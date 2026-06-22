@@ -1,6 +1,6 @@
-package iuh.fit.venueservice.entity;
+package iuh.fit.venueservice.infrastructure.persistence.entity;
 
-import iuh.fit.venueservice.enums.DocumentType;
+import iuh.fit.venueservice.domain.enums.DocumentType;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.entity;
+package iuh.fit.venueservice.infrastructure.persistence.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

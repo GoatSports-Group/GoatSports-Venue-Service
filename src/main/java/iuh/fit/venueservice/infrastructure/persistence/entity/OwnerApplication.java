@@ -1,8 +1,8 @@
-package iuh.fit.venueservice.entity;
+package iuh.fit.venueservice.infrastructure.persistence.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import iuh.fit.venueservice.enums.BusinessType;
-import iuh.fit.venueservice.enums.OwnerApplicationStatus;
+import iuh.fit.venueservice.domain.enums.BusinessType;
+import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

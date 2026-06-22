@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.config;
+package iuh.fit.venueservice.infrastructure.config;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;

@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.enums;
+package iuh.fit.venueservice.domain.enums;
 
 import lombok.Getter;
 

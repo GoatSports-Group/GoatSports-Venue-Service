@@ -1,6 +1,6 @@
-package iuh.fit.venueservice.entity;
+package iuh.fit.venueservice.infrastructure.persistence.entity;
 
-import iuh.fit.venueservice.enums.SportType;
+import iuh.fit.venueservice.domain.enums.SportType;
 import jakarta.persistence.*;
 import lombok.*;
 
