@@ -2,7 +2,6 @@ package iuh.fit.venueservice.domain.entity;
 
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -17,7 +16,4 @@ public class Address {
     private String district;
     private String city;
     private String province;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }

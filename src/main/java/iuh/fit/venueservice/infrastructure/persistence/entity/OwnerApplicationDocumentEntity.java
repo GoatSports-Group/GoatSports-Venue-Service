@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OwnerApplicationDocument extends BaseEntity {
+public class OwnerApplicationDocumentEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
@@ -24,5 +24,5 @@ public class OwnerApplicationDocument extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_application_id")
-    private OwnerApplication ownerApplication;
+    private OwnerApplicationEntity ownerApplication;
 }

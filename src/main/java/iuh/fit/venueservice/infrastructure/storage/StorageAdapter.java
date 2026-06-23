@@ -130,6 +130,6 @@ public class StorageAdapter implements StoragePort {
     }
 
     private boolean isPublic(String key) {
-        return key.contains("/avatars/") || key.contains("/venues/");
+        return key.contains("/venues/");
     }
 }

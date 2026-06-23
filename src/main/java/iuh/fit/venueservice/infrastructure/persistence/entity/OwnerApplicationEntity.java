@@ -21,7 +21,7 @@ import static jakarta.persistence.CascadeType.*;
 @AllArgsConstructor
 @Builder
 @ToString(exclude = {"ownerApplicationDocuments"})
-public class OwnerApplication extends BaseEntity{
+public class OwnerApplicationEntity extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
@@ -41,13 +41,13 @@ public class OwnerApplication extends BaseEntity{
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
 
-    @OneToOne(mappedBy = "ownerApplication", cascade = {PERSIST, MERGE})
-    private Address addresses;
+    @OneToOne(mappedBy = "ownerApplication", cascade = {PERSIST, MERGE}, orphanRemoval = true)
+    private AddressEntity addresses;
 
-    @OneToMany(mappedBy = "ownerApplication", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "ownerApplication", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnore
-    private Set<OwnerApplicationDocument> ownerApplicationDocuments = new HashSet<>();
+    private Set<OwnerApplicationDocumentEntity> ownerApplicationDocuments = new HashSet<>();
 
-    @OneToOne(mappedBy = "ownerApplication", cascade = {PERSIST, MERGE})
-    private VenueOwnerProfile venueOwnerProfile;
+    @OneToOne(mappedBy = "ownerApplication", cascade = {PERSIST, MERGE}, orphanRemoval = true)
+    private VenueOwnerProfileEntity venueOwnerProfileEntity;
 }

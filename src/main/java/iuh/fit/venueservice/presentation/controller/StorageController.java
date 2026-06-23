@@ -1,6 +1,6 @@
 package iuh.fit.venueservice.presentation.controller;
 
-import iuh.fit.venueservice.application.dto.request.UploadRequestCommand;
+import iuh.fit.venueservice.application.dto.request.file.UploadRequestCommand;
 import iuh.fit.venueservice.application.dto.response.file.DownloadResponseCommand;
 import iuh.fit.venueservice.application.dto.response.file.FileResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;

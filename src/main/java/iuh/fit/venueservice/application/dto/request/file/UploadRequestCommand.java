@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.application.dto.request;
+package iuh.fit.venueservice.application.dto.request.file;
 
 public record UploadRequestCommand(
         byte[] content,

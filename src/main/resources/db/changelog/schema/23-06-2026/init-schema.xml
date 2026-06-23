@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1782198211966-1" author="HP">
+        <createTable tableName="addresses">
+            <column name="address_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_addresses"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="ward" type="VARCHAR(255)"/>
+            <column name="district" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(255)"/>
+            <column name="province" type="VARCHAR(255)"/>
+            <column name="owner_application_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1782198211966-2" author="HP">
+        <createTable tableName="owner_application_documents">
+            <column name="owner_application_document_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_owner_application_documents"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="document_type" type="VARCHAR(255)"/>
+            <column name="file_url" type="VARCHAR(255)"/>
+            <column name="owner_application_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1782198211966-3" author="HP">
+        <createTable tableName="owner_applications">
+            <column name="owner_application_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_owner_applications"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="user_id" type="UUID"/>
+            <column name="full_name" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="business_name" type="VARCHAR(255)"/>
+            <column name="business_type" type="VARCHAR(255)"/>
+            <column name="tax_code" type="VARCHAR(255)"/>
+            <column name="identity_number" type="VARCHAR(255)"/>
+            <column name="status" type="VARCHAR(255)"/>
+            <column name="reject_reason" type="VARCHAR(255)"/>
+            <column name="reviewer_id" type="UUID"/>
+            <column name="reviewed_at" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1782198211966-4" author="HP">
+        <createTable tableName="venue_courts">
+            <column name="venue_court_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_venue_courts"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="sport_type" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="capacity" type="INT"/>
+            <column name="price_per_hour" type="DOUBLE"/>
+            <column name="indoor" type="BOOLEAN"/>
+            <column name="active" type="BOOLEAN"/>
+            <column name="venue_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1782198211966-5" author="HP">
+        <createTable tableName="venue_owner_profiles">
+            <column name="venue_owner_profile_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_venue_owner_profiles"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="user_id" type="UUID"/>
+            <column name="business_name" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="tax_code" type="VARCHAR(255)"/>
+            <column name="verified" type="BOOLEAN"/>
+            <column name="verified_at" type="DATETIME"/>
+            <column name="owner_application_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1782198211966-6" author="HP">
+        <createTable tableName="venues">
+            <column name="venue_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_venues"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="open_time" type="DATETIME"/>
+            <column name="close_time" type="DATETIME"/>
+            <column name="active" type="BOOLEAN"/>
+            <column name="min_price" type="DOUBLE"/>
+            <column name="max_price" type="DOUBLE"/>
+            <column name="average_rating" type="DOUBLE"/>
+            <column name="total_reviews" type="INT"/>
+            <column name="user_id" type="UUID"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="venue_owner_profile_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1782198211966-7" author="HP">
+        <addUniqueConstraint columnNames="owner_application_id" constraintName="uc_addresses_owner_application"
+                             tableName="addresses"/>
+    </changeSet>
+    <changeSet id="1782198211966-8" author="HP">
+        <addUniqueConstraint columnNames="owner_application_id"
+                             constraintName="uc_venue_owner_profiles_owner_application"
+                             tableName="venue_owner_profiles"/>
+    </changeSet>
+    <changeSet id="1782198211966-9" author="HP">
+        <addUniqueConstraint columnNames="venue_owner_profile_id" constraintName="uc_venues_venue_owner_profile"
+                             tableName="venues"/>
+    </changeSet>
+    <changeSet id="1782198211966-10" author="HP">
+        <addForeignKeyConstraint baseColumnNames="owner_application_id" baseTableName="addresses"
+                                 constraintName="FK_ADDRESSES_ON_OWNER_APPLICATION"
+                                 referencedColumnNames="owner_application_id" referencedTableName="owner_applications"/>
+    </changeSet>
+    <changeSet id="1782198211966-11" author="HP">
+        <addForeignKeyConstraint baseColumnNames="owner_application_id" baseTableName="owner_application_documents"
+                                 constraintName="FK_OWNER_APPLICATION_DOCUMENTS_ON_OWNER_APPLICATION"
+                                 referencedColumnNames="owner_application_id" referencedTableName="owner_applications"/>
+    </changeSet>
+    <changeSet id="1782198211966-12" author="HP">
+        <addForeignKeyConstraint baseColumnNames="venue_owner_profile_id" baseTableName="venues"
+                                 constraintName="FK_VENUES_ON_VENUE_OWNER_PROFILE"
+                                 referencedColumnNames="venue_owner_profile_id"
+                                 referencedTableName="venue_owner_profiles"/>
+    </changeSet>
+    <changeSet id="1782198211966-13" author="HP">
+        <addForeignKeyConstraint baseColumnNames="venue_id" baseTableName="venue_courts"
+                                 constraintName="FK_VENUE_COURTS_ON_VENUE" referencedColumnNames="venue_id"
+                                 referencedTableName="venues"/>
+    </changeSet>
+    <changeSet id="1782198211966-14" author="HP">
+        <addForeignKeyConstraint baseColumnNames="owner_application_id" baseTableName="venue_owner_profiles"
+                                 constraintName="FK_VENUE_OWNER_PROFILES_ON_OWNER_APPLICATION"
+                                 referencedColumnNames="owner_application_id" referencedTableName="owner_applications"/>
+    </changeSet>
+
+</databaseChangeLog>
