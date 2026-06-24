@@ -1,8 +1,5 @@
-package iuh.fit.venueservice.presentation.response.venue;
+package iuh.fit.venueservice.presentation.response.application;
 
-import iuh.fit.venueservice.domain.enums.BusinessType;
-import iuh.fit.venueservice.domain.enums.DocumentType;
-import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -21,10 +18,10 @@ public class OwnerApplicationResponse {
     private String phone;
     private String email;
     private String businessName;
-    private BusinessType businessType;
+    private String businessType;
     private String taxCode;
     private String identityNumber;
-    private OwnerApplicationStatus status;
+    private String status;
     private String rejectReason;
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
@@ -53,7 +50,7 @@ public class OwnerApplicationResponse {
     @AllArgsConstructor
     public static class DocumentResponse {
         private UUID ownerApplicationDocumentId;
-        private DocumentType documentType;
+        private String documentType;
         private String fileUrl;
     }
 }

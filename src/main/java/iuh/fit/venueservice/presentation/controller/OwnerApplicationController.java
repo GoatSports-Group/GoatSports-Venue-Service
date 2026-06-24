@@ -1,17 +1,19 @@
 package iuh.fit.venueservice.presentation.controller;
 
 import iuh.fit.venueservice.application.dto.PageFilter;
-import iuh.fit.venueservice.application.dto.request.venue.SubmitOwnerApplicationCommand;
-import iuh.fit.venueservice.application.dto.response.OwnerApplicationResponseCommand;
+import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
 import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
+import iuh.fit.venueservice.domain.enums.BusinessType;
+import iuh.fit.venueservice.domain.enums.DocumentType;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
-import iuh.fit.venueservice.presentation.request.venue.SubmitOwnerApplicationRequest;
-import iuh.fit.venueservice.presentation.response.venue.OwnerApplicationResponse;
+import iuh.fit.venueservice.presentation.request.application.SubmitOwnerApplicationRequest;
+import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -47,7 +49,7 @@ public class OwnerApplicationController {
                 request.getEmail(),
                 request.getIdentityNumber(),
                 request.getBusinessName(),
-                request.getBusinessType(),
+                BusinessType.valueOf(request.getBusinessType()),
                 request.getTaxCode(),
                 request.getAddress(),
                 request.getProvince(),
@@ -58,14 +60,14 @@ public class OwnerApplicationController {
                         .map(doc -> {
                             try {
                                 return new SubmitOwnerApplicationCommand.DocumentInfo(
-                                        doc.getDocumentType(),
+                                        DocumentType.valueOf(doc.getDocumentType()),
                                         doc.getFileUrl().getBytes(),
                                         doc.getFileUrl().getOriginalFilename(),
                                         doc.getFileUrl().getContentType()
                                 );
                             } catch (java.io.IOException e) {
                                 try {
-                                    throw new ServiceException("Không thể đọc file đính kèm: " + doc.getDocumentType().getValue());
+                                    throw new ServiceException("Không thể đọc file đính kèm: " + doc.getDocumentType());
                                 } catch (ServiceException ex) {
                                     throw new RuntimeException(ex);
                                 }

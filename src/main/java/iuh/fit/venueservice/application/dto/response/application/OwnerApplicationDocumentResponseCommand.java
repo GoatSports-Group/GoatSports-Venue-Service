@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.application.dto.response;
+package iuh.fit.venueservice.application.dto.response.application;
 
 import iuh.fit.venueservice.domain.enums.DocumentType;
 

@@ -1,7 +1,7 @@
 package iuh.fit.venueservice.application.mapper;
 
-import iuh.fit.venueservice.application.dto.response.OwnerApplicationDocumentResponseCommand;
-import iuh.fit.venueservice.application.dto.response.OwnerApplicationResponseCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationDocumentResponseCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 

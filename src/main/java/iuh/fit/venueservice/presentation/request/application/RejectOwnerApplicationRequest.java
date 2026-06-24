@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.presentation.request.venue;
+package iuh.fit.venueservice.presentation.request.application;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;

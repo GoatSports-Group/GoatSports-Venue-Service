@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class VenueCourt extends BaseEntity{
+public class VenueCourtEntity extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
@@ -28,5 +28,5 @@ public class VenueCourt extends BaseEntity{
 
     @ManyToOne
     @JoinColumn(name = "venue_id")
-    private Venue venue;
+    private VenueEntity venue;
 }

@@ -1,9 +1,9 @@
 package iuh.fit.venueservice.infrastructure.decorator;
 
 import iuh.fit.venueservice.application.dto.PageFilter;
-import iuh.fit.venueservice.application.dto.request.venue.ApproveOwnerApplicationCommand;
-import iuh.fit.venueservice.application.dto.request.venue.RejectOwnerApplicationCommand;
-import iuh.fit.venueservice.application.dto.request.venue.SubmitOwnerApplicationCommand;
+import iuh.fit.venueservice.application.dto.request.application.ApproveOwnerApplicationCommand;
+import iuh.fit.venueservice.application.dto.request.application.RejectOwnerApplicationCommand;
+import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;

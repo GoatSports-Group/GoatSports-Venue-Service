@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -76,9 +75,27 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     }
 
     @Override
-    public List<OwnerApplication> findAll() {
-        return jpaRepository.findAll().stream()
+    public PageResult<OwnerApplication> findAll(PageFilter filter) {
+        int pageNum = Math.max(0, filter.page() - 1);
+        int pageSize = filter.size() > 0 ? filter.size() : 10;
+        Pageable pageable = PageRequest.of(pageNum, pageSize);
+
+        Specification<OwnerApplicationEntity> spec = Specification.where((Specification<OwnerApplicationEntity>) null);
+        if (filter.filter() != null && !filter.filter().trim().isEmpty()) {
+            spec = filterSpecificationConverter.convert(filterParser.parse(filter.filter()));
+        }
+
+        Page<OwnerApplicationEntity> entityPage = jpaRepository.findAll(spec, pageable);
+        List<OwnerApplication> items = entityPage.getContent().stream()
                 .map(OwnerApplicationMapper::toDomain)
-                .collect(Collectors.toList());
+                .toList();
+
+        return new PageResult<>(
+                items,
+                entityPage.getTotalElements(),
+                filter.page(),
+                filter.size(),
+                entityPage.getTotalPages()
+        );
     }
 }

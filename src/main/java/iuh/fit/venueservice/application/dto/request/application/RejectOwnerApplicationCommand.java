@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.application.dto.request.venue;
+package iuh.fit.venueservice.application.dto.request.application;
 
 import java.util.UUID;
 

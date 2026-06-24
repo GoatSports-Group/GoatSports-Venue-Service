@@ -1,7 +1,7 @@
 package iuh.fit.venueservice.presentation.converter;
 
-import iuh.fit.venueservice.application.dto.response.OwnerApplicationResponseCommand;
-import iuh.fit.venueservice.presentation.response.venue.OwnerApplicationResponse;
+import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
+import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,7 +28,7 @@ public class OwnerApplicationConverter {
             docs = app.documents().stream()
                     .map(doc -> OwnerApplicationResponse.DocumentResponse.builder()
                             .ownerApplicationDocumentId(doc.ownerApplicationDocumentId())
-                            .documentType(doc.documentType())
+                            .documentType(doc.documentType().name())
                             .fileUrl(doc.fileUrl())
                             .build())
                     .collect(Collectors.toList());
@@ -41,10 +41,10 @@ public class OwnerApplicationConverter {
                 .phone(app.phone())
                 .email(app.email())
                 .businessName(app.businessName())
-                .businessType(app.businessType())
+                .businessType(app.businessType().name())
                 .taxCode(app.taxCode())
                 .identityNumber(app.identityNumber())
-                .status(app.status())
+                .status(app.status().name())
                 .rejectReason(app.rejectReason())
                 .reviewerId(app.reviewerId())
                 .reviewedAt(app.reviewedAt())

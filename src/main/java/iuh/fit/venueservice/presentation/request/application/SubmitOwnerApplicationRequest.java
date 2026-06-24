@@ -1,7 +1,5 @@
-package iuh.fit.venueservice.presentation.request.venue;
+package iuh.fit.venueservice.presentation.request.application;
 
-import iuh.fit.venueservice.domain.enums.BusinessType;
-import iuh.fit.venueservice.domain.enums.DocumentType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -30,7 +28,7 @@ public class SubmitOwnerApplicationRequest {
     @NotBlank(message = "Tên doanh nghiệp/Hộ kinh doanh không được để trống")
     private String businessName;
     @NotNull(message = "Loại hình kinh doanh không được để trống")
-    private BusinessType businessType;
+    private String businessType;
     @NotBlank(message = "Mã số thuế không được để trống")
     private String taxCode;
     @NotBlank(message = "Địa chỉ chi tiết không được để trống")
@@ -53,7 +51,7 @@ public class SubmitOwnerApplicationRequest {
     @AllArgsConstructor
     public static class DocumentRequest {
         @NotNull(message = "Loại tài liệu không được để trống")
-        private DocumentType documentType;
+        private String documentType;
         @NotNull(message = "File không được để trống")
         private MultipartFile fileUrl;
     }

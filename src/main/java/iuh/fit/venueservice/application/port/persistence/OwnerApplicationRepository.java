@@ -14,5 +14,5 @@ public interface OwnerApplicationRepository {
     Optional<OwnerApplication> findById(UUID id);
     PageResult<OwnerApplication> findByUserId(PageFilter filter, UUID userId);
     boolean existsByUserIdAndStatusIn(UUID userId, List<OwnerApplicationStatus> statuses);
-    List<OwnerApplication> findAll();
+    PageResult<OwnerApplication> findAll(PageFilter filter);
 }

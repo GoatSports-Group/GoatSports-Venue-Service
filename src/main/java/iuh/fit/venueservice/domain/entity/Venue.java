@@ -22,7 +22,6 @@ public class Venue {
     private Double maxPrice;
     private Double averageRating;
     private Integer totalReviews;
-    private UUID userId;
     private String phone;
     private String email;
 
