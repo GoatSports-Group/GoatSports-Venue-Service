@@ -2,12 +2,13 @@ package iuh.fit.venueservice.presentation.controller;
 
 import iuh.fit.venueservice.application.dto.PageFilter;
 import iuh.fit.venueservice.application.dto.request.venue.SubmitOwnerApplicationCommand;
+import iuh.fit.venueservice.application.dto.response.OwnerApplicationResponseCommand;
 import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.usecase.OwnerApplicationUseCase;
-import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
 import iuh.fit.venueservice.presentation.request.venue.SubmitOwnerApplicationRequest;
 import iuh.fit.venueservice.presentation.response.venue.OwnerApplicationResponse;
@@ -73,7 +74,10 @@ public class OwnerApplicationController {
                         .collect(Collectors.toList())
         );
 
-        OwnerApplication result = ownerApplicationUseCase.submitOwnerApplication(command);
+        OwnerApplicationResponseCommand result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+                ownerApplicationUseCase.submitOwnerApplication(command)
+        );
+
         return ResponseEntity.status(HttpStatus.CREATED).body(OwnerApplicationConverter.toResponse(result));
     }
 
@@ -89,7 +93,9 @@ public class OwnerApplicationController {
                 .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để thực hiện chức năng này."));
         UUID userId = UUID.fromString(userIdStr);
 
-        PageResult<OwnerApplication> result = ownerApplicationUseCase.getMyOwnerApplications(query, userId);
+        PageResult<OwnerApplicationResponseCommand> result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+                ownerApplicationUseCase.getMyOwnerApplications(query, userId)
+        );
 
         BaseListResponse.Meta meta = new BaseListResponse.Meta();
         meta.setPage(result.page());

@@ -6,9 +6,6 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static jakarta.persistence.CascadeType.MERGE;
-import static jakarta.persistence.CascadeType.PERSIST;
-
 @Entity
 @Table(name = "venue_owner_profiles")
 @Getter
@@ -16,7 +13,7 @@ import static jakarta.persistence.CascadeType.PERSIST;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class VenueOwnerProfile extends BaseEntity{
+public class VenueOwnerProfileEntity extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
@@ -29,10 +26,10 @@ public class VenueOwnerProfile extends BaseEntity{
     private Boolean verified;
     private LocalDateTime verifiedAt;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_application_id", nullable = false, unique = true)
-    private OwnerApplication ownerApplication;
+    private OwnerApplicationEntity ownerApplication;
 
-    @OneToOne(mappedBy = "venueOwnerProfile", cascade = {PERSIST, MERGE})
-    private Venue venue;
+    @OneToOne(mappedBy = "venueOwnerProfileEntity", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private VenueEntity venue;
 }
