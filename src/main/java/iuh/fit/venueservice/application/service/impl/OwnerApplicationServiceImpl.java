@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.application.usecase;
+package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.PageFilter;
 import iuh.fit.venueservice.application.dto.request.venue.ApproveOwnerApplicationCommand;
@@ -10,6 +10,8 @@ import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.UserRolePort;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueOwnerProfileRepository;
+import iuh.fit.venueservice.application.service.OwnerApplicationService;
+import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
@@ -18,18 +20,20 @@ import iuh.fit.venueservice.domain.enums.DocumentType;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-public class OwnerApplicationUseCase {
+public class OwnerApplicationServiceImpl implements OwnerApplicationService {
 
     private final OwnerApplicationRepository ownerApplicationRepository;
     private final VenueOwnerProfileRepository venueOwnerProfileRepository;
     private final StoragePort storagePort;
     private final UserRolePort userRolePort;
 
-    public OwnerApplicationUseCase(
+    public OwnerApplicationServiceImpl(
             OwnerApplicationRepository ownerApplicationRepository,
             VenueOwnerProfileRepository venueOwnerProfileRepository,
             StoragePort storagePort,
@@ -41,6 +45,7 @@ public class OwnerApplicationUseCase {
         this.userRolePort = userRolePort;
     }
 
+    @Override
     public OwnerApplication submitOwnerApplication(SubmitOwnerApplicationCommand command) throws ServiceException {
         boolean hasActiveApplication = ownerApplicationRepository.existsByUserIdAndStatusIn(
                 command.userId(),
@@ -77,6 +82,7 @@ public class OwnerApplicationUseCase {
         return ownerApplicationRepository.save(ownerApplication);
     }
 
+    @Override
     public OwnerApplication rejectOwnerApplication(RejectOwnerApplicationCommand command) throws ServiceException {
         OwnerApplication application = ownerApplicationRepository.findById(command.applicationId())
                 .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
@@ -93,6 +99,7 @@ public class OwnerApplicationUseCase {
         return ownerApplicationRepository.save(application);
     }
 
+    @Override
     public OwnerApplication approveOwnerApplication(ApproveOwnerApplicationCommand command) throws ServiceException {
         OwnerApplication application = ownerApplicationRepository.findById(command.applicationId())
                 .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
@@ -126,44 +133,58 @@ public class OwnerApplicationUseCase {
         return ownerApplicationRepository.save(application);
     }
 
+    @Override
+    public OwnerApplication getOwnerApplicationDetail(String id) throws ServiceException {
+        UUID uuid = BaseUtil.uuid(id);
+
+        return ownerApplicationRepository.findById(uuid)
+                .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
+    }
+
+    @Override
     public PageResult<OwnerApplication> getMyOwnerApplications(PageFilter filter, UUID userId) {
         return ownerApplicationRepository.findByUserId(filter, userId);
+    }
+
+    @Override
+    public PageResult<OwnerApplication> getAllOwnerApplications(PageFilter filter) {
+        return ownerApplicationRepository.findAll(filter);
     }
 
     private Set<OwnerApplicationDocument> uploadDocuments(List<SubmitOwnerApplicationCommand.DocumentInfo> documents) {
         List<CompletableFuture<OwnerApplicationDocument>> futures =
                 documents.stream()
-                    .map(doc -> {
-                        String folder = getFolderForDocumentType(doc.documentType());
+                        .map(doc -> {
+                            String folder = getFolderForDocumentType(doc.documentType());
 
-                        return storagePort.upload(
-                                doc.content(),
-                                doc.originalFileName(),
-                                doc.contentType(),
-                                folder
-                            )
-                            .thenApply(uploadResponse -> {
-                                String key = uploadResponse.key();
+                            return storagePort.upload(
+                                            doc.content(),
+                                            doc.originalFileName(),
+                                            doc.contentType(),
+                                            folder
+                                    )
+                                    .thenApply(uploadResponse -> {
+                                        String key = uploadResponse.key();
 
-                                String fileUrlOrKey =
-                                        doc.documentType() == DocumentType.VENUE_IMAGE
-                                                ? storagePort.getFileUrl(key)
-                                                : key;
+                                        String fileUrlOrKey =
+                                                doc.documentType() == DocumentType.VENUE_IMAGE
+                                                        ? storagePort.getFileUrl(key)
+                                                        : key;
 
-                                return OwnerApplicationDocument.builder()
-                                        .documentType(doc.documentType())
-                                        .fileUrl(fileUrlOrKey)
-                                        .build();
-                            });
-                    })
-                    .toList();
+                                        return OwnerApplicationDocument.builder()
+                                                .documentType(doc.documentType())
+                                                .fileUrl(fileUrlOrKey)
+                                                .build();
+                                    });
+                        })
+                        .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                        .thenApply(v -> futures.stream()
-                                .map(CompletableFuture::join)
-                                .collect(Collectors.toSet())
-                        )
-                        .join();
+                .thenApply(v -> futures.stream()
+                        .map(CompletableFuture::join)
+                        .collect(Collectors.toSet())
+                )
+                .join();
     }
 
     private String getFolderForDocumentType(DocumentType documentType) {
@@ -173,5 +194,4 @@ public class OwnerApplicationUseCase {
             case VENUE_IMAGE -> "venues";
         };
     }
-
 }

@@ -2,26 +2,27 @@ package iuh.fit.venueservice.infrastructure.config;
 
 import iuh.fit.venueservice.application.port.*;
 import iuh.fit.venueservice.application.port.persistence.*;
-import iuh.fit.venueservice.application.usecase.*;
+import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
+import iuh.fit.venueservice.application.service.impl.StorageServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class UseCaseConfig {
+public class ApplicationServiceConfig {
 
     @Bean
-    public StorageUseCase storageUseCase(StoragePort storagePort) {
-        return new StorageUseCase(storagePort);
+    public StorageServiceImpl storageService(StoragePort storagePort) {
+        return new StorageServiceImpl(storagePort);
     }
 
     @Bean
-    public OwnerApplicationUseCase ownerApplicationUseCase(
+    public OwnerApplicationServiceImpl ownerApplicationService(
             OwnerApplicationRepository ownerApplicationRepository,
             VenueOwnerProfileRepository venueOwnerProfileRepository,
             StoragePort storagePort,
             UserRolePort userRolePort
     ) {
-        return new OwnerApplicationUseCase(
+        return new OwnerApplicationServiceImpl(
                 ownerApplicationRepository, venueOwnerProfileRepository, storagePort, userRolePort
         );
     }

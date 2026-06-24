@@ -8,7 +8,7 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
-import iuh.fit.venueservice.application.usecase.OwnerApplicationUseCase;
+import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
 import iuh.fit.venueservice.presentation.request.venue.SubmitOwnerApplicationRequest;
 import iuh.fit.venueservice.presentation.response.venue.OwnerApplicationResponse;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OwnerApplicationController {
 
-    private final OwnerApplicationUseCase ownerApplicationUseCase;
+    private final OwnerApplicationService ownerApplicationService;
     private final CurrentUserProvider currentUserProvider;
 
     @PostMapping(consumes = {"multipart/form-data"})
@@ -75,7 +75,7 @@ public class OwnerApplicationController {
         );
 
         OwnerApplicationResponseCommand result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
-                ownerApplicationUseCase.submitOwnerApplication(command)
+                ownerApplicationService.submitOwnerApplication(command)
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(OwnerApplicationConverter.toResponse(result));
@@ -94,7 +94,7 @@ public class OwnerApplicationController {
         UUID userId = UUID.fromString(userIdStr);
 
         PageResult<OwnerApplicationResponseCommand> result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
-                ownerApplicationUseCase.getMyOwnerApplications(query, userId)
+                ownerApplicationService.getMyOwnerApplications(query, userId)
         );
 
         BaseListResponse.Meta meta = new BaseListResponse.Meta();

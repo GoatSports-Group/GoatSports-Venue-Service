@@ -1,19 +1,20 @@
-package iuh.fit.venueservice.application.usecase;
+package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.file.UploadRequestCommand;
 import iuh.fit.venueservice.application.dto.response.file.DownloadResponseCommand;
 import iuh.fit.venueservice.application.dto.response.file.FileResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.StoragePort;
+import iuh.fit.venueservice.application.service.StorageService;
 import iuh.fit.venueservice.application.util.FileUtil;
 
 import java.util.concurrent.CompletableFuture;
 
-public class StorageUseCase {
+public class StorageServiceImpl implements StorageService {
 
     private final StoragePort storagePort;
 
-    public StorageUseCase(StoragePort storagePort) {
+    public StorageServiceImpl(StoragePort storagePort) {
         this.storagePort = storagePort;
     }
 

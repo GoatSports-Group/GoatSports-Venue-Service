@@ -4,7 +4,7 @@ import iuh.fit.venueservice.application.dto.request.file.UploadRequestCommand;
 import iuh.fit.venueservice.application.dto.response.file.DownloadResponseCommand;
 import iuh.fit.venueservice.application.dto.response.file.FileResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
-import iuh.fit.venueservice.application.usecase.StorageUseCase;
+import iuh.fit.venueservice.application.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
 public class StorageController {
-    private final StorageUseCase storageUseCase;
+    private final StorageService storageService;
 
     @PostMapping
     public ResponseEntity<Object> uploadFile(
@@ -35,7 +35,7 @@ public class StorageController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Hãy tải file lên");
         }
 
-        CompletableFuture<FileResponseCommand> response = storageUseCase.upload(
+        CompletableFuture<FileResponseCommand> response = storageService.upload(
                 new UploadRequestCommand(
                         file.getBytes(),
                         file.getOriginalFilename(),
@@ -59,7 +59,7 @@ public class StorageController {
         List<CompletableFuture<FileResponseCommand>> futures = new ArrayList<>();
         for (MultipartFile file : files) {
             if (file.isEmpty()) continue;
-            futures.add(storageUseCase.upload(
+            futures.add(storageService.upload(
                     new UploadRequestCommand(
                             file.getBytes(),
                             file.getOriginalFilename(),
@@ -85,7 +85,7 @@ public class StorageController {
             throw new ServiceException("Đường dẫn không được để trống");
         }
 
-        String response = storageUseCase.getFileUrl(key);
+        String response = storageService.getFileUrl(key);
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
@@ -96,7 +96,7 @@ public class StorageController {
             throw new ServiceException("Đường dẫn không được để trống");
         }
 
-        DownloadResponseCommand response = storageUseCase.download(key);
+        DownloadResponseCommand response = storageService.download(key);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
@@ -109,7 +109,7 @@ public class StorageController {
         if(key == null || key.isEmpty()) {
             throw new ServiceException("Đường dẫn không được để trống");
         }
-        storageUseCase.delete(key);
+        storageService.delete(key);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
