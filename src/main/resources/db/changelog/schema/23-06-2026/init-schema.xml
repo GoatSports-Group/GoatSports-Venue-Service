@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
         objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
-    <changeSet id="1782198211966-1" author="HP">
+    <changeSet id="1782286734697-1" author="minhdat">
         <createTable tableName="addresses">
             <column name="address_id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_addresses"/>
@@ -24,7 +24,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1782198211966-2" author="HP">
+    <changeSet id="1782286734697-2" author="minhdat">
         <createTable tableName="owner_application_documents">
             <column name="owner_application_document_id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_owner_application_documents"/>
@@ -38,7 +38,7 @@
             <column name="owner_application_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet id="1782198211966-3" author="HP">
+    <changeSet id="1782286734697-3" author="minhdat">
         <createTable tableName="owner_applications">
             <column name="owner_application_id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_owner_applications"/>
@@ -61,7 +61,7 @@
             <column name="reviewed_at" type="DATETIME"/>
         </createTable>
     </changeSet>
-    <changeSet id="1782198211966-4" author="HP">
+    <changeSet id="1782286734697-4" author="minhdat">
         <createTable tableName="venue_courts">
             <column name="venue_court_id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_venue_courts"/>
@@ -79,7 +79,7 @@
             <column name="venue_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet id="1782198211966-5" author="HP">
+    <changeSet id="1782286734697-5" author="minhdat">
         <createTable tableName="venue_owner_profiles">
             <column name="venue_owner_profile_id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_venue_owner_profiles"/>
@@ -100,7 +100,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1782198211966-6" author="HP">
+    <changeSet id="1782286734697-6" author="minhdat">
         <createTable tableName="venues">
             <column name="venue_id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_venues"/>
@@ -118,7 +118,6 @@
             <column name="max_price" type="DOUBLE"/>
             <column name="average_rating" type="DOUBLE"/>
             <column name="total_reviews" type="INT"/>
-            <column name="user_id" type="UUID"/>
             <column name="phone" type="VARCHAR(255)"/>
             <column name="email" type="VARCHAR(255)"/>
             <column name="venue_owner_profile_id" type="UUID">
@@ -126,41 +125,41 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1782198211966-7" author="HP">
+    <changeSet id="1782286734697-7" author="minhdat">
         <addUniqueConstraint columnNames="owner_application_id" constraintName="uc_addresses_owner_application"
                              tableName="addresses"/>
     </changeSet>
-    <changeSet id="1782198211966-8" author="HP">
+    <changeSet id="1782286734697-8" author="minhdat">
         <addUniqueConstraint columnNames="owner_application_id"
                              constraintName="uc_venue_owner_profiles_owner_application"
                              tableName="venue_owner_profiles"/>
     </changeSet>
-    <changeSet id="1782198211966-9" author="HP">
+    <changeSet id="1782286734697-9" author="minhdat">
         <addUniqueConstraint columnNames="venue_owner_profile_id" constraintName="uc_venues_venue_owner_profile"
                              tableName="venues"/>
     </changeSet>
-    <changeSet id="1782198211966-10" author="HP">
+    <changeSet id="1782286734697-10" author="minhdat">
         <addForeignKeyConstraint baseColumnNames="owner_application_id" baseTableName="addresses"
                                  constraintName="FK_ADDRESSES_ON_OWNER_APPLICATION"
                                  referencedColumnNames="owner_application_id" referencedTableName="owner_applications"/>
     </changeSet>
-    <changeSet id="1782198211966-11" author="HP">
+    <changeSet id="1782286734697-11" author="minhdat">
         <addForeignKeyConstraint baseColumnNames="owner_application_id" baseTableName="owner_application_documents"
                                  constraintName="FK_OWNER_APPLICATION_DOCUMENTS_ON_OWNER_APPLICATION"
                                  referencedColumnNames="owner_application_id" referencedTableName="owner_applications"/>
     </changeSet>
-    <changeSet id="1782198211966-12" author="HP">
+    <changeSet id="1782286734697-12" author="minhdat">
         <addForeignKeyConstraint baseColumnNames="venue_owner_profile_id" baseTableName="venues"
                                  constraintName="FK_VENUES_ON_VENUE_OWNER_PROFILE"
                                  referencedColumnNames="venue_owner_profile_id"
                                  referencedTableName="venue_owner_profiles"/>
     </changeSet>
-    <changeSet id="1782198211966-13" author="HP">
+    <changeSet id="1782286734697-13" author="minhdat">
         <addForeignKeyConstraint baseColumnNames="venue_id" baseTableName="venue_courts"
                                  constraintName="FK_VENUE_COURTS_ON_VENUE" referencedColumnNames="venue_id"
                                  referencedTableName="venues"/>
     </changeSet>
-    <changeSet id="1782198211966-14" author="HP">
+    <changeSet id="1782286734697-14" author="minhdat">
         <addForeignKeyConstraint baseColumnNames="owner_application_id" baseTableName="venue_owner_profiles"
                                  constraintName="FK_VENUE_OWNER_PROFILES_ON_OWNER_APPLICATION"
                                  referencedColumnNames="owner_application_id" referencedTableName="owner_applications"/>
