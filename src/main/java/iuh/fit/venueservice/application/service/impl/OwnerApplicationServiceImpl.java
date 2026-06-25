@@ -8,6 +8,7 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.UserRolePort;
+import iuh.fit.venueservice.application.port.event.OwnerApplicationEventPublisher;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueOwnerProfileRepository;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
@@ -32,17 +33,20 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
     private final VenueOwnerProfileRepository venueOwnerProfileRepository;
     private final StoragePort storagePort;
     private final UserRolePort userRolePort;
+    private final OwnerApplicationEventPublisher ownerApplicationEventPublisher;
 
     public OwnerApplicationServiceImpl(
             OwnerApplicationRepository ownerApplicationRepository,
             VenueOwnerProfileRepository venueOwnerProfileRepository,
             StoragePort storagePort,
-            UserRolePort userRolePort
+            UserRolePort userRolePort,
+            OwnerApplicationEventPublisher ownerApplicationEventPublisher
     ) {
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.venueOwnerProfileRepository = venueOwnerProfileRepository;
         this.storagePort = storagePort;
         this.userRolePort = userRolePort;
+        this.ownerApplicationEventPublisher = ownerApplicationEventPublisher;
     }
 
     @Override
@@ -79,7 +83,11 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .documents(documents)
                 .build();
 
-        return ownerApplicationRepository.save(ownerApplication);
+        OwnerApplication saved = ownerApplicationRepository.save(ownerApplication);
+
+        ownerApplicationEventPublisher.publishOwnerApplicationSubmittedAfterCommit(saved);
+
+        return saved;
     }
 
     @Override
@@ -96,7 +104,11 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
         application.setReviewerId(command.reviewerId());
         application.setReviewedAt(LocalDateTime.now());
 
-        return ownerApplicationRepository.save(application);
+        OwnerApplication saved = ownerApplicationRepository.save(application);
+
+        ownerApplicationEventPublisher.publishOwnerApplicationRejectedAfterCommit(saved);
+
+        return saved;
     }
 
     @Override
@@ -129,7 +141,11 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
         application.setReviewerId(command.reviewerId());
         application.setReviewedAt(LocalDateTime.now());
 
-        return ownerApplicationRepository.save(application);
+        OwnerApplication saved = ownerApplicationRepository.save(application);
+
+        ownerApplicationEventPublisher.publishOwnerApplicationApprovedAfterCommit(saved);
+
+        return saved;
     }
 
     @Override

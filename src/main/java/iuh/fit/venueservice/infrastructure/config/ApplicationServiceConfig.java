@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.config;
 
 import iuh.fit.venueservice.application.port.*;
+import iuh.fit.venueservice.application.port.event.OwnerApplicationEventPublisher;
 import iuh.fit.venueservice.application.port.persistence.*;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
 import iuh.fit.venueservice.application.service.impl.StorageServiceImpl;
@@ -22,10 +23,12 @@ public class ApplicationServiceConfig {
             OwnerApplicationRepository ownerApplicationRepository,
             VenueOwnerProfileRepository venueOwnerProfileRepository,
             StoragePort storagePort,
-            UserRolePort userRolePort
+            UserRolePort userRolePort,
+            OwnerApplicationEventPublisher ownerApplicationEventPublisher
     ) {
         return new OwnerApplicationServiceImpl(
-                ownerApplicationRepository, venueOwnerProfileRepository, storagePort, userRolePort
+                ownerApplicationRepository, venueOwnerProfileRepository,
+                storagePort, userRolePort, ownerApplicationEventPublisher
         );
     }
 
