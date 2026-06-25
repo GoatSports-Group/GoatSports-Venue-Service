@@ -46,14 +46,11 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
         int pageSize = filter.size() > 0 ? filter.size() : 10;
         Pageable pageable = PageRequest.of(pageNum, pageSize);
 
-        Specification<OwnerApplicationEntity> spec = Specification.where((Specification<OwnerApplicationEntity>) null);
+        Specification<OwnerApplicationEntity> spec = (root, query, cb) ->
+                cb.equal(root.get("userId"), userId);
         if (filter.filter() != null && !filter.filter().trim().isEmpty()) {
             spec = filterSpecificationConverter.convert(filterParser.parse(filter.filter()));
         }
-
-        spec = spec.and((root, query, cb) ->
-                        cb.equal(root.get("userId"), userId)
-        );
 
         Page<OwnerApplicationEntity> entityPage = jpaRepository.findAll(spec, pageable);
         List<OwnerApplication> items = entityPage.getContent().stream()
@@ -80,7 +77,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
         int pageSize = filter.size() > 0 ? filter.size() : 10;
         Pageable pageable = PageRequest.of(pageNum, pageSize);
 
-        Specification<OwnerApplicationEntity> spec = Specification.where((Specification<OwnerApplicationEntity>) null);
+        Specification<OwnerApplicationEntity> spec = (root, query, cb) -> cb.conjunction();
         if (filter.filter() != null && !filter.filter().trim().isEmpty()) {
             spec = filterSpecificationConverter.convert(filterParser.parse(filter.filter()));
         }

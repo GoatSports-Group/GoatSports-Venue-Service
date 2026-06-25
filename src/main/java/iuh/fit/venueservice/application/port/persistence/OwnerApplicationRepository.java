@@ -11,8 +11,12 @@ import java.util.UUID;
 
 public interface OwnerApplicationRepository {
     OwnerApplication save(OwnerApplication ownerApplication);
+
     Optional<OwnerApplication> findById(UUID id);
+
     PageResult<OwnerApplication> findByUserId(PageFilter filter, UUID userId);
+
     boolean existsByUserIdAndStatusIn(UUID userId, List<OwnerApplicationStatus> statuses);
+
     PageResult<OwnerApplication> findAll(PageFilter filter);
 }

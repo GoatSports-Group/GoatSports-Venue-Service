@@ -12,9 +12,14 @@ import java.util.UUID;
 
 public interface OwnerApplicationService {
     OwnerApplication submitOwnerApplication(SubmitOwnerApplicationCommand command) throws ServiceException;
+
     OwnerApplication rejectOwnerApplication(RejectOwnerApplicationCommand command) throws ServiceException;
+
     OwnerApplication approveOwnerApplication(ApproveOwnerApplicationCommand command) throws ServiceException;
+
     OwnerApplication getOwnerApplicationDetail(String id) throws ServiceException;
+
     PageResult<OwnerApplication> getMyOwnerApplications(PageFilter filter, UUID userId);
+
     PageResult<OwnerApplication> getAllOwnerApplications(PageFilter filter);
 }
