@@ -27,7 +27,7 @@ public class OwnerApplicationEventPublisherAdapter implements OwnerApplicationEv
 
     @Override
     public void publishOwnerApplicationSubmittedAfterCommit(OwnerApplication ownerApplication) {
-        OwnerApplicationEvent event = toOwnerApplicationEvent(ownerApplication);
+        OwnerApplicationEvent event = toOwnerApplicationEvent(ownerApplication, OwnerApplicationEventType.SUBMITTED);
         if(event == null) {
             return;
         }
@@ -41,9 +41,9 @@ public class OwnerApplicationEventPublisherAdapter implements OwnerApplicationEv
                     }
                 }
             );
+        } else {
+            publishOwnerApplicationEvent(ownerApplication.getUserId().toString(), event);
         }
-
-        publishOwnerApplicationEvent(ownerApplication.getUserId().toString(), event);
     }
 
     @Override
@@ -61,19 +61,22 @@ public class OwnerApplicationEventPublisherAdapter implements OwnerApplicationEv
         kafkaTemplate.send(topic, userId, event)
             .whenComplete((result, ex) -> {
                 if (ex == null) {
-                    log.info("Sent event [{}] successfully for User: {}", event.getEventType().name(), userId);
+                    log.info("Gửi [{}] thành công cho User: {}", event.getEventType().name(), userId);
                 } else {
-                    log.error("Failed to send event [{}] due to: {}", event.getEventType().name(), ex.getMessage());
+                    log.error("Thất bại khi gửi [{}] vì: {}", event.getEventType().name(), ex.getMessage());
                 }
             });
     }
 
-    private OwnerApplicationEvent toOwnerApplicationEvent(OwnerApplication ownerApplication) {
+    private OwnerApplicationEvent toOwnerApplicationEvent(
+            OwnerApplication ownerApplication, OwnerApplicationEventType eventType
+    )
+    {
         if (ownerApplication == null) return null;
 
         return OwnerApplicationEvent.builder()
                 .eventId(UUID.randomUUID())
-                .eventType(OwnerApplicationEventType.SUBMITTED)
+                .eventType(eventType)
                 .timestamp(LocalDateTime.now())
                 .data(OwnerApplicationEvent.OwnerApplicationData.builder()
                         .ownerApplicationId(ownerApplication.getOwnerApplicationId())

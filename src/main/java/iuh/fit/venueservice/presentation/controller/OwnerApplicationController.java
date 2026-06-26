@@ -9,6 +9,7 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
+import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.enums.BusinessType;
 import iuh.fit.venueservice.domain.enums.DocumentType;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
@@ -40,7 +41,7 @@ public class OwnerApplicationController {
     {
         String userIdStr = currentUserProvider.getCurrentUserId()
                 .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để thực hiện chức năng này."));
-        UUID userId = UUID.fromString(userIdStr);
+        UUID userId = BaseUtil.uuid(userIdStr);
 
         SubmitOwnerApplicationCommand command = new SubmitOwnerApplicationCommand(
                 userId,
@@ -93,7 +94,7 @@ public class OwnerApplicationController {
 
         String userIdStr = currentUserProvider.getCurrentUserId()
                 .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để thực hiện chức năng này."));
-        UUID userId = UUID.fromString(userIdStr);
+        UUID userId = BaseUtil.uuid(userIdStr);
 
         PageResult<OwnerApplicationResponseCommand> result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
                 ownerApplicationService.getMyOwnerApplications(query, userId)
