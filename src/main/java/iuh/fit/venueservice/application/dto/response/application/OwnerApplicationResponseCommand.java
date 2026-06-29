@@ -20,6 +20,7 @@ public record OwnerApplicationResponseCommand(
         String identityNumber,
         OwnerApplicationStatus status,
         String rejectReason,
+        LocalDateTime createdAt,
         UUID reviewerId,
         LocalDateTime reviewedAt,
         Address address,

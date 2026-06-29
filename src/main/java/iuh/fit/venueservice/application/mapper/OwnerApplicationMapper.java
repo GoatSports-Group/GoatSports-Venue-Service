@@ -29,6 +29,7 @@ public class OwnerApplicationMapper {
                 ownerApplication.getIdentityNumber(),
                 ownerApplication.getStatus(),
                 ownerApplication.getRejectReason(),
+                ownerApplication.getCreatedAt(),
                 ownerApplication.getReviewerId(),
                 ownerApplication.getReviewedAt(),
                 ownerApplication.getAddress(),

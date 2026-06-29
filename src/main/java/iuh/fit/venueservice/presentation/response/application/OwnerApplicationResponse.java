@@ -23,6 +23,7 @@ public class OwnerApplicationResponse {
     private String identityNumber;
     private String status;
     private String rejectReason;
+    private LocalDateTime createdAt;
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
 

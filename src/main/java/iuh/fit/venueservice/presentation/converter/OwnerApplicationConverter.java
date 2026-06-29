@@ -46,6 +46,7 @@ public class OwnerApplicationConverter {
                 .identityNumber(app.identityNumber())
                 .status(app.status().name())
                 .rejectReason(app.rejectReason())
+                .createdAt(app.createdAt())
                 .reviewerId(app.reviewerId())
                 .reviewedAt(app.reviewedAt())
                 .address(addr)

@@ -59,6 +59,7 @@ public class OwnerApplicationMapper {
                 .rejectReason(entity.getRejectReason())
                 .reviewerId(entity.getReviewerId())
                 .reviewedAt(entity.getReviewedAt())
+                .createdAt(entity.getCreatedAt())
                 .address(AddressMapper.toDomain(entity.getAddresses()))
                 .documents(
                         entity.getOwnerApplicationDocuments() != null

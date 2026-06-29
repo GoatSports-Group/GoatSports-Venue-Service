@@ -27,6 +27,7 @@ public class OwnerApplication {
     private String rejectReason;
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
+    private LocalDateTime createdAt;
 
     private Address address;
     private Set<OwnerApplicationDocument> documents;
