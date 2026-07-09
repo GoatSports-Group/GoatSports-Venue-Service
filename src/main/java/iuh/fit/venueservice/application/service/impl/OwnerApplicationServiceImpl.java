@@ -6,13 +6,16 @@ import iuh.fit.venueservice.application.dto.request.application.RejectOwnerAppli
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
-import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.UserRolePort;
+import iuh.fit.venueservice.application.port.StoragePort;
+import iuh.fit.venueservice.application.dto.response.file.UploadFileInfo;
 import iuh.fit.venueservice.application.port.event.OwnerApplicationEventPublisher;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueOwnerProfileRepository;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.util.BaseUtil;
+import java.util.ArrayList;
+import java.util.Map;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
@@ -31,22 +34,22 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
 
     private final OwnerApplicationRepository ownerApplicationRepository;
     private final VenueOwnerProfileRepository venueOwnerProfileRepository;
-    private final StoragePort storagePort;
     private final UserRolePort userRolePort;
     private final OwnerApplicationEventPublisher ownerApplicationEventPublisher;
+    private final StoragePort storagePort;
 
     public OwnerApplicationServiceImpl(
             OwnerApplicationRepository ownerApplicationRepository,
             VenueOwnerProfileRepository venueOwnerProfileRepository,
-            StoragePort storagePort,
             UserRolePort userRolePort,
-            OwnerApplicationEventPublisher ownerApplicationEventPublisher
+            OwnerApplicationEventPublisher ownerApplicationEventPublisher,
+            StoragePort storagePort
     ) {
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.venueOwnerProfileRepository = venueOwnerProfileRepository;
-        this.storagePort = storagePort;
         this.userRolePort = userRolePort;
         this.ownerApplicationEventPublisher = ownerApplicationEventPublisher;
+        this.storagePort = storagePort;
     }
 
     @Override
@@ -57,6 +60,13 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
         );
         if (hasActiveApplication) {
             throw new ServiceException("Người dùng đã có đơn đăng ký đang chờ duyệt hoặc đã được chấp thuận.");
+        }
+
+        if (command.documents() == null || command.documents().isEmpty()) {
+            throw new ServiceException("Tài liệu đăng ký không được để trống.");
+        }
+        if (command.documents().size() > 10) {
+            throw new ServiceException("Chỉ được tải lên tối đa 10 tài liệu cùng một lúc.");
         }
 
         Address address = Address.builder()
@@ -167,36 +177,43 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
     }
 
     private Set<OwnerApplicationDocument> uploadDocuments(List<SubmitOwnerApplicationCommand.DocumentInfo> documents) {
-        List<CompletableFuture<OwnerApplicationDocument>> futures =
-                documents.stream()
-                        .map(doc -> {
-                            String folder = getFolderForDocumentType(doc.documentType());
+        Map<String, List<SubmitOwnerApplicationCommand.DocumentInfo>> groupedDocs = documents.stream()
+                .collect(Collectors.groupingBy(doc -> getFolderForDocumentType(doc.documentType())));
 
-                            return storagePort.upload(
-                                            doc.content(),
-                                            doc.originalFileName(),
-                                            doc.contentType(),
-                                            folder
-                                    )
-                                    .thenApply(uploadResponse -> {
-                                        String key = uploadResponse.key();
+        List<CompletableFuture<List<OwnerApplicationDocument>>> futures = groupedDocs.entrySet().stream()
+                .map(entry -> {
+                    String folder = entry.getKey();
+                    List<SubmitOwnerApplicationCommand.DocumentInfo> docInfos = entry.getValue();
 
-                                        String fileUrlOrKey =
-                                                doc.documentType() == DocumentType.VENUE_IMAGE
-                                                        ? storagePort.getFileUrl(key)
-                                                        : key;
+                    List<UploadFileInfo> uploadFiles = docInfos.stream()
+                            .map(d -> new UploadFileInfo(d.content(), d.originalFileName(), d.contentType()))
+                            .toList();
 
-                                        return OwnerApplicationDocument.builder()
-                                                .documentType(doc.documentType())
-                                                .fileUrl(fileUrlOrKey)
-                                                .build();
-                                    });
-                        })
-                        .toList();
+                    return storagePort.uploadMultiple(uploadFiles, folder)
+                            .thenApply(responses -> {
+                                List<OwnerApplicationDocument> list = new ArrayList<>();
+                                for (int i = 0; i < docInfos.size(); i++) {
+                                    SubmitOwnerApplicationCommand.DocumentInfo docInfo = docInfos.get(i);
+                                    String key = responses.get(i).key();
+
+                                    String fileUrlOrKey =
+                                            docInfo.documentType() == DocumentType.VENUE_IMAGE
+                                                    ? storagePort.getFileUrl(key)
+                                                    : key;
+
+                                    list.add(OwnerApplicationDocument.builder()
+                                            .documentType(docInfo.documentType())
+                                            .fileUrl(fileUrlOrKey)
+                                            .build());
+                                }
+                                return list;
+                            });
+                })
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
-                        .map(CompletableFuture::join)
+                        .flatMap(f -> f.join().stream())
                         .collect(Collectors.toSet())
                 )
                 .join();

@@ -10,7 +10,6 @@ public class AddressMapper {
         if (domain == null) return null;
 
         return AddressEntity.builder()
-                        .addressId(domain.getAddressId())
                         .address(domain.getAddress())
                         .ward(domain.getWard())
                         .district(domain.getDistrict())

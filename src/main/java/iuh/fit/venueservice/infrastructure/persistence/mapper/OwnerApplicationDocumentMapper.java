@@ -10,7 +10,6 @@ public class OwnerApplicationDocumentMapper {
         if (domain == null) return null;
 
         return OwnerApplicationDocumentEntity.builder()
-                .ownerApplicationDocumentId(domain.getOwnerApplicationDocumentId())
                 .documentType(domain.getDocumentType())
                 .fileUrl(domain.getFileUrl())
                 .ownerApplication(parent)

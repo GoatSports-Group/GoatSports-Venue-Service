@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.persistence.mapper;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
 
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 public class OwnerApplicationMapper {
@@ -12,7 +13,6 @@ public class OwnerApplicationMapper {
 
         OwnerApplicationEntity entity =
                 OwnerApplicationEntity.builder()
-                        .ownerApplicationId(domain.getOwnerApplicationId())
                         .userId(domain.getUserId())
                         .fullName(domain.getFullName())
                         .phone(domain.getPhone())
@@ -66,7 +66,7 @@ public class OwnerApplicationMapper {
                                 ? entity.getOwnerApplicationDocuments().stream()
                                         .map(OwnerApplicationDocumentMapper::toDomain)
                                         .collect(Collectors.toSet())
-                                : java.util.Collections.emptySet()
+                                : Collections.emptySet()
                 )
                 .build();
     }

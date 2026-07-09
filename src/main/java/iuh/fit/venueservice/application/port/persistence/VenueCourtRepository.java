@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface VenueCourtRepository {
     VenueCourt save(VenueCourt venueCourt, Venue venue);
+
     Optional<VenueCourt> findById(UUID id);
 }

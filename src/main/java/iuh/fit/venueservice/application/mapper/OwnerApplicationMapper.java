@@ -7,6 +7,7 @@ import iuh.fit.venueservice.domain.entity.OwnerApplication;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class OwnerApplicationMapper {
 
@@ -14,7 +15,7 @@ public class OwnerApplicationMapper {
         Set<OwnerApplicationDocumentResponseCommand> documents = ownerApplication.getDocuments() != null
                 ? ownerApplication.getDocuments().stream()
                 .map(OwnerApplicationDocumentMapper::toOwnerApplicationDocumentResponseCommand)
-                .collect(java.util.stream.Collectors.toSet())
+                .collect(Collectors.toSet())
                 : Collections.emptySet();
 
         return new OwnerApplicationResponseCommand(

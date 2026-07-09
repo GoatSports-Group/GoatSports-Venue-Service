@@ -1,18 +1,13 @@
 package iuh.fit.venueservice.application.port;
 
-import iuh.fit.venueservice.application.dto.response.file.DownloadResponseCommand;
-import iuh.fit.venueservice.application.dto.response.file.FileResponseCommand;
+import iuh.fit.venueservice.application.dto.response.file.FileResponse;
+import iuh.fit.venueservice.application.dto.response.file.UploadFileInfo;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface StoragePort {
-    CompletableFuture<FileResponseCommand> upload(
-            byte[] content,
-            String originalFileName,
-            String contentType,
-            String folder
-    );
+    CompletableFuture<List<FileResponse>> uploadMultiple(List<UploadFileInfo> files, String folder);
+
     String getFileUrl(String key);
-    DownloadResponseCommand download(String key);
-    void delete(String key);
 }

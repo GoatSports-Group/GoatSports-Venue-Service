@@ -24,5 +24,6 @@ public record OwnerApplicationResponseCommand(
         UUID reviewerId,
         LocalDateTime reviewedAt,
         Address address,
+
         Set<OwnerApplicationDocumentResponseCommand> documents
 ) {}

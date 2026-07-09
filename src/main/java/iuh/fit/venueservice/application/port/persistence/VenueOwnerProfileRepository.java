@@ -7,7 +7,10 @@ import java.util.UUID;
 
 public interface VenueOwnerProfileRepository {
     VenueOwnerProfile save(VenueOwnerProfile profile);
+
     Optional<VenueOwnerProfile> findById(UUID id);
+
     Optional<VenueOwnerProfile> findByUserId(UUID userId);
+
     boolean existsByUserId(UUID userId);
 }
