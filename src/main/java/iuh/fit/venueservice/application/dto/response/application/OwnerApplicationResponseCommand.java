@@ -5,7 +5,6 @@ import iuh.fit.venueservice.domain.enums.BusinessType;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 
 public record OwnerApplicationResponseCommand(
@@ -23,7 +22,5 @@ public record OwnerApplicationResponseCommand(
         LocalDateTime createdAt,
         UUID reviewerId,
         LocalDateTime reviewedAt,
-        Address address,
-
-        Set<OwnerApplicationDocumentResponseCommand> documents
+        Address address
 ) {}

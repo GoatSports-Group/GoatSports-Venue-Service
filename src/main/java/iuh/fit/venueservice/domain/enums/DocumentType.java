@@ -4,10 +4,10 @@ import lombok.Getter;
 
 @Getter
 public enum DocumentType {
-    ID_CARD_FRONT("CCCD mặt trước"),
-    ID_CARD_BACK("CCCD mặt sau"),
+    ID_CARD("CCCD"),
     BUSINESS_LICENSE("Giấy phép hoạt động"),
-    VENUE_IMAGE("Ảnh sân");
+    VENUE_IMAGE("Ảnh sân"),
+    OTHER("Khác");
 
     private final String value;
     DocumentType(String value) {

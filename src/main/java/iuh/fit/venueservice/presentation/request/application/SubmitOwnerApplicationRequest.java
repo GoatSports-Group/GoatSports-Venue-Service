@@ -1,14 +1,9 @@
 package iuh.fit.venueservice.presentation.request.application;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @Getter
 @Setter
@@ -41,18 +36,4 @@ public class SubmitOwnerApplicationRequest {
     private String ward;
     @NotBlank(message = "Thành phố không được để trống")
     private String city;
-    @NotEmpty(message = "Tài liệu đăng ký không được để trống")
-    @Valid
-    private List<DocumentRequest> documents;
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class DocumentRequest {
-        @NotNull(message = "Loại tài liệu không được để trống")
-        private String documentType;
-        @NotNull(message = "File không được để trống")
-        private MultipartFile fileUrl;
-    }
 }

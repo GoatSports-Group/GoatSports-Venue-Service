@@ -1,23 +1,12 @@
 package iuh.fit.venueservice.application.mapper;
 
-import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationDocumentResponseCommand;
 import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 public class OwnerApplicationMapper {
 
     public static OwnerApplicationResponseCommand toOwnerApplicationResponseCommand(OwnerApplication ownerApplication) {
-        Set<OwnerApplicationDocumentResponseCommand> documents = ownerApplication.getDocuments() != null
-                ? ownerApplication.getDocuments().stream()
-                .map(OwnerApplicationDocumentMapper::toOwnerApplicationDocumentResponseCommand)
-                .collect(Collectors.toSet())
-                : Collections.emptySet();
-
         return new OwnerApplicationResponseCommand(
                 ownerApplication.getOwnerApplicationId(),
                 ownerApplication.getUserId(),
@@ -33,8 +22,7 @@ public class OwnerApplicationMapper {
                 ownerApplication.getCreatedAt(),
                 ownerApplication.getReviewerId(),
                 ownerApplication.getReviewedAt(),
-                ownerApplication.getAddress(),
-                documents
+                ownerApplication.getAddress()
         );
     }
 

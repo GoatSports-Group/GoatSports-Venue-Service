@@ -3,9 +3,6 @@ package iuh.fit.venueservice.presentation.converter;
 import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
 import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 public class OwnerApplicationConverter {
 
     public static OwnerApplicationResponse toResponse(OwnerApplicationResponseCommand app) {
@@ -21,17 +18,6 @@ public class OwnerApplicationConverter {
                     .city(app.address().getCity())
                     .province(app.address().getProvince())
                     .build();
-        }
-
-        List<OwnerApplicationResponse.DocumentResponse> docs = null;
-        if (app.documents() != null) {
-            docs = app.documents().stream()
-                    .map(doc -> OwnerApplicationResponse.DocumentResponse.builder()
-                            .ownerApplicationDocumentId(doc.ownerApplicationDocumentId())
-                            .documentType(doc.documentType().name())
-                            .fileUrl(doc.fileUrl())
-                            .build())
-                    .collect(Collectors.toList());
         }
 
         return OwnerApplicationResponse.builder()
@@ -50,7 +36,6 @@ public class OwnerApplicationConverter {
                 .reviewerId(app.reviewerId())
                 .reviewedAt(app.reviewedAt())
                 .address(addr)
-                .documents(docs)
                 .build();
     }
 

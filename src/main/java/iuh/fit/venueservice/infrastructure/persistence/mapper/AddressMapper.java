@@ -10,13 +10,14 @@ public class AddressMapper {
         if (domain == null) return null;
 
         return AddressEntity.builder()
-                        .address(domain.getAddress())
-                        .ward(domain.getWard())
-                        .district(domain.getDistrict())
-                        .city(domain.getCity())
-                        .province(domain.getProvince())
-                        .ownerApplication(parent)
-                        .build();
+            .addressId(domain.getAddressId())
+            .address(domain.getAddress())
+            .ward(domain.getWard())
+            .district(domain.getDistrict())
+            .city(domain.getCity())
+            .province(domain.getProvince())
+            .ownerApplication(parent)
+            .build();
     }
 
     public static Address toDomain(AddressEntity entity) {

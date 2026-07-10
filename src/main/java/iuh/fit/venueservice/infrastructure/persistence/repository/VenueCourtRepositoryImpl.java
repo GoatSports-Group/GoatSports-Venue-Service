@@ -8,7 +8,6 @@ import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueCourtMapper;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueCourtRepository;
-import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +18,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VenueCourtRepositoryImpl implements VenueCourtRepository {
     private final JpaVenueCourtRepository jpaRepository;
-    private final JpaVenueRepository jpaVenueRepository;
 
     @Override
     public VenueCourt save(VenueCourt venueCourt, Venue venue) {

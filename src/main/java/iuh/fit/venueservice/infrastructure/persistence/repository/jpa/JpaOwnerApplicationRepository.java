@@ -14,5 +14,6 @@ public interface JpaOwnerApplicationRepository extends JpaRepository<OwnerApplic
         JpaSpecificationExecutor<OwnerApplicationEntity>
 {
     List<OwnerApplicationEntity> findByUserId(UUID userId);
+
     boolean existsByUserIdAndStatusIn(UUID userId, List<OwnerApplicationStatus> statuses);
 }

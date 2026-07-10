@@ -13,6 +13,7 @@ public class OwnerApplicationMapper {
 
         OwnerApplicationEntity entity =
                 OwnerApplicationEntity.builder()
+                        .ownerApplicationId(domain.getOwnerApplicationId())
                         .userId(domain.getUserId())
                         .fullName(domain.getFullName())
                         .phone(domain.getPhone())
@@ -29,14 +30,6 @@ public class OwnerApplicationMapper {
 
         if (domain.getAddress() != null) {
             entity.setAddresses(AddressMapper.toEntity(domain.getAddress(), entity));
-        }
-
-        if (domain.getDocuments() != null) {
-            entity.setOwnerApplicationDocuments(
-                    domain.getDocuments().stream()
-                            .map(doc -> OwnerApplicationDocumentMapper.toEntity(doc, entity))
-                            .collect(Collectors.toSet())
-            );
         }
 
         return entity;
@@ -61,13 +54,6 @@ public class OwnerApplicationMapper {
                 .reviewedAt(entity.getReviewedAt())
                 .createdAt(entity.getCreatedAt())
                 .address(AddressMapper.toDomain(entity.getAddresses()))
-                .documents(
-                        entity.getOwnerApplicationDocuments() != null
-                                ? entity.getOwnerApplicationDocuments().stream()
-                                        .map(OwnerApplicationDocumentMapper::toDomain)
-                                        .collect(Collectors.toSet())
-                                : Collections.emptySet()
-                )
                 .build();
     }
 }

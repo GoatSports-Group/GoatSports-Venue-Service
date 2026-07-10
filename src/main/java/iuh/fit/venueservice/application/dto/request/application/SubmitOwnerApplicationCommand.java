@@ -1,8 +1,5 @@
 package iuh.fit.venueservice.application.dto.request.application;
 
-import iuh.fit.venueservice.domain.enums.BusinessType;
-import iuh.fit.venueservice.domain.enums.DocumentType;
-import java.util.List;
 import java.util.UUID;
 
 public record SubmitOwnerApplicationCommand(
@@ -12,21 +9,12 @@ public record SubmitOwnerApplicationCommand(
         String email,
         String identityNumber,
         String businessName,
-        BusinessType businessType,
+        String businessType,
         String taxCode,
         
         String address,
         String province,
         String district,
         String ward,
-        String city,
-
-        List<DocumentInfo> documents
-) {
-    public record DocumentInfo(
-            DocumentType documentType,
-            byte[] content,
-            String originalFileName,
-            String contentType
-    ) {}
-}
+        String city
+) {}

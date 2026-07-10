@@ -10,8 +10,6 @@ import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.util.BaseUtil;
-import iuh.fit.venueservice.domain.enums.BusinessType;
-import iuh.fit.venueservice.domain.enums.DocumentType;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
 import iuh.fit.venueservice.presentation.request.application.SubmitOwnerApplicationRequest;
 import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
@@ -34,9 +32,9 @@ public class OwnerApplicationController {
     private final OwnerApplicationService ownerApplicationService;
     private final CurrentUserProvider currentUserProvider;
 
-    @PostMapping(consumes = {"multipart/form-data"})
+    @PostMapping
     public ResponseEntity<OwnerApplicationResponse> submitApplication(
-            @Valid @ModelAttribute SubmitOwnerApplicationRequest request
+            @Valid @RequestBody SubmitOwnerApplicationRequest request
     ) throws ServiceException
     {
         String userIdStr = currentUserProvider.getCurrentUserId()
@@ -50,31 +48,13 @@ public class OwnerApplicationController {
                 request.getEmail(),
                 request.getIdentityNumber(),
                 request.getBusinessName(),
-                BusinessType.valueOf(request.getBusinessType()),
+                request.getBusinessType(),
                 request.getTaxCode(),
                 request.getAddress(),
                 request.getProvince(),
                 request.getDistrict(),
                 request.getWard(),
-                request.getCity(),
-                request.getDocuments().stream()
-                        .map(doc -> {
-                            try {
-                                return new SubmitOwnerApplicationCommand.DocumentInfo(
-                                        DocumentType.valueOf(doc.getDocumentType()),
-                                        doc.getFileUrl().getBytes(),
-                                        doc.getFileUrl().getOriginalFilename(),
-                                        doc.getFileUrl().getContentType()
-                                );
-                            } catch (java.io.IOException e) {
-                                try {
-                                    throw new ServiceException("Không thể đọc file đính kèm: " + doc.getDocumentType());
-                                } catch (ServiceException ex) {
-                                    throw new RuntimeException(ex);
-                                }
-                            }
-                        })
-                        .collect(Collectors.toList())
+                request.getCity()
         );
 
         OwnerApplicationResponseCommand result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
