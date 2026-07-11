@@ -1,10 +1,12 @@
 package iuh.fit.venueservice.application.dto.response.application;
 
 import iuh.fit.venueservice.domain.entity.Address;
+import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
 import iuh.fit.venueservice.domain.enums.BusinessType;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 public record OwnerApplicationResponseCommand(
@@ -22,5 +24,6 @@ public record OwnerApplicationResponseCommand(
         LocalDateTime createdAt,
         UUID reviewerId,
         LocalDateTime reviewedAt,
-        Address address
+        Address address,
+        Set<OwnerApplicationDocument> documents
 ) {}

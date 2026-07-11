@@ -22,7 +22,8 @@ public class OwnerApplicationMapper {
                 ownerApplication.getCreatedAt(),
                 ownerApplication.getReviewerId(),
                 ownerApplication.getReviewedAt(),
-                ownerApplication.getAddress()
+                ownerApplication.getAddress(),
+                ownerApplication.getDocuments()
         );
     }
 

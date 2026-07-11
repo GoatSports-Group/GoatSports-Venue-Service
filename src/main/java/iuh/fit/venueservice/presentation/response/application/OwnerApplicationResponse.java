@@ -1,8 +1,10 @@
 package iuh.fit.venueservice.presentation.response.application;
 
+import iuh.fit.venueservice.domain.enums.DocumentType;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -27,6 +29,7 @@ public class OwnerApplicationResponse {
     private LocalDateTime reviewedAt;
 
     private AddressResponse address;
+    private Set<DocumentResponse> documents;
 
     @Getter
     @Setter
@@ -40,5 +43,16 @@ public class OwnerApplicationResponse {
         private String district;
         private String city;
         private String province;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DocumentResponse {
+        private UUID ownerApplicationDocumentId;
+        private DocumentType documentType;
+        private String fileUrl;
     }
 }

@@ -54,6 +54,12 @@ public class OwnerApplicationMapper {
                 .reviewedAt(entity.getReviewedAt())
                 .createdAt(entity.getCreatedAt())
                 .address(AddressMapper.toDomain(entity.getAddresses()))
+                .documents(entity.getOwnerApplicationDocuments() != null
+                    ? entity.getOwnerApplicationDocuments().stream()
+                        .map(OwnerApplicationDocumentMapper::toDomain)
+                        .collect(Collectors.toSet())
+                    : Collections.emptySet()
+                )
                 .build();
     }
 }
