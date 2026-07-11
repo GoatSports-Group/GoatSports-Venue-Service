@@ -48,12 +48,44 @@ public class OwnerApplicationEventPublisherAdapter implements OwnerApplicationEv
 
     @Override
     public void publishOwnerApplicationRejectedAfterCommit(OwnerApplication ownerApplication) {
+        OwnerApplicationEvent event = toOwnerApplicationEvent(ownerApplication, OwnerApplicationEventType.REJECTED);
+        if(event == null) {
+            return;
+        }
 
+        if(TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            publishOwnerApplicationEvent(ownerApplication.getUserId().toString(), event);
+                        }
+                    }
+            );
+        } else {
+            publishOwnerApplicationEvent(ownerApplication.getUserId().toString(), event);
+        }
     }
 
     @Override
     public void publishOwnerApplicationApprovedAfterCommit(OwnerApplication ownerApplication) {
+        OwnerApplicationEvent event = toOwnerApplicationEvent(ownerApplication, OwnerApplicationEventType.APPROVED);
+        if(event == null) {
+            return;
+        }
 
+        if(TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            publishOwnerApplicationEvent(ownerApplication.getUserId().toString(), event);
+                        }
+                    }
+            );
+        } else {
+            publishOwnerApplicationEvent(ownerApplication.getUserId().toString(), event);
+        }
     }
 
     @Override
