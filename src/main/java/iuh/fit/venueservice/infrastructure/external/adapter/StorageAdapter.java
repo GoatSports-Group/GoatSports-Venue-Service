@@ -19,7 +19,7 @@ public class StorageAdapter implements StoragePort {
     public List<String> confirmFile(List<FileMoveRequest> requests) throws ServiceException {
         BaseResponse<List<String>> response = storageClient.confirmFile(requests);
 
-        if(response.getError() != null || response.getMessage() != null) {
+        if(response.getError() != null) {
             throw new ServiceException("Xác nhận tài liệu thất bại: " + response.getMessage());
         }
 

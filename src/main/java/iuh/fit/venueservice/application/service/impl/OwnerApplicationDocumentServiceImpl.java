@@ -39,26 +39,27 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
             String ownerApplicationId, List<FileMoveRequest> requests
     ) throws ServiceException
     {
+        String currentUserId = currentUserProvider.getCurrentUserId().orElseThrow(
+                () -> new ServiceException("Cần đăng nhập để thực hiện chức năng này")
+        );
         UUID ownerApplicationIdUUID = BaseUtil.uuid(ownerApplicationId);
         OwnerApplication ownerApplication = ownerApplicationRepository.findById(ownerApplicationIdUUID)
                 .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đăng ký: " + ownerApplicationId));
 
-        if(!ownerApplication.getUserId().toString().equalsIgnoreCase(currentUserProvider.getCurrentUserId().toString())) {
+        if(!ownerApplication.getUserId().toString().equalsIgnoreCase(currentUserId)) {
             throw new ServiceException("Bạn không có quyền thực hiện hành động này");
         }
 
         List<String> storageResponse = storagePort.confirmFile(requests);
 
-        storageResponse.forEach(
-            objectKey -> {
-                OwnerApplicationDocument document = OwnerApplicationDocument.builder()
+        for (String objectKey : storageResponse) {
+            OwnerApplicationDocument document = OwnerApplicationDocument.builder()
                     .documentType(getDocumentType(objectKey))
                     .fileUrl(objectKey)
                     .build();
 
-                ownerApplicationDocumentRepository.save(document, ownerApplication);
-            }
-        );
+            ownerApplicationDocumentRepository.save(document, ownerApplication);
+        }
     }
 
     private DocumentType getDocumentType(String path) {
