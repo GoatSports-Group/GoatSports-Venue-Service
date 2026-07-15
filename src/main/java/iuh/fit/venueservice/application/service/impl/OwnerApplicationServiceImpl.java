@@ -72,11 +72,7 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .address(address)
                 .build();
 
-        OwnerApplication saved = ownerApplicationRepository.save(ownerApplication);
-
-        ownerApplicationEventPublisher.publishOwnerApplicationSubmittedAfterCommit(saved);
-
-        return saved;
+        return ownerApplicationRepository.save(ownerApplication);
     }
 
     @Override

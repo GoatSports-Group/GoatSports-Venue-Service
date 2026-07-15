@@ -32,13 +32,15 @@ public class ApplicationServiceConfig {
             StoragePort storagePort,
             OwnerApplicationRepository ownerApplicationRepository,
             OwnerApplicationDocumentRepository ownerApplicationDocumentRepository,
-            CurrentUserProvider currentUserProvider
+            CurrentUserProvider currentUserProvider,
+            OwnerApplicationEventPublisher ownerApplicationEventPublisher
     )
     {
         return new OwnerApplicationDocumentServiceImpl(
                 storagePort,
                 ownerApplicationRepository, ownerApplicationDocumentRepository,
-                currentUserProvider
+                currentUserProvider,
+                ownerApplicationEventPublisher
         );
     }
 
