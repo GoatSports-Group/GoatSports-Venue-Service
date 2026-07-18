@@ -1,6 +1,5 @@
 package iuh.fit.venueservice.presentation.response.application;
 
-import iuh.fit.venueservice.domain.enums.DocumentType;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -52,7 +51,7 @@ public class OwnerApplicationResponse {
     @AllArgsConstructor
     public static class DocumentResponse {
         private UUID ownerApplicationDocumentId;
-        private DocumentType documentType;
+        private String documentType;
         private String fileUrl;
     }
 }

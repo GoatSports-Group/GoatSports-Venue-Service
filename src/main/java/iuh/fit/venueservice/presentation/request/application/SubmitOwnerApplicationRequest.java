@@ -11,6 +11,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SubmitOwnerApplicationRequest {
+    @NotBlank(message = "Mã người dùng không được để trống")
+    private String userId;
     @NotBlank(message = "Họ tên không được để trống")
     private String fullName;
     @NotBlank(message = "Số điện thoại không được để trống")

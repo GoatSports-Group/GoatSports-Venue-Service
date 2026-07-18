@@ -64,8 +64,6 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
 
             ownerApplicationDocumentRepository.save(document, ownerApplication);
         }
-
-        ownerApplicationEventPublisher.publishOwnerApplicationSubmittedAfterCommit(ownerApplication);
     }
 
     private DocumentType getDocumentType(String path) {

@@ -28,7 +28,7 @@ public class OwnerApplicationConverter {
             docs = app.documents().stream()
                     .map(doc -> OwnerApplicationResponse.DocumentResponse.builder()
                             .ownerApplicationDocumentId(doc.getOwnerApplicationDocumentId())
-                            .documentType(doc.getDocumentType())
+                            .documentType(doc.getDocumentType().name())
                             .fileUrl(doc.getFileUrl())
                             .build()
                     )

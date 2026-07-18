@@ -1,4 +1,4 @@
-package iuh.fit.venueservice.presentation.controller;
+package iuh.fit.venueservice.presentation.controller.internal;
 
 import iuh.fit.venueservice.application.dto.request.file.FileMoveRequest;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/documents")
+@RequestMapping("/internal/documents")
 @RequiredArgsConstructor
-public class OwnerApplicationDocumentController {
+public class OwnerApplicationDocumentInternalController {
     private final OwnerApplicationDocumentService ownerApplicationDocumentService;
 
     @PostMapping
@@ -33,5 +33,4 @@ public class OwnerApplicationDocumentController {
 
         return ResponseEntity.ok().build();
     }
-
 }
