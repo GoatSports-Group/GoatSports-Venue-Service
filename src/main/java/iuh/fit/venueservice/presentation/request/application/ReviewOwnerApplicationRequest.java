@@ -7,7 +7,9 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RejectOwnerApplicationRequest {
+public class ReviewOwnerApplicationRequest {
+    @NotBlank(message = "Người duyệt không được để trống")
+    private String reviewerId;
     @NotBlank(message = "Lý do từ chối không được để trống")
     private String rejectReason;
 }

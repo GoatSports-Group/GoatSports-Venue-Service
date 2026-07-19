@@ -1,8 +1,6 @@
 package iuh.fit.venueservice.infrastructure.decorator;
 
 import iuh.fit.venueservice.application.dto.PageFilter;
-import iuh.fit.venueservice.application.dto.request.application.ApproveOwnerApplicationCommand;
-import iuh.fit.venueservice.application.dto.request.application.RejectOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -28,14 +26,20 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
 
     @Override
     @Transactional(rollbackFor = ServiceException.class)
-    public OwnerApplication rejectOwnerApplication(RejectOwnerApplicationCommand command) throws ServiceException {
-        return ownerApplicationServiceImpl.rejectOwnerApplication(command);
+    public OwnerApplication rejectOwnerApplication(UUID applicationId, UUID reviewerId, String rejectReason) throws ServiceException {
+        return ownerApplicationServiceImpl.rejectOwnerApplication(applicationId, reviewerId, rejectReason);
     }
 
     @Override
     @Transactional(rollbackFor = ServiceException.class)
-    public OwnerApplication approveOwnerApplication(ApproveOwnerApplicationCommand command) throws ServiceException {
-        return ownerApplicationServiceImpl.approveOwnerApplication(command);
+    public OwnerApplication approveOwnerApplication(UUID applicationId, UUID reviewerId) throws ServiceException {
+        return ownerApplicationServiceImpl.approveOwnerApplication(applicationId, reviewerId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public void createVenueOwnerProfile(UUID applicationId) throws ServiceException {
+        ownerApplicationServiceImpl.createVenueOwnerProfile(applicationId);
     }
 
     @Override

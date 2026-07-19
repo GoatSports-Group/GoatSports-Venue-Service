@@ -3,7 +3,6 @@ package iuh.fit.venueservice.application.service.impl;
 import iuh.fit.venueservice.application.dto.request.file.FileMoveRequest;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.StoragePort;
-import iuh.fit.venueservice.application.port.event.OwnerApplicationEventPublisher;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationDocumentRepository;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
@@ -21,21 +20,18 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
     private final OwnerApplicationDocumentRepository ownerApplicationDocumentRepository;
     private final StoragePort storagePort;
     private final CurrentUserProvider currentUserProvider;
-    private final OwnerApplicationEventPublisher ownerApplicationEventPublisher;
 
     public OwnerApplicationDocumentServiceImpl(
             StoragePort storagePort,
             OwnerApplicationRepository ownerApplicationRepository,
             OwnerApplicationDocumentRepository ownerApplicationDocumentRepository,
-            CurrentUserProvider currentUserProvider,
-            OwnerApplicationEventPublisher ownerApplicationEventPublisher
+            CurrentUserProvider currentUserProvider
     )
     {
         this.storagePort = storagePort;
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.ownerApplicationDocumentRepository = ownerApplicationDocumentRepository;
         this.currentUserProvider = currentUserProvider;
-        this.ownerApplicationEventPublisher = ownerApplicationEventPublisher;
     }
 
     @Override

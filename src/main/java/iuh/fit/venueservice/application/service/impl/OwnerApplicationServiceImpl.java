@@ -1,13 +1,9 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.PageFilter;
-import iuh.fit.venueservice.application.dto.request.application.ApproveOwnerApplicationCommand;
-import iuh.fit.venueservice.application.dto.request.application.RejectOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
-import iuh.fit.venueservice.application.port.UserRolePort;
-import iuh.fit.venueservice.application.port.event.OwnerApplicationEventPublisher;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueOwnerProfileRepository;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
@@ -26,19 +22,13 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
 
     private final OwnerApplicationRepository ownerApplicationRepository;
     private final VenueOwnerProfileRepository venueOwnerProfileRepository;
-    private final UserRolePort userRolePort;
-    private final OwnerApplicationEventPublisher ownerApplicationEventPublisher;
 
     public OwnerApplicationServiceImpl(
             OwnerApplicationRepository ownerApplicationRepository,
-            VenueOwnerProfileRepository venueOwnerProfileRepository,
-            UserRolePort userRolePort,
-            OwnerApplicationEventPublisher ownerApplicationEventPublisher
+            VenueOwnerProfileRepository venueOwnerProfileRepository
     ) {
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.venueOwnerProfileRepository = venueOwnerProfileRepository;
-        this.userRolePort = userRolePort;
-        this.ownerApplicationEventPublisher = ownerApplicationEventPublisher;
     }
 
     @Override
@@ -76,34 +66,34 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
     }
 
     @Override
-    public OwnerApplication rejectOwnerApplication(RejectOwnerApplicationCommand command) throws ServiceException {
-        OwnerApplication application = ownerApplicationRepository.findById(command.applicationId())
+    public OwnerApplication rejectOwnerApplication(UUID applicationId, UUID reviewerId, String rejectReason) throws ServiceException {
+        OwnerApplication application = ownerApplicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
 
-        if (application.getStatus() != OwnerApplicationStatus.PENDING) {
-            throw new ServiceException("Đơn đăng ký không ở trạng thái PENDING");
-        }
-
         application.setStatus(OwnerApplicationStatus.REJECTED);
-        application.setRejectReason(command.rejectReason());
-        application.setReviewerId(command.reviewerId());
+        application.setRejectReason(rejectReason);
+        application.setReviewerId(reviewerId);
         application.setReviewedAt(LocalDateTime.now());
 
-        OwnerApplication saved = ownerApplicationRepository.save(application);
-
-        ownerApplicationEventPublisher.publishOwnerApplicationRejectedAfterCommit(saved);
-
-        return saved;
+        return ownerApplicationRepository.save(application);
     }
 
     @Override
-    public OwnerApplication approveOwnerApplication(ApproveOwnerApplicationCommand command) throws ServiceException {
-        OwnerApplication application = ownerApplicationRepository.findById(command.applicationId())
+    public OwnerApplication approveOwnerApplication(UUID applicationId, UUID reviewerId) throws ServiceException {
+        OwnerApplication application = ownerApplicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
 
-        if (application.getStatus() != OwnerApplicationStatus.PENDING) {
-            throw new ServiceException("Đơn đăng ký không ở trạng thái PENDING");
-        }
+        application.setStatus(OwnerApplicationStatus.APPROVED);
+        application.setReviewerId(reviewerId);
+        application.setReviewedAt(LocalDateTime.now());
+
+        return ownerApplicationRepository.save(application);
+    }
+
+    @Override
+    public void createVenueOwnerProfile(UUID applicationId) throws ServiceException {
+        OwnerApplication application = ownerApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
 
         VenueOwnerProfile profile = VenueOwnerProfile.builder()
                 .userId(application.getUserId())
@@ -114,23 +104,8 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .verified(false)
                 .ownerApplication(application)
                 .build();
+
         venueOwnerProfileRepository.save(profile);
-
-        try {
-            userRolePort.assignVenueOwnerRole(application.getUserId());
-        } catch (Exception ex) {
-            throw new ServiceException("Gọi auth-service cấp quyền OWNER_VENUE thất bại. Chi tiết: " + ex.getMessage());
-        }
-
-        application.setStatus(OwnerApplicationStatus.APPROVED);
-        application.setReviewerId(command.reviewerId());
-        application.setReviewedAt(LocalDateTime.now());
-
-        OwnerApplication saved = ownerApplicationRepository.save(application);
-
-        ownerApplicationEventPublisher.publishOwnerApplicationApprovedAfterCommit(saved);
-
-        return saved;
     }
 
     @Override

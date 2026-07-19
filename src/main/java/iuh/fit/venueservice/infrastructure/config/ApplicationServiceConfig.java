@@ -1,7 +1,6 @@
 package iuh.fit.venueservice.infrastructure.config;
 
 import iuh.fit.venueservice.application.port.*;
-import iuh.fit.venueservice.application.port.event.OwnerApplicationEventPublisher;
 import iuh.fit.venueservice.application.port.persistence.*;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationDocumentServiceImpl;
@@ -17,13 +16,10 @@ public class ApplicationServiceConfig {
     @Bean
     public OwnerApplicationServiceImpl ownerApplicationService(
             OwnerApplicationRepository ownerApplicationRepository,
-            VenueOwnerProfileRepository venueOwnerProfileRepository,
-            UserRolePort userRolePort,
-            OwnerApplicationEventPublisher ownerApplicationEventPublisher
+            VenueOwnerProfileRepository venueOwnerProfileRepository
     ) {
         return new OwnerApplicationServiceImpl(
-                ownerApplicationRepository, venueOwnerProfileRepository,
-                userRolePort, ownerApplicationEventPublisher
+                ownerApplicationRepository, venueOwnerProfileRepository
         );
     }
 
@@ -32,15 +28,13 @@ public class ApplicationServiceConfig {
             StoragePort storagePort,
             OwnerApplicationRepository ownerApplicationRepository,
             OwnerApplicationDocumentRepository ownerApplicationDocumentRepository,
-            CurrentUserProvider currentUserProvider,
-            OwnerApplicationEventPublisher ownerApplicationEventPublisher
+            CurrentUserProvider currentUserProvider
     )
     {
         return new OwnerApplicationDocumentServiceImpl(
                 storagePort,
                 ownerApplicationRepository, ownerApplicationDocumentRepository,
-                currentUserProvider,
-                ownerApplicationEventPublisher
+                currentUserProvider
         );
     }
 
