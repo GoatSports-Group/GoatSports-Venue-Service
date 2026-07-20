@@ -28,8 +28,18 @@ public class OwnerApplicationMapper {
                         .reviewedAt(domain.getReviewedAt())
                         .build();
 
+        entity.setCreatedAt(domain.getCreatedAt());
+
         if (domain.getAddress() != null) {
             entity.setAddresses(AddressMapper.toEntity(domain.getAddress(), entity));
+        }
+
+        if (domain.getDocuments() != null) {
+            entity.setOwnerApplicationDocuments(
+                    domain.getDocuments().stream()
+                            .map(doc -> OwnerApplicationDocumentMapper.toEntity(doc, entity))
+                            .collect(Collectors.toSet())
+            );
         }
 
         return entity;

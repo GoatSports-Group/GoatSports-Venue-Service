@@ -25,7 +25,6 @@ public class VenueMapper {
                         .totalReviews(domain.getTotalReviews())
                         .phone(domain.getPhone())
                         .email(domain.getEmail())
-                        .venueOwnerProfileEntity(VenueOwnerProfileMapper.toEntity(domain.getVenueOwnerProfile()))
                         .build();
 
         if (domain.getCourts() != null) {

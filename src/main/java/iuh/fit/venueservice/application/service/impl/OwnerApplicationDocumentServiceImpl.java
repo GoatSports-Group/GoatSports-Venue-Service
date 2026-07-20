@@ -5,7 +5,6 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationDocumentRepository;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
-import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerApplicationDocumentService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
@@ -19,19 +18,16 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
     private final OwnerApplicationRepository ownerApplicationRepository;
     private final OwnerApplicationDocumentRepository ownerApplicationDocumentRepository;
     private final StoragePort storagePort;
-    private final CurrentUserProvider currentUserProvider;
 
     public OwnerApplicationDocumentServiceImpl(
             StoragePort storagePort,
             OwnerApplicationRepository ownerApplicationRepository,
-            OwnerApplicationDocumentRepository ownerApplicationDocumentRepository,
-            CurrentUserProvider currentUserProvider
+            OwnerApplicationDocumentRepository ownerApplicationDocumentRepository
     )
     {
         this.storagePort = storagePort;
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.ownerApplicationDocumentRepository = ownerApplicationDocumentRepository;
-        this.currentUserProvider = currentUserProvider;
     }
 
     @Override
@@ -39,16 +35,9 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
             String ownerApplicationId, List<FileMoveRequest> requests
     ) throws ServiceException
     {
-        String currentUserId = currentUserProvider.getCurrentUserId().orElseThrow(
-                () -> new ServiceException("Cần đăng nhập để thực hiện chức năng này")
-        );
         UUID ownerApplicationIdUUID = BaseUtil.uuid(ownerApplicationId);
         OwnerApplication ownerApplication = ownerApplicationRepository.findById(ownerApplicationIdUUID)
                 .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đăng ký: " + ownerApplicationId));
-
-        if(!ownerApplication.getUserId().toString().equalsIgnoreCase(currentUserId)) {
-            throw new ServiceException("Bạn không có quyền thực hiện hành động này");
-        }
 
         List<String> storageResponse = storagePort.confirmFile(requests);
 
