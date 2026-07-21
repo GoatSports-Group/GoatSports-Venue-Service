@@ -3,33 +3,22 @@ package iuh.fit.venueservice.infrastructure.persistence.mapper;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.infrastructure.persistence.entity.AddressEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
-public class AddressMapper {
+@Mapper(componentModel = "spring")
+public interface AddressMapper {
+    @Mapping(target = "ownerApplication", ignore = true)
+    AddressEntity createEntity(Address domain);
 
-    public static AddressEntity toEntity(Address domain, OwnerApplicationEntity parent) {
-        if (domain == null) return null;
+    void updateEntity(Address domain, @MappingTarget AddressEntity entity);
 
-        return AddressEntity.builder()
-            .addressId(domain.getAddressId())
-            .address(domain.getAddress())
-            .ward(domain.getWard())
-            .district(domain.getDistrict())
-            .city(domain.getCity())
-            .province(domain.getProvince())
-            .ownerApplication(parent)
-            .build();
-    }
+    Address toDomain(AddressEntity entity);
 
-    public static Address toDomain(AddressEntity entity) {
-        if (entity == null) return null;
-
-        return Address.builder()
-                .addressId(entity.getAddressId())
-                .address(entity.getAddress())
-                .ward(entity.getWard())
-                .district(entity.getDistrict())
-                .city(entity.getCity())
-                .province(entity.getProvince())
-                .build();
+    default AddressEntity createEntity(Address domain, OwnerApplicationEntity parent){
+        AddressEntity entity = createEntity(domain);
+        entity.setOwnerApplication(parent);
+        return entity;
     }
 }

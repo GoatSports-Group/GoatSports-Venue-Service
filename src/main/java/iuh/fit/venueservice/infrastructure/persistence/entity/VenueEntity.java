@@ -16,8 +16,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"venueCourts", "venueOwnerProfile"})
-public class VenueEntity extends BaseEntity{
+@ToString(exclude = { "venueCourts", "venueOwnerProfile" })
+public class VenueEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
@@ -36,10 +36,10 @@ public class VenueEntity extends BaseEntity{
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_owner_profile_id", nullable = false, unique = true)
-    private VenueOwnerProfileEntity venueOwnerProfileEntity;
+    private VenueOwnerProfileEntity venueOwnerProfile;
 
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     @Builder.Default
-    private Set<VenueCourtEntity> venueCourtEntities = new HashSet<>();
+    private Set<VenueCourtEntity> venueCourts = new HashSet<>();
 }

@@ -2,74 +2,52 @@ package iuh.fit.venueservice.infrastructure.persistence.mapper;
 
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
-import java.util.Collections;
-import java.util.stream.Collectors;
+@Mapper(componentModel = "spring", uses = {AddressMapper.class, OwnerApplicationDocumentMapper.class})
+public interface OwnerApplicationMapper {
 
-public class OwnerApplicationMapper {
+    @Mapping(target = "address", ignore = true)
+    @Mapping(target = "ownerApplicationDocuments", ignore = true)
+    @Mapping(target = "venueOwnerProfile", ignore = true)
+    OwnerApplicationEntity createEntity(OwnerApplication domain);
 
-    public static OwnerApplicationEntity toEntity(OwnerApplication domain) {
-        if (domain == null) return null;
+    @Mapping(target = "ownerApplicationId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "address", ignore = true)
+    @Mapping(target = "ownerApplicationDocuments", ignore = true)
+    @Mapping(target = "venueOwnerProfile", ignore = true)
+    void updateEntity(OwnerApplication domain, @MappingTarget OwnerApplicationEntity entity);
 
-        OwnerApplicationEntity entity =
-                OwnerApplicationEntity.builder()
-                        .ownerApplicationId(domain.getOwnerApplicationId())
-                        .userId(domain.getUserId())
-                        .fullName(domain.getFullName())
-                        .phone(domain.getPhone())
-                        .email(domain.getEmail())
-                        .businessName(domain.getBusinessName())
-                        .businessType(domain.getBusinessType())
-                        .taxCode(domain.getTaxCode())
-                        .identityNumber(domain.getIdentityNumber())
-                        .status(domain.getStatus())
-                        .rejectReason(domain.getRejectReason())
-                        .reviewerId(domain.getReviewerId())
-                        .reviewedAt(domain.getReviewedAt())
-                        .build();
+    @Mapping(target = "documents", ignore = true)
+    OwnerApplication toDomain(OwnerApplicationEntity entity);
 
-        entity.setCreatedAt(domain.getCreatedAt());
+    default OwnerApplicationEntity createEntity(OwnerApplication domain, AddressMapper addressMapper) {
+        OwnerApplicationEntity entity = createEntity(domain);
 
-        if (domain.getAddress() != null) {
-            entity.setAddresses(AddressMapper.toEntity(domain.getAddress(), entity));
-        }
-
-        if (domain.getDocuments() != null) {
-            entity.setOwnerApplicationDocuments(
-                    domain.getDocuments().stream()
-                            .map(doc -> OwnerApplicationDocumentMapper.toEntity(doc, entity))
-                            .collect(Collectors.toSet())
-            );
+        if (entity != null && domain != null && domain.getAddress() != null && addressMapper != null) {
+            entity.setAddress(addressMapper.createEntity(domain.getAddress(), entity));
         }
 
         return entity;
     }
 
-    public static OwnerApplication toDomain(OwnerApplicationEntity entity) {
-        if (entity == null) return null;
+    default void updateEntity(OwnerApplication domain, OwnerApplicationEntity entity, AddressMapper addressMapper) {
+        if (domain == null || entity == null) return;
 
-        return OwnerApplication.builder()
-                .ownerApplicationId(entity.getOwnerApplicationId())
-                .userId(entity.getUserId())
-                .fullName(entity.getFullName())
-                .phone(entity.getPhone())
-                .email(entity.getEmail())
-                .businessName(entity.getBusinessName())
-                .businessType(entity.getBusinessType())
-                .taxCode(entity.getTaxCode())
-                .identityNumber(entity.getIdentityNumber())
-                .status(entity.getStatus())
-                .rejectReason(entity.getRejectReason())
-                .reviewerId(entity.getReviewerId())
-                .reviewedAt(entity.getReviewedAt())
-                .createdAt(entity.getCreatedAt())
-                .address(AddressMapper.toDomain(entity.getAddresses()))
-                .documents(entity.getOwnerApplicationDocuments() != null
-                    ? entity.getOwnerApplicationDocuments().stream()
-                        .map(OwnerApplicationDocumentMapper::toDomain)
-                        .collect(Collectors.toSet())
-                    : Collections.emptySet()
-                )
-                .build();
+        updateEntity(domain, entity);
+
+        if (domain.getAddress() != null && addressMapper != null) {
+            if (entity.getAddress() == null) {
+                entity.setAddress(addressMapper.createEntity(domain.getAddress(), entity));
+            } else {
+                addressMapper.updateEntity(domain.getAddress(), entity.getAddress());
+            }
+        }
     }
 }

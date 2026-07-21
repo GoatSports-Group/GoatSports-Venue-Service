@@ -102,10 +102,9 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .email(application.getEmail())
                 .taxCode(application.getTaxCode())
                 .verified(false)
-                .ownerApplication(application)
                 .build();
 
-        venueOwnerProfileRepository.save(profile);
+        venueOwnerProfileRepository.save(profile, applicationId);
     }
 
     @Override

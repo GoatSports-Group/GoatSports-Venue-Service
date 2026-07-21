@@ -31,4 +31,5 @@ public class OwnerApplication {
 
     private Address address;
     private Set<OwnerApplicationDocument> documents;
+    private VenueOwnerProfile venueOwnerProfile;
 }

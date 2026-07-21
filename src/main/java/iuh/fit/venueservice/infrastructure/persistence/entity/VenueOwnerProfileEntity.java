@@ -13,6 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"ownerApplication", "venue"})
 public class VenueOwnerProfileEntity extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -30,6 +31,6 @@ public class VenueOwnerProfileEntity extends BaseEntity{
     @JoinColumn(name = "owner_application_id", nullable = false, unique = true)
     private OwnerApplicationEntity ownerApplication;
 
-    @OneToOne(mappedBy = "venueOwnerProfileEntity", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @OneToOne(mappedBy = "venueOwnerProfile", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private VenueEntity venue;
 }

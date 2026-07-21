@@ -36,8 +36,6 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
     ) throws ServiceException
     {
         UUID ownerApplicationIdUUID = BaseUtil.uuid(ownerApplicationId);
-        OwnerApplication ownerApplication = ownerApplicationRepository.findById(ownerApplicationIdUUID)
-                .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đăng ký: " + ownerApplicationId));
 
         List<String> storageResponse = storagePort.confirmFile(requests);
 
@@ -47,7 +45,7 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
                     .fileUrl(objectKey)
                     .build();
 
-            ownerApplicationDocumentRepository.save(document, ownerApplication);
+            ownerApplicationDocumentRepository.save(document, ownerApplicationIdUUID);
         }
     }
 

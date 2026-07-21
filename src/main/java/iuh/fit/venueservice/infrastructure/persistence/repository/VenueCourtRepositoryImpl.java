@@ -18,17 +18,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VenueCourtRepositoryImpl implements VenueCourtRepository {
     private final JpaVenueCourtRepository jpaRepository;
+    private final VenueCourtMapper venueCourtMapper;
+    private final VenueMapper venueMapper;
 
     @Override
     public VenueCourt save(VenueCourt venueCourt, Venue venue) {
-        VenueEntity venueEntity = VenueMapper.toEntity(venue);
-        VenueCourtEntity entity = VenueCourtMapper.toEntity(venueCourt, venueEntity);
+        VenueEntity venueEntity = venueMapper.createEntity(venue);
+        VenueCourtEntity entity = venueCourtMapper.createEntity(venueCourt, venueEntity);
         VenueCourtEntity saved = jpaRepository.save(entity);
-        return VenueCourtMapper.toDomain(saved);
+        return venueCourtMapper.toDomain(saved);
     }
 
     @Override
     public Optional<VenueCourt> findById(UUID id) {
-        return jpaRepository.findById(id).map(VenueCourtMapper::toDomain);
+        return jpaRepository.findById(id).map(venueCourtMapper::toDomain);
     }
 }

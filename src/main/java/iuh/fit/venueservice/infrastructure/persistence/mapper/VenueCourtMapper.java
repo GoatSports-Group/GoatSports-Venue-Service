@@ -3,35 +3,25 @@ package iuh.fit.venueservice.infrastructure.persistence.mapper;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueCourtEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
-public class VenueCourtMapper {
+@Mapper(componentModel = "spring")
+public interface VenueCourtMapper {
 
-    public static VenueCourtEntity toEntity(VenueCourt domain, VenueEntity parent) {
-        if (domain == null) return null;
+    @Mapping(target = "venue", ignore = true)
+    VenueCourtEntity createEntity(VenueCourt domain);
 
-        return VenueCourtEntity.builder()
-                .venueCourtId(domain.getVenueCourtId())
-                .sportType(domain.getSportType())
-                .name(domain.getName())
-                .capacity(domain.getCapacity())
-                .pricePerHour(domain.getPricePerHour())
-                .indoor(domain.getIndoor())
-                .active(domain.getActive())
-                .venue(parent)
-                .build();
-    }
+    void updateEntity(VenueCourt domain, @MappingTarget VenueCourtEntity entity);
 
-    public static VenueCourt toDomain(VenueCourtEntity entity) {
-        if (entity == null) return null;
+    VenueCourt toDomain(VenueCourtEntity entity);
 
-        return VenueCourt.builder()
-                .venueCourtId(entity.getVenueCourtId())
-                .sportType(entity.getSportType())
-                .name(entity.getName())
-                .capacity(entity.getCapacity())
-                .pricePerHour(entity.getPricePerHour())
-                .indoor(entity.getIndoor())
-                .active(entity.getActive())
-                .build();
+    default VenueCourtEntity createEntity(VenueCourt domain, VenueEntity parent) {
+        VenueCourtEntity entity = createEntity(domain);
+        if (entity != null) {
+            entity.setVenue(parent);
+        }
+        return entity;
     }
 }

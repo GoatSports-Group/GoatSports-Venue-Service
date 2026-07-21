@@ -3,48 +3,37 @@ package iuh.fit.venueservice.infrastructure.persistence.mapper;
 import iuh.fit.venueservice.domain.entity.VenueOwnerProfile;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueOwnerProfileEntity;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
-public class VenueOwnerProfileMapper {
+@Mapper(componentModel = "spring")
+public interface VenueOwnerProfileMapper {
 
-    public static VenueOwnerProfileEntity toEntity(VenueOwnerProfile domain) {
-        if (domain == null) return null;
+    @Mapping(target = "ownerApplication", ignore = true)
+    @Mapping(target = "venue", ignore = true)
+    VenueOwnerProfileEntity createEntity(VenueOwnerProfile domain);
 
-        OwnerApplicationEntity ownerAppEntity = domain.getOwnerApplication() != null
-                ? OwnerApplicationMapper.toEntity(domain.getOwnerApplication())
-                : null;
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "ownerApplication", ignore = true)
+    @Mapping(target = "venue", ignore = true)
+    void updateEntity(VenueOwnerProfile domain, @MappingTarget VenueOwnerProfileEntity entity);
 
-        VenueOwnerProfileEntity profileEntity = VenueOwnerProfileEntity.builder()
-                .venueOwnerProfileId(domain.getVenueOwnerProfileId())
-                .userId(domain.getUserId())
-                .businessName(domain.getBusinessName())
-                .phone(domain.getPhone())
-                .email(domain.getEmail())
-                .taxCode(domain.getTaxCode())
-                .verified(domain.getVerified())
-                .verifiedAt(domain.getVerifiedAt())
-                .ownerApplication(ownerAppEntity)
-                .build();
+    VenueOwnerProfile toDomain(VenueOwnerProfileEntity entity);
 
-        if (ownerAppEntity != null) {
-            ownerAppEntity.setVenueOwnerProfileEntity(profileEntity);
+    default VenueOwnerProfileEntity createEntity(VenueOwnerProfile domain, OwnerApplicationEntity parent) {
+        VenueOwnerProfileEntity entity = createEntity(domain);
+
+        if (entity != null) {
+            entity.setOwnerApplication(parent);
+            if (parent != null) {
+                parent.setVenueOwnerProfile(entity);
+            }
         }
 
-        return profileEntity;
-    }
-
-    public static VenueOwnerProfile toDomain(VenueOwnerProfileEntity entity) {
-        if (entity == null) return null;
-
-        return VenueOwnerProfile.builder()
-                .venueOwnerProfileId(entity.getVenueOwnerProfileId())
-                .userId(entity.getUserId())
-                .businessName(entity.getBusinessName())
-                .phone(entity.getPhone())
-                .email(entity.getEmail())
-                .taxCode(entity.getTaxCode())
-                .verified(entity.getVerified())
-                .verifiedAt(entity.getVerifiedAt())
-                .ownerApplication(entity.getOwnerApplication() != null ? OwnerApplicationMapper.toDomain(entity.getOwnerApplication()) : null)
-                .build();
+        return entity;
     }
 }

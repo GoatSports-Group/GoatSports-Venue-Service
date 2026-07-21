@@ -3,27 +3,26 @@ package iuh.fit.venueservice.infrastructure.persistence.mapper;
 import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationDocumentEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
-public class OwnerApplicationDocumentMapper {
+@Mapper(componentModel = "spring")
+public interface OwnerApplicationDocumentMapper {
+    @Mapping(target = "ownerApplication", ignore = true)
+    OwnerApplicationDocumentEntity createEntity(OwnerApplicationDocument domain);
 
-    public static OwnerApplicationDocumentEntity toEntity(OwnerApplicationDocument domain, OwnerApplicationEntity parent) {
-        if (domain == null) return null;
+    void updateEntity(OwnerApplicationDocument domain, @MappingTarget OwnerApplicationDocumentEntity entity);
 
-        return OwnerApplicationDocumentEntity.builder()
-                .ownerApplicationDocumentId(domain.getOwnerApplicationDocumentId())
-                .documentType(domain.getDocumentType())
-                .fileUrl(domain.getFileUrl())
-                .ownerApplication(parent)
-                .build();
-    }
+    OwnerApplicationDocument toDomain(OwnerApplicationDocumentEntity entity);
 
-    public static OwnerApplicationDocument toDomain(OwnerApplicationDocumentEntity entity) {
-        if (entity == null) return null;
+    default OwnerApplicationDocumentEntity createEntity(OwnerApplicationDocument domain, OwnerApplicationEntity parent) {
+        OwnerApplicationDocumentEntity entity = createEntity(domain);
 
-        return OwnerApplicationDocument.builder()
-                .ownerApplicationDocumentId(entity.getOwnerApplicationDocumentId())
-                .documentType(entity.getDocumentType())
-                .fileUrl(entity.getFileUrl())
-                .build();
+        if (entity != null) {
+            entity.setOwnerApplication(parent);
+        }
+
+        return entity;
     }
 }

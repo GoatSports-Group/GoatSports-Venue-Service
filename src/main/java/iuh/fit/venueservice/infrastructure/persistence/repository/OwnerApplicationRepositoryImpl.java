@@ -4,10 +4,12 @@ import com.turkraft.springfilter.converter.FilterSpecificationConverter;
 import com.turkraft.springfilter.parser.FilterParser;
 import iuh.fit.venueservice.application.dto.PageFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressMapper;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,17 +29,31 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     private final JpaOwnerApplicationRepository jpaRepository;
     private final FilterSpecificationConverter filterSpecificationConverter;
     private final FilterParser filterParser;
+    private final OwnerApplicationMapper ownerApplicationMapper;
+    private final AddressMapper addressMapper;
 
     @Override
-    public OwnerApplication save(OwnerApplication ownerApplication) {
-        OwnerApplicationEntity entity = OwnerApplicationMapper.toEntity(ownerApplication);
+    public OwnerApplication save(OwnerApplication ownerApplication) throws ServiceException {
+        OwnerApplicationEntity entity;
+        if (ownerApplication.getOwnerApplicationId() != null) {
+            entity = jpaRepository.findById(ownerApplication.getOwnerApplicationId())
+                    .map(existing -> {
+                        ownerApplicationMapper.updateEntity(ownerApplication, existing, addressMapper);
+                        return existing;
+                    })
+                    .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
+        } else {
+            entity = ownerApplicationMapper.createEntity(ownerApplication, addressMapper);
+        }
+
         OwnerApplicationEntity saved = jpaRepository.save(entity);
-        return OwnerApplicationMapper.toDomain(saved);
+
+        return ownerApplicationMapper.toDomain(saved);
     }
 
     @Override
     public Optional<OwnerApplication> findById(UUID id) {
-        return jpaRepository.findById(id).map(OwnerApplicationMapper::toDomain);
+        return jpaRepository.findById(id).map(ownerApplicationMapper::toDomain);
     }
 
     @Override
@@ -54,7 +70,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
 
         Page<OwnerApplicationEntity> entityPage = jpaRepository.findAll(spec, pageable);
         List<OwnerApplication> items = entityPage.getContent().stream()
-                .map(OwnerApplicationMapper::toDomain)
+                .map(ownerApplicationMapper::toDomain)
                 .toList();
 
         return new PageResult<>(
@@ -84,7 +100,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
 
         Page<OwnerApplicationEntity> entityPage = jpaRepository.findAll(spec, pageable);
         List<OwnerApplication> items = entityPage.getContent().stream()
-                .map(OwnerApplicationMapper::toDomain)
+                .map(ownerApplicationMapper::toDomain)
                 .toList();
 
         return new PageResult<>(

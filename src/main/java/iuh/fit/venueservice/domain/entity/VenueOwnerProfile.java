@@ -19,5 +19,4 @@ public class VenueOwnerProfile {
     private String taxCode;
     private Boolean verified;
     private LocalDateTime verifiedAt;
-    private OwnerApplication ownerApplication;
 }
