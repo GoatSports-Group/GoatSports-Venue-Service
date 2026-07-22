@@ -28,6 +28,8 @@ public class OwnerApplicationController {
 
     private final OwnerApplicationService ownerApplicationService;
     private final CurrentUserProvider currentUserProvider;
+    private final OwnerApplicationMapper ownerApplicationMapper;
+    private final OwnerApplicationConverter ownerApplicationConverter;
 
     @GetMapping("/me")
     public ResponseEntity<BaseListResponse> getMyOwnerApplications(
@@ -41,7 +43,7 @@ public class OwnerApplicationController {
                 .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để thực hiện chức năng này."));
         UUID userId = BaseUtil.uuid(userIdStr);
 
-        PageResult<OwnerApplicationResponseCommand> result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+        PageResult<OwnerApplicationResponseCommand> result = ownerApplicationMapper.toOwnerApplicationResponseCommand(
                 ownerApplicationService.getMyOwnerApplications(query, userId)
         );
 
@@ -52,7 +54,7 @@ public class OwnerApplicationController {
         meta.setTotal(result.total());
 
         List<OwnerApplicationResponse> responses = result.items().stream()
-                .map(OwnerApplicationConverter::toResponse)
+                .map(ownerApplicationConverter::toResponse)
                 .collect(Collectors.toList());
 
         return ResponseEntity.status(HttpStatus.OK).body(new BaseListResponse(meta, responses));

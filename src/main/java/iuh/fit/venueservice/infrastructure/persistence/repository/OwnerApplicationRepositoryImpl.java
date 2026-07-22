@@ -9,8 +9,8 @@ import iuh.fit.venueservice.application.port.persistence.OwnerApplicationReposit
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
-import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressMapper;
-import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressEntityMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,8 +29,8 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     private final JpaOwnerApplicationRepository jpaRepository;
     private final FilterSpecificationConverter filterSpecificationConverter;
     private final FilterParser filterParser;
-    private final OwnerApplicationMapper ownerApplicationMapper;
-    private final AddressMapper addressMapper;
+    private final OwnerApplicationEntityMapper ownerApplicationEntityMapper;
+    private final AddressEntityMapper addressEntityMapper;
 
     @Override
     public OwnerApplication save(OwnerApplication ownerApplication) throws ServiceException {
@@ -38,22 +38,22 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
         if (ownerApplication.getOwnerApplicationId() != null) {
             entity = jpaRepository.findById(ownerApplication.getOwnerApplicationId())
                     .map(existing -> {
-                        ownerApplicationMapper.updateEntity(ownerApplication, existing, addressMapper);
+                        ownerApplicationEntityMapper.updateEntity(ownerApplication, existing, addressEntityMapper);
                         return existing;
                     })
                     .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
         } else {
-            entity = ownerApplicationMapper.createEntity(ownerApplication, addressMapper);
+            entity = ownerApplicationEntityMapper.createEntity(ownerApplication, addressEntityMapper);
         }
 
         OwnerApplicationEntity saved = jpaRepository.save(entity);
 
-        return ownerApplicationMapper.toDomain(saved);
+        return ownerApplicationEntityMapper.toDomain(saved);
     }
 
     @Override
     public Optional<OwnerApplication> findById(UUID id) {
-        return jpaRepository.findById(id).map(ownerApplicationMapper::toDomain);
+        return jpaRepository.findById(id).map(ownerApplicationEntityMapper::toDomain);
     }
 
     @Override
@@ -70,7 +70,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
 
         Page<OwnerApplicationEntity> entityPage = jpaRepository.findAll(spec, pageable);
         List<OwnerApplication> items = entityPage.getContent().stream()
-                .map(ownerApplicationMapper::toDomain)
+                .map(ownerApplicationEntityMapper::toDomain)
                 .toList();
 
         return new PageResult<>(
@@ -100,7 +100,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
 
         Page<OwnerApplicationEntity> entityPage = jpaRepository.findAll(spec, pageable);
         List<OwnerApplication> items = entityPage.getContent().stream()
-                .map(ownerApplicationMapper::toDomain)
+                .map(ownerApplicationEntityMapper::toDomain)
                 .toList();
 
         return new PageResult<>(

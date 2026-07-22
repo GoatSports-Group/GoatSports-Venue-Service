@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
-public interface AddressMapper {
+public interface AddressEntityMapper {
     @Mapping(target = "ownerApplication", ignore = true)
     AddressEntity createEntity(Address domain);
 

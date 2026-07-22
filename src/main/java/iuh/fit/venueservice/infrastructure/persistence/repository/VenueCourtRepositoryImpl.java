@@ -5,8 +5,8 @@ import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueCourtEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
-import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueCourtMapper;
-import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueCourtEntityMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueCourtRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,19 +18,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VenueCourtRepositoryImpl implements VenueCourtRepository {
     private final JpaVenueCourtRepository jpaRepository;
-    private final VenueCourtMapper venueCourtMapper;
-    private final VenueMapper venueMapper;
+    private final VenueCourtEntityMapper venueCourtEntityMapper;
+    private final VenueEntityMapper venueEntityMapper;
 
     @Override
     public VenueCourt save(VenueCourt venueCourt, Venue venue) {
-        VenueEntity venueEntity = venueMapper.createEntity(venue);
-        VenueCourtEntity entity = venueCourtMapper.createEntity(venueCourt, venueEntity);
+        VenueEntity venueEntity = venueEntityMapper.createEntity(venue);
+        VenueCourtEntity entity = venueCourtEntityMapper.createEntity(venueCourt, venueEntity);
         VenueCourtEntity saved = jpaRepository.save(entity);
-        return venueCourtMapper.toDomain(saved);
+        return venueCourtEntityMapper.toDomain(saved);
     }
 
     @Override
     public Optional<VenueCourt> findById(UUID id) {
-        return jpaRepository.findById(id).map(venueCourtMapper::toDomain);
+        return jpaRepository.findById(id).map(venueCourtEntityMapper::toDomain);
     }
 }

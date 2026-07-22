@@ -2,7 +2,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.entity.Venue;
-import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,24 +16,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VenueRepositoryImpl implements VenueRepository {
     private final JpaVenueRepository jpaRepository;
-    private final VenueMapper venueMapper;
+    private final VenueEntityMapper venueEntityMapper;
 
     @Override
     public Venue save(Venue venue) {
-        var entity = venueMapper.createEntity(venue);
+        var entity = venueEntityMapper.createEntity(venue);
         var saved = jpaRepository.save(entity);
-        return venueMapper.toDomain(saved);
+        return venueEntityMapper.toDomain(saved);
     }
 
     @Override
     public Optional<Venue> findById(UUID id) {
-        return jpaRepository.findById(id).map(venueMapper::toDomain);
+        return jpaRepository.findById(id).map(venueEntityMapper::toDomain);
     }
 
     @Override
     public List<Venue> findByUserId(UUID userId) {
         return jpaRepository.findByVenueOwnerProfile_UserId(userId).stream()
-                .map(venueMapper::toDomain)
+                .map(venueEntityMapper::toDomain)
                 .collect(Collectors.toList());
     }
 }

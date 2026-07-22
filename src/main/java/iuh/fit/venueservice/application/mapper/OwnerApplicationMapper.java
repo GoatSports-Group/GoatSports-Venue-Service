@@ -3,38 +3,27 @@ package iuh.fit.venueservice.application.mapper;
 import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
+import org.mapstruct.Mapper;
 
-public class OwnerApplicationMapper {
+import java.util.List;
 
-    public static OwnerApplicationResponseCommand toOwnerApplicationResponseCommand(OwnerApplication ownerApplication) {
-        return new OwnerApplicationResponseCommand(
-                ownerApplication.getOwnerApplicationId(),
-                ownerApplication.getUserId(),
-                ownerApplication.getFullName(),
-                ownerApplication.getPhone(),
-                ownerApplication.getEmail(),
-                ownerApplication.getBusinessName(),
-                ownerApplication.getBusinessType(),
-                ownerApplication.getTaxCode(),
-                ownerApplication.getIdentityNumber(),
-                ownerApplication.getStatus(),
-                ownerApplication.getRejectReason(),
-                ownerApplication.getCreatedAt(),
-                ownerApplication.getReviewerId(),
-                ownerApplication.getReviewedAt(),
-                ownerApplication.getAddress(),
-                ownerApplication.getDocuments()
-        );
-    }
+@Mapper(componentModel = "spring")
+public interface OwnerApplicationMapper {
 
-    public static PageResult<OwnerApplicationResponseCommand> toOwnerApplicationResponseCommand(
+    OwnerApplicationResponseCommand toOwnerApplicationResponseCommand(OwnerApplication ownerApplication);
+
+    List<OwnerApplicationResponseCommand> toOwnerApplicationResponseCommandList(List<OwnerApplication> ownerApplications);
+
+    default PageResult<OwnerApplicationResponseCommand> toOwnerApplicationResponseCommand(
             PageResult<OwnerApplication> ownerApplications
-    )
-    {
+    ) {
+        if (ownerApplications == null) return null;
         return new PageResult<>(
-                ownerApplications.items().stream().map(OwnerApplicationMapper::toOwnerApplicationResponseCommand).toList(),
-                ownerApplications.total(), ownerApplications.page(), ownerApplications.pageSize(), ownerApplications.totalPages()
+                toOwnerApplicationResponseCommandList(ownerApplications.items()),
+                ownerApplications.total(),
+                ownerApplications.page(),
+                ownerApplications.pageSize(),
+                ownerApplications.totalPages()
         );
     }
-
 }

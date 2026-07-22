@@ -28,6 +28,8 @@ import java.util.UUID;
 public class OwnerApplicationInternalController {
 
     private final OwnerApplicationService ownerApplicationService;
+    private final OwnerApplicationMapper ownerApplicationMapper;
+    private final OwnerApplicationConverter ownerApplicationConverter;
 
     @PostMapping
     public ResponseEntity<OwnerApplicationResponse> submitApplication(
@@ -52,11 +54,11 @@ public class OwnerApplicationInternalController {
                 request.getCity()
         );
 
-        OwnerApplicationResponseCommand result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+        OwnerApplicationResponseCommand result = ownerApplicationMapper.toOwnerApplicationResponseCommand(
                 ownerApplicationService.submitOwnerApplication(command)
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(OwnerApplicationConverter.toResponse(result));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ownerApplicationConverter.toResponse(result));
     }
 
     @PostMapping("/{id}/reject")
@@ -68,11 +70,11 @@ public class OwnerApplicationInternalController {
         UUID applicationId = BaseUtil.uuid(id);
         UUID reviewerUuid = BaseUtil.uuid(request.getReviewerId());
 
-        OwnerApplicationResponseCommand result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+        OwnerApplicationResponseCommand result = ownerApplicationMapper.toOwnerApplicationResponseCommand(
                 ownerApplicationService.rejectOwnerApplication(applicationId, reviewerUuid, request.getRejectReason())
         );
 
-        return ResponseEntity.status(HttpStatus.OK).body(OwnerApplicationConverter.toResponse(result));
+        return ResponseEntity.status(HttpStatus.OK).body(ownerApplicationConverter.toResponse(result));
     }
 
     @PostMapping("/{id}/approve")
@@ -84,11 +86,11 @@ public class OwnerApplicationInternalController {
         UUID applicationId = BaseUtil.uuid(id);
         UUID reviewerUuid = BaseUtil.uuid(request.getReviewerId());
 
-        OwnerApplicationResponseCommand result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+        OwnerApplicationResponseCommand result = ownerApplicationMapper.toOwnerApplicationResponseCommand(
                 ownerApplicationService.approveOwnerApplication(applicationId, reviewerUuid)
         );
 
-        return ResponseEntity.status(HttpStatus.OK).body(OwnerApplicationConverter.toResponse(result));
+        return ResponseEntity.status(HttpStatus.OK).body(ownerApplicationConverter.toResponse(result));
     }
 
     @PostMapping("/{id}/profile")

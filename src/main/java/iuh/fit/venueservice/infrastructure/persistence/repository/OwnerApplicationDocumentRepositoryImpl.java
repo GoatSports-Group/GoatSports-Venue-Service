@@ -5,7 +5,7 @@ import iuh.fit.venueservice.application.port.persistence.OwnerApplicationDocumen
 import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationDocumentEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
-import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationDocumentMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationDocumentEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationDocumentRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import java.util.UUID;
 public class OwnerApplicationDocumentRepositoryImpl implements OwnerApplicationDocumentRepository {
     private final JpaOwnerApplicationDocumentRepository jpaOwnerApplicationDocumentRepository;
     private final JpaOwnerApplicationRepository jpaOwnerApplicationRepository;
-    private final OwnerApplicationDocumentMapper ownerApplicationDocumentMapper;
+    private final OwnerApplicationDocumentEntityMapper ownerApplicationDocumentEntityMapper;
 
     @Override
     public OwnerApplicationDocument save(
@@ -29,12 +29,12 @@ public class OwnerApplicationDocumentRepositoryImpl implements OwnerApplicationD
                 .findById(ownerApplicationId)
                 .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại."));
 
-        OwnerApplicationDocumentEntity entity = ownerApplicationDocumentMapper.createEntity(
+        OwnerApplicationDocumentEntity entity = ownerApplicationDocumentEntityMapper.createEntity(
                 document, ownerAppEntity
         );
 
         OwnerApplicationDocumentEntity saved = jpaOwnerApplicationDocumentRepository.save(entity);
 
-        return ownerApplicationDocumentMapper.toDomain(saved);
+        return ownerApplicationDocumentEntityMapper.toDomain(saved);
     }
 }

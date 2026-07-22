@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
-public interface VenueCourtMapper {
+public interface VenueCourtEntityMapper {
 
     @Mapping(target = "venue", ignore = true)
     VenueCourtEntity createEntity(VenueCourt domain);

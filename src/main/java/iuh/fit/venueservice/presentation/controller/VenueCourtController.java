@@ -28,6 +28,8 @@ public class VenueCourtController {
 
     private final VenueCourtService venueCourtService;
     private final CurrentUserProvider currentUserProvider;
+    private final VenueCourtMapper venueCourtMapper;
+    private final VenueCourtConverter venueCourtConverter;
 
     @PostMapping
     public ResponseEntity<VenueCourtResponse> createVenueCourt(
@@ -48,10 +50,10 @@ public class VenueCourtController {
                 userId
         );
 
-        VenueCourtResponseCommand result = VenueCourtMapper.toVenueCourtResponseCommand(
+        VenueCourtResponseCommand result = venueCourtMapper.toVenueCourtResponseCommand(
                 venueCourtService.createVenueCourt(command)
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(VenueCourtConverter.toResponse(result));
+        return ResponseEntity.status(HttpStatus.CREATED).body(venueCourtConverter.toResponse(result));
     }
 }

@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
-public interface OwnerApplicationDocumentMapper {
+public interface OwnerApplicationDocumentEntityMapper {
     @Mapping(target = "ownerApplication", ignore = true)
     OwnerApplicationDocumentEntity createEntity(OwnerApplicationDocument domain);
 

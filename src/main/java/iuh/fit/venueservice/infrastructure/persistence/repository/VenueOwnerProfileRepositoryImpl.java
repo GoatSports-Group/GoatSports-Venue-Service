@@ -5,7 +5,7 @@ import iuh.fit.venueservice.application.port.persistence.VenueOwnerProfileReposi
 import iuh.fit.venueservice.domain.entity.VenueOwnerProfile;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueOwnerProfileEntity;
-import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueOwnerProfileMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueOwnerProfileEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueOwnerProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.UUID;
 public class VenueOwnerProfileRepositoryImpl implements VenueOwnerProfileRepository {
     private final JpaVenueOwnerProfileRepository jpaRepository;
     private final JpaOwnerApplicationRepository jpaOwnerApplicationRepository;
-    private final VenueOwnerProfileMapper venueOwnerProfileMapper;
+    private final VenueOwnerProfileEntityMapper venueOwnerProfileEntityMapper;
 
     @Override
     public VenueOwnerProfile save(VenueOwnerProfile profile, UUID applicationId) throws ServiceException {
@@ -31,27 +31,27 @@ public class VenueOwnerProfileRepositoryImpl implements VenueOwnerProfileReposit
         if (profile != null && profile.getVenueOwnerProfileId() != null) {
             entity = jpaRepository.findById(profile.getVenueOwnerProfileId())
                     .map(existing -> {
-                        venueOwnerProfileMapper.updateEntity(profile, existing);
+                        venueOwnerProfileEntityMapper.updateEntity(profile, existing);
                         return existing;
                     })
                     .orElseThrow(() -> new ServiceException("Hồ sơ chủ sân không tồn tại."));
         } else {
-            entity = venueOwnerProfileMapper.createEntity(profile, ownerAppEntity);
+            entity = venueOwnerProfileEntityMapper.createEntity(profile, ownerAppEntity);
         }
 
         VenueOwnerProfileEntity saved = jpaRepository.save(entity);
 
-        return venueOwnerProfileMapper.toDomain(saved);
+        return venueOwnerProfileEntityMapper.toDomain(saved);
     }
 
     @Override
     public Optional<VenueOwnerProfile> findById(UUID id) {
-        return jpaRepository.findById(id).map(venueOwnerProfileMapper::toDomain);
+        return jpaRepository.findById(id).map(venueOwnerProfileEntityMapper::toDomain);
     }
 
     @Override
     public Optional<VenueOwnerProfile> findByUserId(UUID userId) {
-        return jpaRepository.findByUserId(userId).map(venueOwnerProfileMapper::toDomain);
+        return jpaRepository.findByUserId(userId).map(venueOwnerProfileEntityMapper::toDomain);
     }
 
     @Override

@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
-public interface VenueOwnerProfileMapper {
+public interface VenueOwnerProfileEntityMapper {
 
     @Mapping(target = "ownerApplication", ignore = true)
     @Mapping(target = "venue", ignore = true)

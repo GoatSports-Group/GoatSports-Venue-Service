@@ -6,8 +6,8 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring", uses = {VenueCourtMapper.class, VenueOwnerProfileMapper.class})
-public interface VenueMapper {
+@Mapper(componentModel = "spring", uses = {VenueCourtEntityMapper.class, VenueOwnerProfileEntityMapper.class})
+public interface VenueEntityMapper {
 
     @Mapping(target = "venueOwnerProfile", ignore = true)
     @Mapping(target = "venueCourts", ignore = true)
@@ -15,7 +15,7 @@ public interface VenueMapper {
 
     void updateEntity(Venue domain, @MappingTarget VenueEntity entity);
 
-    @Mapping(target = "venueOwnerProfile", ignore = true)
-    @Mapping(target = "courts", ignore = true)
+    @Mapping(target = "venueOwnerProfile", source = "venueOwnerProfile")
+    @Mapping(target = "courts", source = "venueCourts")
     Venue toDomain(VenueEntity entity);
 }

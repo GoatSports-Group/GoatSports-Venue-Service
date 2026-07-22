@@ -25,6 +25,8 @@ import java.util.List;
 public class OwnerApplicationAdminController {
 
     private final OwnerApplicationService ownerApplicationService;
+    private final OwnerApplicationMapper ownerApplicationMapper;
+    private final OwnerApplicationConverter ownerApplicationConverter;
 
     @GetMapping
     public ResponseEntity<BaseListResponse> getAllOwnerApplications(
@@ -32,7 +34,7 @@ public class OwnerApplicationAdminController {
             Pageable pageable
     ) {
         PageFilter query = new PageFilter(filter, pageable.getPageNumber() + 1, pageable.getPageSize());
-        PageResult<OwnerApplicationResponseCommand> resultDto = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+        PageResult<OwnerApplicationResponseCommand> resultDto = ownerApplicationMapper.toOwnerApplicationResponseCommand(
                 ownerApplicationService.getAllOwnerApplications(query)
         );
 
@@ -43,7 +45,7 @@ public class OwnerApplicationAdminController {
         meta.setTotal(resultDto.total());
 
         List<OwnerApplicationResponse> responses = resultDto.items().stream()
-                .map(OwnerApplicationConverter::toResponse)
+                .map(ownerApplicationConverter::toResponse)
                 .toList();
 
         return ResponseEntity.status(HttpStatus.OK).body(new BaseListResponse(meta, responses));
@@ -54,10 +56,10 @@ public class OwnerApplicationAdminController {
             @PathVariable String id
     ) throws ServiceException
     {
-        OwnerApplicationResponseCommand result = OwnerApplicationMapper.toOwnerApplicationResponseCommand(
+        OwnerApplicationResponseCommand result = ownerApplicationMapper.toOwnerApplicationResponseCommand(
                 ownerApplicationService.getOwnerApplicationDetail(id)
         );
-        return ResponseEntity.status(HttpStatus.OK).body(OwnerApplicationConverter.toResponse(result));
+        return ResponseEntity.status(HttpStatus.OK).body(ownerApplicationConverter.toResponse(result));
     }
 
 }

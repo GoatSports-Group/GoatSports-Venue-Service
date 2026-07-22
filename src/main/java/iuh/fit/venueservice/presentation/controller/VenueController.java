@@ -28,6 +28,8 @@ public class VenueController {
 
     private final VenueService venueService;
     private final CurrentUserProvider currentUserProvider;
+    private final VenueMapper venueMapper;
+    private final VenueConverter venueConverter;
 
     @PostMapping
     public ResponseEntity<VenueResponse> createVenue(
@@ -50,8 +52,8 @@ public class VenueController {
                 userId
         );
 
-        VenueResponseCommand result = VenueMapper.toVenueResponseCommand(venueService.createVenue(command));
+        VenueResponseCommand result = venueMapper.toVenueResponseCommand(venueService.createVenue(command));
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(VenueConverter.toResponse(result));
+        return ResponseEntity.status(HttpStatus.CREATED).body(venueConverter.toResponse(result));
     }
 }
