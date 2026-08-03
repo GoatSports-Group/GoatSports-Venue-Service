@@ -21,7 +21,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/owner-applications")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ADMIN')")
 public class OwnerApplicationAdminController {
 
     private final OwnerApplicationService ownerApplicationService;
@@ -29,6 +28,7 @@ public class OwnerApplicationAdminController {
     private final OwnerApplicationConverter ownerApplicationConverter;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('GET_OWNER_APPLICATIONS')")
     public ResponseEntity<BaseListResponse> getAllOwnerApplications(
             @RequestParam(value = "filter", required = false) String filter,
             Pageable pageable
@@ -52,6 +52,7 @@ public class OwnerApplicationAdminController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('GET_OWNER_APPLICATION')")
     public ResponseEntity<OwnerApplicationResponse> getOwnerApplicationDetail(
             @PathVariable String id
     ) throws ServiceException
