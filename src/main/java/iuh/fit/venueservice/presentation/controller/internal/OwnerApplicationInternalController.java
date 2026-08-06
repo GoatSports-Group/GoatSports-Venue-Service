@@ -64,7 +64,7 @@ public class OwnerApplicationInternalController {
     }
 
     @PostMapping("/{id}/reject")
-    @AuditLog(action = "REJECT_APPLICATION", description = "Từ chối đơn đăng ký chủ sân")
+    @AuditLog(action = "REJECT_APPLICATION", description = "Từ chối đơn đăng ký chủ sân #{#id}")
     public ResponseEntity<OwnerApplicationResponse> rejectApplication(
             @PathVariable String id,
             @RequestBody ReviewOwnerApplicationRequest request
@@ -81,7 +81,7 @@ public class OwnerApplicationInternalController {
     }
 
     @PostMapping("/{id}/approve")
-    @AuditLog(action = "APPROVE_APPLICATION", description = "Chấp nhận đơn đăng ký chủ sân")
+    @AuditLog(action = "APPROVE_APPLICATION", description = "Chấp nhận đơn đăng ký chủ sân #{#id}")
     public ResponseEntity<OwnerApplicationResponse> approveApplication(
             @PathVariable String id,
             @RequestBody ReviewOwnerApplicationRequest request
@@ -98,7 +98,7 @@ public class OwnerApplicationInternalController {
     }
 
     @PostMapping("/{id}/profile")
-    @AuditLog(action = "CREATE_VENUE_OWNER_PROFILE", description = "Tạo hồ sơ chủ sân")
+    @AuditLog(action = "CREATE_VENUE_OWNER_PROFILE", description = "Tạo hồ sơ chủ sân cho đơn #{#id}")
     public ResponseEntity<Void> createVenueOwnerProfile(@PathVariable String id) throws ServiceException {
         ownerApplicationService.createVenueOwnerProfile(BaseUtil.uuid(id));
         return ResponseEntity.status(HttpStatus.CREATED).build();

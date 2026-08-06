@@ -17,6 +17,16 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.core.ParameterNameDiscoverer;
+import org.springframework.core.StandardReflectionParameterNameDiscoverer;
+import org.springframework.expression.common.TemplateParserContext;
+import org.aspectj.lang.reflect.MethodSignature;
+import java.lang.reflect.Method;
 
 @Aspect
 @RequiredArgsConstructor
@@ -24,6 +34,8 @@ import java.time.LocalDateTime;
 public class AuditLogAspect {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ExpressionParser spelParser = new SpelExpressionParser();
+    private final ParameterNameDiscoverer nameDiscoverer = new StandardReflectionParameterNameDiscoverer();
 
     @Value("${spring.kafka.topic.user-log}")
     private String userLogTopic;
@@ -37,7 +49,7 @@ public class AuditLogAspect {
 
         try {
             result = joinPoint.proceed();
-            
+
             HttpServletResponse response = getResponse();
             if (response != null) {
                 statusCode = response.getStatus();
@@ -50,11 +62,11 @@ public class AuditLogAspect {
         } finally {
             try {
                 HttpServletRequest request = getRequest();
-                
+
                 String userId = getUserId(joinPoint, result);
-                String actionDescription = auditLog.description();
+                String actionDescription = parseDescription(auditLog.description(), joinPoint, result);
                 String userDesc = userId.equals("anonymous") ? "Khách ẩn danh" : "Người dùng [" + userId + "]";
-                
+
                 String description;
                 if (statusCode >= 200 && statusCode < 300) {
                     if (actionDescription.startsWith("Admin")) {
@@ -64,10 +76,10 @@ public class AuditLogAspect {
                     }
                 } else {
                     if (actionDescription.startsWith("Admin")) {
-                        description = actionDescription + " thất bại (" + userId + ")" 
+                        description = actionDescription + " thất bại (" + userId + ")"
                                 + (errorMessage != null ? " (" + errorMessage + ")" : "");
                     } else {
-                        description = userDesc + " thực hiện " + actionDescription.toLowerCase() + " thất bại" 
+                        description = userDesc + " thực hiện " + actionDescription.toLowerCase() + " thất bại"
                                 + (errorMessage != null ? " (" + errorMessage + ")" : "");
                     }
                 }
@@ -89,7 +101,7 @@ public class AuditLogAspect {
                             if (ex != null) {
                                 log.error("Failed to send AOP business audit log to Kafka: {}", ex.getMessage());
                             } else {
-                                log.debug("AOP Business log sent successfully: {} (Action: {}, User: {})", 
+                                log.debug("AOP Business log sent successfully: {} (Action: {}, User: {})",
                                         description, auditLog.action(), userId);
                             }
                         });
@@ -127,11 +139,14 @@ public class AuditLogAspect {
     private String getUserId(ProceedingJoinPoint joinPoint, Object result) {
         if (result != null) {
             String val = getFieldValue(result, "userId");
-            if (val != null) return val;
+            if (val != null)
+                return val;
             val = getFieldValue(result, "username");
-            if (val != null) return val;
+            if (val != null)
+                return val;
             val = getNestedUserFieldValue(result);
-            if (val != null) return val;
+            if (val != null)
+                return val;
         }
 
         try {
@@ -160,16 +175,19 @@ public class AuditLogAspect {
             // Ignore
         }
 
-        // Try checking parameter names first (for direct String userId / String username / String email args)
+        // Try checking parameter names first (for direct String userId / String
+        // username / String email args)
         try {
-            String[] parameterNames = ((org.aspectj.lang.reflect.MethodSignature) joinPoint.getSignature()).getParameterNames();
+            String[] parameterNames = ((org.aspectj.lang.reflect.MethodSignature) joinPoint.getSignature())
+                    .getParameterNames();
             Object[] args = joinPoint.getArgs();
             if (parameterNames != null && args != null) {
                 for (int i = 0; i < Math.min(parameterNames.length, args.length); i++) {
                     String paramName = parameterNames[i];
                     Object arg = args[i];
                     if (arg != null) {
-                        if ("userId".equalsIgnoreCase(paramName) || "username".equalsIgnoreCase(paramName) || "email".equalsIgnoreCase(paramName)) {
+                        if ("userId".equalsIgnoreCase(paramName) || "username".equalsIgnoreCase(paramName)
+                                || "email".equalsIgnoreCase(paramName)) {
                             return arg.toString();
                         }
                     }
@@ -183,11 +201,14 @@ public class AuditLogAspect {
         for (Object arg : joinPoint.getArgs()) {
             if (arg != null) {
                 String val = getFieldValue(arg, "userId");
-                if (val != null) return val;
+                if (val != null)
+                    return val;
                 val = getFieldValue(arg, "username");
-                if (val != null) return val;
+                if (val != null)
+                    return val;
                 val = getFieldValue(arg, "email");
-                if (val != null) return val;
+                if (val != null)
+                    return val;
             }
         }
         return "anonymous";
@@ -221,13 +242,41 @@ public class AuditLogAspect {
             Object userObj = userMethod.invoke(obj);
             if (userObj != null) {
                 String val = getFieldValue(userObj, "username");
-                if (val != null) return val;
+                if (val != null)
+                    return val;
                 val = getFieldValue(userObj, "userId");
-                if (val != null) return val;
+                if (val != null)
+                    return val;
             }
         } catch (Exception e) {
             // Ignore
         }
         return null;
+    }
+
+    private String parseDescription(String template, ProceedingJoinPoint joinPoint, Object result) {
+        if (template == null || !template.contains("#")) {
+            return template;
+        }
+        try {
+            MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+            Method method = signature.getMethod();
+            Object[] args = joinPoint.getArgs();
+            String[] parameterNames = nameDiscoverer.getParameterNames(method);
+            EvaluationContext context = new StandardEvaluationContext();
+            if (parameterNames != null && args != null) {
+                for (int i = 0; i < Math.min(parameterNames.length, args.length); i++) {
+                    context.setVariable(parameterNames[i], args[i]);
+                }
+            }
+            if (result != null) {
+                context.setVariable("result", result);
+            }
+            Expression expression = spelParser.parseExpression(template, new TemplateParserContext());
+            return expression.getValue(context, String.class);
+        } catch (Exception e) {
+            log.error("Failed to parse SpEL expression for audit log description: {}", template, e);
+            return template;
+        }
     }
 }
