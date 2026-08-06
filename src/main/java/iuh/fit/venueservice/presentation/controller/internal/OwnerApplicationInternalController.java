@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.presentation.controller.internal;
 
+import iuh.fit.shared.annotation.AuditLog;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -32,6 +33,7 @@ public class OwnerApplicationInternalController {
     private final OwnerApplicationConverter ownerApplicationConverter;
 
     @PostMapping
+    @AuditLog(action = "SUBMIT_APPLICATION", description = "Gửi đơn đăng ký chủ sân")
     public ResponseEntity<OwnerApplicationResponse> submitApplication(
             @Valid @RequestBody SubmitOwnerApplicationRequest request
     ) throws ServiceException
@@ -62,6 +64,7 @@ public class OwnerApplicationInternalController {
     }
 
     @PostMapping("/{id}/reject")
+    @AuditLog(action = "REJECT_APPLICATION", description = "Từ chối đơn đăng ký chủ sân")
     public ResponseEntity<OwnerApplicationResponse> rejectApplication(
             @PathVariable String id,
             @RequestBody ReviewOwnerApplicationRequest request
@@ -78,6 +81,7 @@ public class OwnerApplicationInternalController {
     }
 
     @PostMapping("/{id}/approve")
+    @AuditLog(action = "APPROVE_APPLICATION", description = "Chấp nhận đơn đăng ký chủ sân")
     public ResponseEntity<OwnerApplicationResponse> approveApplication(
             @PathVariable String id,
             @RequestBody ReviewOwnerApplicationRequest request
@@ -94,6 +98,7 @@ public class OwnerApplicationInternalController {
     }
 
     @PostMapping("/{id}/profile")
+    @AuditLog(action = "CREATE_VENUE_OWNER_PROFILE", description = "Tạo hồ sơ chủ sân")
     public ResponseEntity<Void> createVenueOwnerProfile(@PathVariable String id) throws ServiceException {
         ownerApplicationService.createVenueOwnerProfile(BaseUtil.uuid(id));
         return ResponseEntity.status(HttpStatus.CREATED).build();
