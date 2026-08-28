@@ -17,12 +17,12 @@ public class OwnerApplicationDocumentEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
-    private UUID ownerApplicationDocumentId;
+    private UUID documentId;
     @Enumerated(EnumType.STRING)
     private DocumentType documentType;
     private String fileUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_application_id")
+    @JoinColumn(name = "owner_application_id", nullable = false)
     private OwnerApplicationEntity ownerApplication;
 }

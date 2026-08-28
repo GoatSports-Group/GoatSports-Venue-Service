@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <changeSet id="20260828-venue-discovery-fields" author="minhdat">
+        <addColumn tableName="venues">
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="ward" type="VARCHAR(255)"/>
+            <column name="district" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(255)"/>
+            <column name="latitude" type="DOUBLE"/>
+            <column name="longitude" type="DOUBLE"/>
+            <column name="image_urls" type="JSONB"/>
+            <column name="amenities" type="JSONB"/>
+        </addColumn>
+
+        <modifyDataType
+                tableName="venues"
+                columnName="description"
+                newDataType="VARCHAR(2000)"/>
+
+        <rollback>
+            <modifyDataType
+                    tableName="venues"
+                    columnName="description"
+                    newDataType="VARCHAR(255)"/>
+            <dropColumn tableName="venues" columnName="amenities"/>
+            <dropColumn tableName="venues" columnName="image_urls"/>
+            <dropColumn tableName="venues" columnName="longitude"/>
+            <dropColumn tableName="venues" columnName="latitude"/>
+            <dropColumn tableName="venues" columnName="city"/>
+            <dropColumn tableName="venues" columnName="district"/>
+            <dropColumn tableName="venues" columnName="ward"/>
+            <dropColumn tableName="venues" columnName="address"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

@@ -49,15 +49,15 @@ public class OwnerApplicationDocumentServiceImpl implements OwnerApplicationDocu
         }
     }
 
-    private DocumentType getDocumentType(String path) {
+    private DocumentType getDocumentType(String path) throws ServiceException {
         if (path.contains("identities/")) {
-            return DocumentType.ID_CARD;
+            return DocumentType.IDENTITY_CARD;
         } else if (path.contains("licenses/")) {
             return DocumentType.BUSINESS_LICENSE;
         } else if (path.contains("venues/")) {
-            return DocumentType.VENUE_IMAGE;
+            return DocumentType.VENUE_PHOTO;
         } else {
-            return DocumentType.OTHER;
+            throw new ServiceException("Không nhận diện được loại tài liệu từ object key: " + path);
         }
     }
 }

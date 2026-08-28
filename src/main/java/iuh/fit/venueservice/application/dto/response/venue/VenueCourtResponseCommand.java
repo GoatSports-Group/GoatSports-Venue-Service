@@ -9,7 +9,6 @@ public record VenueCourtResponseCommand(
         SportType sportType,
         String name,
         Integer capacity,
-        Double pricePerHour,
-        Boolean indoor,
+        String surfaceType,
         Boolean active
 ) {}

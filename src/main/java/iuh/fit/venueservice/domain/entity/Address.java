@@ -1,6 +1,10 @@
 package iuh.fit.venueservice.domain.entity;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
@@ -8,12 +12,13 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Address {
+@SuperBuilder
+public class Address extends BaseEntity {
     private UUID addressId;
     private String address;
     private String ward;
     private String district;
     private String city;
-    private String province;
+    private Double latitude;
+    private Double longitude;
 }

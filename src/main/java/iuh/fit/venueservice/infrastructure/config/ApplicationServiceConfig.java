@@ -15,10 +15,10 @@ public class ApplicationServiceConfig {
     @Bean
     public OwnerApplicationServiceImpl ownerApplicationService(
             OwnerApplicationRepository ownerApplicationRepository,
-            VenueOwnerProfileRepository venueOwnerProfileRepository
+            VenueRepository venueRepository
     ) {
         return new OwnerApplicationServiceImpl(
-                ownerApplicationRepository, venueOwnerProfileRepository
+                ownerApplicationRepository, venueRepository
         );
     }
 
@@ -37,11 +37,10 @@ public class ApplicationServiceConfig {
 
     @Bean
     public VenueServiceImpl venueService(
-            VenueOwnerProfileRepository venueOwnerProfileRepository,
             VenueRepository venueRepository
     ) {
         return new VenueServiceImpl(
-                venueOwnerProfileRepository, venueRepository
+                venueRepository
         );
     }
 
@@ -52,6 +51,31 @@ public class ApplicationServiceConfig {
     ) {
         return new VenueCourtServiceImpl(
                 venueCourtRepository, venueRepository
+        );
+    }
+
+    @Bean
+    public iuh.fit.venueservice.application.service.impl.VenueSearchServiceImpl venueSearchService(
+            VenueRepository venueRepository,
+            VenueCourtRepository venueCourtRepository
+    ) {
+        return new iuh.fit.venueservice.application.service.impl.VenueSearchServiceImpl(
+                venueRepository, venueCourtRepository
+        );
+    }
+
+    @Bean
+    public iuh.fit.venueservice.application.service.impl.BookingServiceImpl bookingService(
+            BookingRepository bookingRepository,
+            TimeSlotRepository timeSlotRepository,
+            BookingCancellationRepository bookingCancellationRepository,
+            CheckInRecordRepository checkInRecordRepository,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository
+    ) {
+        return new iuh.fit.venueservice.application.service.impl.BookingServiceImpl(
+                bookingRepository, timeSlotRepository, bookingCancellationRepository,
+                checkInRecordRepository, venueCourtRepository, venueRepository
         );
     }
 }

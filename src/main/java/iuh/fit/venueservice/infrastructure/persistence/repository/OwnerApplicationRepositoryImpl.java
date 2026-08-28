@@ -12,6 +12,7 @@ import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEn
 import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationRepository;
+import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +33,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     private final FilterParser filterParser;
     private final OwnerApplicationEntityMapper ownerApplicationEntityMapper;
     private final AddressEntityMapper addressEntityMapper;
+    private final JpaVenueRepository jpaVenueRepository;
 
     @Override
     public OwnerApplication save(OwnerApplication ownerApplication) throws ServiceException {
@@ -47,6 +49,10 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
             entity = ownerApplicationEntityMapper.createEntity(ownerApplication, addressEntityMapper);
         }
 
+        if (ownerApplication.getVenueId() != null) {
+            entity.setVenue(jpaVenueRepository.getReferenceById(ownerApplication.getVenueId()));
+        }
+
         OwnerApplicationEntity saved = jpaRepository.save(entity);
 
         return ownerApplicationEntityMapper.toDomain(saved);
@@ -55,6 +61,11 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     @Override
     public Optional<OwnerApplication> findById(UUID id) {
         return jpaRepository.findById(id).map(ownerApplicationEntityMapper::toDomain);
+    }
+
+    @Override
+    public Optional<OwnerApplication> findByIdForUpdate(UUID id) {
+        return jpaRepository.findByIdForUpdate(id).map(ownerApplicationEntityMapper::toDomain);
     }
 
     @Override

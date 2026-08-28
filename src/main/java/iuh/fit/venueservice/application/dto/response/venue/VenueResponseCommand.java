@@ -1,14 +1,14 @@
 package iuh.fit.venueservice.application.dto.response.venue;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 public record VenueResponseCommand(
         UUID venueId,
         String name,
         String description,
-        LocalDateTime openTime,
-        LocalDateTime closeTime,
+        LocalTime openTime,
+        LocalTime closeTime,
         Boolean active,
         Double minPrice,
         Double maxPrice,

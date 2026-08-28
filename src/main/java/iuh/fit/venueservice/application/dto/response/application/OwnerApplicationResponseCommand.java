@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public record OwnerApplicationResponseCommand(
         UUID ownerApplicationId,
+        UUID venueId,
         UUID userId,
         String fullName,
         String phone,

@@ -1,8 +1,15 @@
 package iuh.fit.venueservice.domain.entity;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -10,13 +17,13 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Venue {
+@SuperBuilder
+public class Venue extends BaseEntity {
     private UUID venueId;
     private String name;
     private String description;
-    private LocalDateTime openTime;
-    private LocalDateTime closeTime;
+    private LocalTime openTime;
+    private LocalTime closeTime;
     private Boolean active;
     private Double minPrice;
     private Double maxPrice;
@@ -25,6 +32,14 @@ public class Venue {
     private String phone;
     private String email;
 
-    private VenueOwnerProfile venueOwnerProfile;
-    private Set<VenueCourt> courts;
+    private List<String> imageUrls;
+    private List<String> amenities;
+    private UUID ownerId;
+
+    private Address address;
+    private CancellationPolicy cancellationPolicy;
+    @Builder.Default
+    private Set<VenueCourt> courts = new HashSet<>();
+    @Builder.Default
+    private Set<Review> reviews = new HashSet<>();
 }

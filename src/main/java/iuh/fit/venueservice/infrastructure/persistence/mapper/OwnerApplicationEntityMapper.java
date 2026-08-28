@@ -9,15 +9,13 @@ import org.mapstruct.MappingTarget;
 @Mapper(
         componentModel = "spring",
         uses = {
-                AddressEntityMapper.class, OwnerApplicationDocumentEntityMapper.class,
-                VenueOwnerProfileEntityMapper.class
+                AddressEntityMapper.class, OwnerApplicationDocumentEntityMapper.class
         }
 )
 public interface OwnerApplicationEntityMapper {
 
-    @Mapping(target = "address", ignore = true)
     @Mapping(target = "ownerApplicationDocuments", ignore = true)
-    @Mapping(target = "venueOwnerProfile", ignore = true)
+    @Mapping(target = "venue", ignore = true)
     OwnerApplicationEntity createEntity(OwnerApplication domain);
 
     @Mapping(target = "ownerApplicationId", ignore = true)
@@ -27,16 +25,17 @@ public interface OwnerApplicationEntityMapper {
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "address", ignore = true)
     @Mapping(target = "ownerApplicationDocuments", ignore = true)
-    @Mapping(target = "venueOwnerProfile", ignore = true)
+    @Mapping(target = "venue", ignore = true)
     void updateEntity(OwnerApplication domain, @MappingTarget OwnerApplicationEntity entity);
 
     @Mapping(target = "documents", source = "ownerApplicationDocuments")
+    @Mapping(target = "venueId", source = "venue.venueId")
     OwnerApplication toDomain(OwnerApplicationEntity entity);
 
     default OwnerApplicationEntity createEntity(OwnerApplication domain, AddressEntityMapper addressEntityMapper) {
         OwnerApplicationEntity entity = createEntity(domain);
         if (entity != null && domain != null && domain.getAddress() != null && addressEntityMapper != null) {
-            entity.setAddress(addressEntityMapper.createEntity(domain.getAddress(), entity));
+            entity.setAddress(addressEntityMapper.createEntity(domain.getAddress()));
         }
         return entity;
     }
@@ -46,7 +45,7 @@ public interface OwnerApplicationEntityMapper {
         updateEntity(domain, entity);
         if (domain.getAddress() != null && addressEntityMapper != null) {
             if (entity.getAddress() == null) {
-                entity.setAddress(addressEntityMapper.createEntity(domain.getAddress(), entity));
+                entity.setAddress(addressEntityMapper.createEntity(domain.getAddress()));
             } else {
                 addressEntityMapper.updateEntity(domain.getAddress(), entity.getAddress());
             }

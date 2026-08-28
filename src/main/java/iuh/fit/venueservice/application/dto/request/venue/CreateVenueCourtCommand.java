@@ -7,7 +7,6 @@ public record CreateVenueCourtCommand(
         String sportType,
         String name,
         Integer capacity,
-        Double pricePerHour,
-        Boolean indoor,
+        String surfaceType,
         UUID currentUserId
 ) {}

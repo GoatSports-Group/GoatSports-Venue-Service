@@ -3,9 +3,12 @@ package iuh.fit.venueservice.infrastructure.persistence.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,16 +19,17 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = { "venueCourts", "venueOwnerProfile" })
+@ToString(exclude = { "address", "cancellationPolicy", "venueCourts", "reviews" })
 public class VenueEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
     private UUID venueId;
     private String name;
+    @Column(length = 2000)
     private String description;
-    private LocalDateTime openTime;
-    private LocalDateTime closeTime;
+    private LocalTime openTime;
+    private LocalTime closeTime;
     private Boolean active;
     private Double minPrice;
     private Double maxPrice;
@@ -34,12 +38,31 @@ public class VenueEntity extends BaseEntity {
     private String phone;
     private String email;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venue_owner_profile_id", nullable = false, unique = true)
-    private VenueOwnerProfileEntity venueOwnerProfile;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<String> imageUrls;
 
-    @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<String> amenities;
+
+    @Column(nullable = false, columnDefinition = "UUID")
+    private UUID ownerId;
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
+    @JoinColumn(name = "address_id", nullable = false, unique = true)
+    private AddressEntity address;
+
+    @OneToOne(mappedBy = "venue", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private CancellationPolicyEntity cancellationPolicy;
+
+    @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnore
     @Builder.Default
     private Set<VenueCourtEntity> venueCourts = new HashSet<>();
+
+    @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    private Set<ReviewEntity> reviews = new HashSet<>();
 }

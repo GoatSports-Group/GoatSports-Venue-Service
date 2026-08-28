@@ -26,7 +26,7 @@ public class VenueCourtServiceImpl implements VenueCourtService {
         Venue venue = venueRepository.findById(command.venueId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân."));
 
-        if (venue.getVenueOwnerProfile() == null || !venue.getVenueOwnerProfile().getUserId().equals(command.currentUserId()))
+        if (venue.getOwnerId() == null || !venue.getOwnerId().equals(command.currentUserId()))
         {
             throw new ServiceException("Bạn không có quyền quản lý sân này.");
         }
@@ -35,8 +35,7 @@ public class VenueCourtServiceImpl implements VenueCourtService {
                 .sportType(SportType.valueOf(command.sportType()))
                 .name(command.name())
                 .capacity(command.capacity())
-                .pricePerHour(command.pricePerHour())
-                .indoor(command.indoor())
+                .surfaceType(command.surfaceType())
                 .active(true)
                 .build();
 

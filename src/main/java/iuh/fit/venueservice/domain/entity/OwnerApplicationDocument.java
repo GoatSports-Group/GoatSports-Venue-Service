@@ -1,16 +1,22 @@
 package iuh.fit.venueservice.domain.entity;
 
 import iuh.fit.venueservice.domain.enums.DocumentType;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class OwnerApplicationDocument {
-    private UUID ownerApplicationDocumentId;
+@SuperBuilder
+public class OwnerApplicationDocument extends BaseEntity {
+    private UUID documentId;
+    private UUID ownerApplicationId;
     private DocumentType documentType;
     private String fileUrl;
 }

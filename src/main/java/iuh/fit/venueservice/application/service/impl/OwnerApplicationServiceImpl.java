@@ -5,14 +5,16 @@ import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerAppli
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
-import iuh.fit.venueservice.application.port.persistence.VenueOwnerProfileRepository;
+import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
-import iuh.fit.venueservice.domain.entity.VenueOwnerProfile;
+import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
 import iuh.fit.venueservice.domain.enums.BusinessType;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
+import iuh.fit.venueservice.domain.enums.DocumentType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,14 +23,14 @@ import java.util.UUID;
 public class OwnerApplicationServiceImpl implements OwnerApplicationService {
 
     private final OwnerApplicationRepository ownerApplicationRepository;
-    private final VenueOwnerProfileRepository venueOwnerProfileRepository;
+    private final VenueRepository venueRepository;
 
     public OwnerApplicationServiceImpl(
             OwnerApplicationRepository ownerApplicationRepository,
-            VenueOwnerProfileRepository venueOwnerProfileRepository
+            VenueRepository venueRepository
     ) {
         this.ownerApplicationRepository = ownerApplicationRepository;
-        this.venueOwnerProfileRepository = venueOwnerProfileRepository;
+        this.venueRepository = venueRepository;
     }
 
     @Override
@@ -43,7 +45,6 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
 
         Address address = Address.builder()
                 .address(command.address())
-                .province(command.province())
                 .district(command.district())
                 .ward(command.ward())
                 .city(command.city())
@@ -80,31 +81,51 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
 
     @Override
     public OwnerApplication approveOwnerApplication(UUID applicationId, UUID reviewerId) throws ServiceException {
-        OwnerApplication application = ownerApplicationRepository.findById(applicationId)
+        OwnerApplication application = ownerApplicationRepository.findByIdForUpdate(applicationId)
                 .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
+
+        if (application.getStatus() == OwnerApplicationStatus.APPROVED && application.getVenueId() != null) {
+            return application;
+        }
+
+        if (application.getStatus() == OwnerApplicationStatus.REJECTED) {
+            throw new ServiceException("Đơn đăng ký đã bị từ chối và không thể phê duyệt lại.");
+        }
+
+        Address applicationAddress = application.getAddress();
+        Address venueAddress = applicationAddress == null ? null : Address.builder()
+                .address(applicationAddress.getAddress())
+                .ward(applicationAddress.getWard())
+                .district(applicationAddress.getDistrict())
+                .city(applicationAddress.getCity())
+                .latitude(applicationAddress.getLatitude())
+                .longitude(applicationAddress.getLongitude())
+                .build();
+
+        List<String> venueImages = application.getDocuments() == null ? List.of() : application.getDocuments().stream()
+                .filter(document -> document.getDocumentType() == DocumentType.VENUE_PHOTO)
+                .map(OwnerApplicationDocument::getFileUrl)
+                .toList();
+
+        Venue venue = venueRepository.save(Venue.builder()
+                .name(application.getBusinessName())
+                .active(false)
+                .averageRating(0.0)
+                .totalReviews(0)
+                .phone(application.getPhone())
+                .email(application.getEmail())
+                .imageUrls(venueImages)
+                .amenities(List.of())
+                .ownerId(application.getUserId())
+                .address(venueAddress)
+                .build());
 
         application.setStatus(OwnerApplicationStatus.APPROVED);
         application.setReviewerId(reviewerId);
         application.setReviewedAt(LocalDateTime.now());
+        application.setVenueId(venue.getVenueId());
 
         return ownerApplicationRepository.save(application);
-    }
-
-    @Override
-    public void createVenueOwnerProfile(UUID applicationId) throws ServiceException {
-        OwnerApplication application = ownerApplicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ServiceException("Đơn đăng ký không tồn tại"));
-
-        VenueOwnerProfile profile = VenueOwnerProfile.builder()
-                .userId(application.getUserId())
-                .businessName(application.getBusinessName())
-                .phone(application.getPhone())
-                .email(application.getEmail())
-                .taxCode(application.getTaxCode())
-                .verified(false)
-                .build();
-
-        venueOwnerProfileRepository.save(profile, applicationId);
     }
 
     @Override

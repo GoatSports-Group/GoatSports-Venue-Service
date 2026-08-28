@@ -13,6 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class OwnerApplicationResponse {
     private UUID ownerApplicationId;
+    private UUID venueId;
     private UUID userId;
     private String fullName;
     private String phone;
@@ -41,7 +42,8 @@ public class OwnerApplicationResponse {
         private String ward;
         private String district;
         private String city;
-        private String province;
+        private Double latitude;
+        private Double longitude;
     }
 
     @Getter
@@ -50,7 +52,7 @@ public class OwnerApplicationResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class DocumentResponse {
-        private UUID ownerApplicationDocumentId;
+        private UUID documentId;
         private String documentType;
         private String fileUrl;
     }

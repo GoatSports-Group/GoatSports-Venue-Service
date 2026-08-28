@@ -6,4 +6,6 @@
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
 >
     <include file="/db/changelog/schema/23-06-2026/init-schema.xml"/>
+    <include file="/db/changelog/schema/28-08-2026/add-venue-discovery-fields.xml"/>
+    <include file="/db/changelog/schema/28-08-2026/align-venue-domain-model.xml"/>
 </databaseChangeLog>

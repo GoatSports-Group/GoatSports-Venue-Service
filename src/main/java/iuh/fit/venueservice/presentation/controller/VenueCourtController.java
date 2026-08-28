@@ -45,8 +45,7 @@ public class VenueCourtController {
                 request.getSportType(),
                 request.getName(),
                 request.getCapacity(),
-                request.getPricePerHour(),
-                request.getIndoor(),
+                request.getSurfaceType(),
                 userId
         );
 

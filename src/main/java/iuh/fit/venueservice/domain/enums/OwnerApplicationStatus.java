@@ -6,8 +6,7 @@ import lombok.Getter;
 public enum OwnerApplicationStatus {
     PENDING("Chờ xác nhận"),
     APPROVED("Chấp nhận"),
-    REJECTED("Từ chối"),
-    CANCELLED("Hủy");
+    REJECTED("Từ chối");
 
     private final String value;
     OwnerApplicationStatus(String value) {

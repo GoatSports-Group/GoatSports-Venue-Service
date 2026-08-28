@@ -37,12 +37,6 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
     }
 
     @Override
-    @Transactional(rollbackFor = ServiceException.class)
-    public void createVenueOwnerProfile(UUID applicationId) throws ServiceException {
-        ownerApplicationServiceImpl.createVenueOwnerProfile(applicationId);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public OwnerApplication getOwnerApplicationDetail(String id) throws ServiceException {
         return ownerApplicationServiceImpl.getOwnerApplicationDetail(id);

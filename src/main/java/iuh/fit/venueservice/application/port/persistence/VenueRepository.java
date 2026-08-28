@@ -1,5 +1,7 @@
 package iuh.fit.venueservice.application.port.persistence;
 
+import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.Venue;
 
 import java.util.List;
@@ -12,4 +14,8 @@ public interface VenueRepository {
     Optional<Venue> findById(UUID id);
 
     List<Venue> findByUserId(UUID userId);
+
+    PageResult<Venue> search(SearchVenueCommand command);
+
+    List<Venue> findAll(int page, int size);
 }

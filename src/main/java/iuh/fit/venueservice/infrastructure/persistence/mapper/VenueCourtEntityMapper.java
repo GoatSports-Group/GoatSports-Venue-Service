@@ -11,10 +11,21 @@ import org.mapstruct.MappingTarget;
 public interface VenueCourtEntityMapper {
 
     @Mapping(target = "venue", ignore = true)
+    @Mapping(target = "pricingRules", ignore = true)
+    @Mapping(target = "timeSlots", ignore = true)
+    @Mapping(target = "bookings", ignore = true)
     VenueCourtEntity createEntity(VenueCourt domain);
 
+    @Mapping(target = "venue", ignore = true)
+    @Mapping(target = "pricingRules", ignore = true)
+    @Mapping(target = "timeSlots", ignore = true)
+    @Mapping(target = "bookings", ignore = true)
     void updateEntity(VenueCourt domain, @MappingTarget VenueCourtEntity entity);
 
+    @Mapping(target = "venueId", source = "venue.venueId")
+    @Mapping(target = "pricingRules", ignore = true)
+    @Mapping(target = "timeSlots", ignore = true)
+    @Mapping(target = "bookings", ignore = true)
     VenueCourt toDomain(VenueCourtEntity entity);
 
     default VenueCourtEntity createEntity(VenueCourt domain, VenueEntity parent) {

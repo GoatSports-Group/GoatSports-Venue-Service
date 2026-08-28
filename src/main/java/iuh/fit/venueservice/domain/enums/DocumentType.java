@@ -4,10 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum DocumentType {
-    ID_CARD("CCCD"),
+    IDENTITY_CARD("CCCD"),
     BUSINESS_LICENSE("Giấy phép hoạt động"),
-    VENUE_IMAGE("Ảnh sân"),
-    OTHER("Khác");
+    VENUE_PHOTO("Ảnh sân");
 
     private final String value;
     DocumentType(String value) {

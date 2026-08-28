@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AddressEntity extends BaseEntity{
+public class AddressEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
@@ -21,9 +21,6 @@ public class AddressEntity extends BaseEntity{
     private String ward;
     private String district;
     private String city;
-    private String province;
-
-    @OneToOne
-    @JoinColumn(name = "owner_application_id", nullable = false, unique = true)
-    private OwnerApplicationEntity ownerApplication;
+    private Double latitude;
+    private Double longitude;
 }

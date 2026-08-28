@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <changeSet id="20260828-align-venue-ownership-address" author="minhdat">
+        <addColumn tableName="addresses">
+            <column name="latitude" type="DOUBLE"/>
+            <column name="longitude" type="DOUBLE"/>
+        </addColumn>
+        <addColumn tableName="owner_applications">
+            <column name="address_id" type="UUID"/>
+            <column name="venue_id" type="UUID"/>
+        </addColumn>
+        <addColumn tableName="venues">
+            <column name="owner_id" type="UUID"/>
+            <column name="address_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE owner_applications application
+            SET address_id = address.address_id
+            FROM addresses address
+            WHERE address.owner_application_id = application.owner_application_id;
+
+            UPDATE owner_applications application
+            SET venue_id = venue.venue_id
+            FROM venue_owner_profiles profile
+            JOIN venues venue ON venue.venue_owner_profile_id = profile.venue_owner_profile_id
+            WHERE profile.owner_application_id = application.owner_application_id;
+
+            UPDATE venues venue
+            SET owner_id = profile.user_id
+            FROM venue_owner_profiles profile
+            WHERE venue.venue_owner_profile_id = profile.venue_owner_profile_id;
+        </sql>
+
+        <dropForeignKeyConstraint baseTableName="addresses"
+                                  constraintName="FK_ADDRESSES_ON_OWNER_APPLICATION"/>
+        <dropUniqueConstraint tableName="addresses"
+                              constraintName="uc_addresses_owner_application"/>
+        <dropNotNullConstraint tableName="addresses"
+                               columnName="owner_application_id"
+                               columnDataType="UUID"/>
+
+        <sql>
+            INSERT INTO addresses (
+                address_id, created_at, created_by, updated_at, updated_by,
+                address, ward, district, city, latitude, longitude, owner_application_id
+            )
+            SELECT
+                venue.venue_id, venue.created_at, venue.created_by, venue.updated_at, venue.updated_by,
+                venue.address, venue.ward, venue.district, venue.city,
+                venue.latitude, venue.longitude, NULL
+            FROM venues venue
+            WHERE NOT EXISTS (
+                SELECT 1 FROM addresses address WHERE address.address_id = venue.venue_id
+            );
+
+            UPDATE venues SET address_id = venue_id WHERE address_id IS NULL;
+        </sql>
+
+        <dropForeignKeyConstraint baseTableName="venues"
+                                  constraintName="FK_VENUES_ON_VENUE_OWNER_PROFILE"/>
+        <dropUniqueConstraint tableName="venues"
+                              constraintName="uc_venues_venue_owner_profile"/>
+        <dropForeignKeyConstraint baseTableName="venue_owner_profiles"
+                                  constraintName="FK_VENUE_OWNER_PROFILES_ON_OWNER_APPLICATION"/>
+        <dropUniqueConstraint tableName="venue_owner_profiles"
+                              constraintName="uc_venue_owner_profiles_owner_application"/>
+
+        <dropColumn tableName="addresses" columnName="owner_application_id"/>
+        <dropColumn tableName="addresses" columnName="province"/>
+        <dropColumn tableName="venues" columnName="venue_owner_profile_id"/>
+        <dropColumn tableName="venues" columnName="address"/>
+        <dropColumn tableName="venues" columnName="ward"/>
+        <dropColumn tableName="venues" columnName="district"/>
+        <dropColumn tableName="venues" columnName="city"/>
+        <dropColumn tableName="venues" columnName="latitude"/>
+        <dropColumn tableName="venues" columnName="longitude"/>
+        <dropTable tableName="venue_owner_profiles"/>
+
+        <addNotNullConstraint tableName="owner_applications"
+                              columnName="address_id"
+                              columnDataType="UUID"/>
+        <addNotNullConstraint tableName="venues"
+                              columnName="owner_id"
+                              columnDataType="UUID"/>
+        <addNotNullConstraint tableName="venues"
+                              columnName="address_id"
+                              columnDataType="UUID"/>
+        <addUniqueConstraint tableName="owner_applications"
+                             columnNames="address_id"
+                             constraintName="uc_owner_applications_address"/>
+        <addUniqueConstraint tableName="owner_applications"
+                             columnNames="venue_id"
+                             constraintName="uc_owner_applications_venue"/>
+        <addUniqueConstraint tableName="venues"
+                             columnNames="address_id"
+                             constraintName="uc_venues_address"/>
+        <addForeignKeyConstraint baseTableName="owner_applications"
+                                 baseColumnNames="address_id"
+                                 constraintName="fk_owner_applications_address"
+                                 referencedTableName="addresses"
+                                 referencedColumnNames="address_id"/>
+        <addForeignKeyConstraint baseTableName="owner_applications"
+                                 baseColumnNames="venue_id"
+                                 constraintName="fk_owner_applications_venue"
+                                 referencedTableName="venues"
+                                 referencedColumnNames="venue_id"/>
+        <addForeignKeyConstraint baseTableName="venues"
+                                 baseColumnNames="address_id"
+                                 constraintName="fk_venues_address"
+                                 referencedTableName="addresses"
+                                 referencedColumnNames="address_id"/>
+    </changeSet>
+
+    <changeSet id="20260828-align-existing-venue-columns" author="minhdat">
+        <renameColumn tableName="owner_application_documents"
+                      oldColumnName="owner_application_document_id"
+                      newColumnName="document_id"
+                      columnDataType="UUID"/>
+        <sql>
+            UPDATE owner_application_documents SET document_type = 'IDENTITY_CARD'
+            WHERE document_type = 'ID_CARD';
+            UPDATE owner_application_documents SET document_type = 'VENUE_PHOTO'
+            WHERE document_type = 'VENUE_IMAGE';
+        </sql>
+        <addNotNullConstraint tableName="owner_application_documents"
+                              columnName="owner_application_id"
+                              columnDataType="UUID"/>
+
+        <modifyDataType tableName="venues" columnName="open_time" newDataType="TIME"/>
+        <modifyDataType tableName="venues" columnName="close_time" newDataType="TIME"/>
+
+        <addColumn tableName="venue_courts">
+            <column name="surface_type" type="VARCHAR(255)"/>
+        </addColumn>
+        <dropColumn tableName="venue_courts" columnName="price_per_hour"/>
+        <dropColumn tableName="venue_courts" columnName="indoor"/>
+        <addNotNullConstraint tableName="venue_courts"
+                              columnName="venue_id"
+                              columnDataType="UUID"/>
+    </changeSet>
+
+    <changeSet id="20260828-create-venue-pricing-slot-model" author="minhdat">
+        <createTable tableName="cancellation_policies">
+            <column name="policy_id" type="UUID">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_cancellation_policies"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="full_refund_hours_before" type="INT"/>
+            <column name="partial_refund_hours_before" type="INT"/>
+            <column name="partial_refund_percentage" type="DOUBLE"/>
+            <column name="no_refund_hours_before" type="INT"/>
+            <column name="venue_id" type="UUID">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_cancellation_policies_venue"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="court_pricing_rules">
+            <column name="pricing_rule_id" type="UUID">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_court_pricing_rules"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="day_of_week" type="VARCHAR(20)"/>
+            <column name="start_time" type="TIME"/>
+            <column name="end_time" type="TIME"/>
+            <column name="price_per_hour" type="DOUBLE"/>
+            <column name="base_price_per_hour" type="DOUBLE"/>
+            <column name="effective_from" type="DATE"/>
+            <column name="effective_to" type="DATE"/>
+            <column name="court_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="time_slots">
+            <column name="time_slot_id" type="UUID">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_time_slots"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="venue_court_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date" type="DATE"/>
+            <column name="start_time" type="TIME"/>
+            <column name="end_time" type="TIME"/>
+            <column name="status" type="VARCHAR(30)"/>
+            <column name="price_per_hour" type="DOUBLE"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="cancellation_policies" baseColumnNames="venue_id"
+                                 constraintName="fk_cancellation_policies_venue"
+                                 referencedTableName="venues" referencedColumnNames="venue_id"/>
+        <addForeignKeyConstraint baseTableName="court_pricing_rules" baseColumnNames="court_id"
+                                 constraintName="fk_court_pricing_rules_court"
+                                 referencedTableName="venue_courts" referencedColumnNames="venue_court_id"/>
+        <addForeignKeyConstraint baseTableName="time_slots" baseColumnNames="venue_court_id"
+                                 constraintName="fk_time_slots_venue_court"
+                                 referencedTableName="venue_courts" referencedColumnNames="venue_court_id"/>
+    </changeSet>
+
+    <changeSet id="20260828-create-booking-review-model" author="minhdat">
+        <createTable tableName="bookings">
+            <column name="booking_id" type="UUID">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_bookings"/>
+            </column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="player_id" type="UUID"/>
+            <column name="venue_court_id" type="UUID"><constraints nullable="false"/></column>
+            <column name="play_date" type="DATE"/>
+            <column name="start_time" type="TIME"/>
+            <column name="end_time" type="TIME"/>
+            <column name="status" type="VARCHAR(30)"/>
+            <column name="source" type="VARCHAR(30)"/>
+            <column name="total_price" type="DOUBLE"/>
+            <column name="deposit_amount" type="DOUBLE"/>
+            <column name="remaining_amount" type="DOUBLE"/>
+            <column name="deposit_payment_id" type="UUID"/>
+            <column name="remaining_payment_id" type="UUID"/>
+            <column name="booking_code" type="VARCHAR(20)"><constraints unique="true"/></column>
+            <column name="qr_code" type="VARCHAR(500)"/>
+            <column name="walk_in_customer_name" type="VARCHAR(255)"/>
+            <column name="walk_in_customer_phone" type="VARCHAR(255)"/>
+            <column name="matchmaking_session_id" type="UUID"/>
+        </createTable>
+
+        <createTable tableName="booking_cancellations">
+            <column name="cancellation_id" type="UUID"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="booking_id" type="UUID"><constraints nullable="false" unique="true"/></column>
+            <column name="refund_id" type="UUID"/>
+            <column name="reason" type="VARCHAR(1000)"/>
+            <column name="refund_percentage" type="DOUBLE"/>
+            <column name="refund_amount" type="DOUBLE"/>
+            <column name="status" type="VARCHAR(30)"/>
+            <column name="processed_by" type="UUID"/>
+            <column name="decision_reason" type="VARCHAR(1000)"/>
+            <column name="processed_at" type="DATETIME"/>
+        </createTable>
+
+        <createTable tableName="check_in_records">
+            <column name="check_in_id" type="UUID"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="booking_id" type="UUID"><constraints nullable="false" unique="true"/></column>
+            <column name="payment_id" type="UUID"/>
+            <column name="checked_in_by" type="UUID"/>
+            <column name="method" type="VARCHAR(30)"/>
+            <column name="remaining_amount_collected" type="DECIMAL(19,2)"/>
+            <column name="checked_in_at" type="DATETIME"/>
+        </createTable>
+
+        <createTable tableName="reviews">
+            <column name="review_id" type="UUID"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="created_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_at" type="DATETIME"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="venue_id" type="UUID"><constraints nullable="false"/></column>
+            <column name="player_id" type="UUID"/>
+            <column name="booking_id" type="UUID"><constraints nullable="false" unique="true"/></column>
+            <column name="rating" type="INT"/>
+            <column name="content" type="VARCHAR(2000)"/>
+            <column name="status" type="VARCHAR(30)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="bookings" baseColumnNames="venue_court_id"
+                                 constraintName="fk_bookings_venue_court"
+                                 referencedTableName="venue_courts" referencedColumnNames="venue_court_id"/>
+        <addForeignKeyConstraint baseTableName="booking_cancellations" baseColumnNames="booking_id"
+                                 constraintName="fk_booking_cancellations_booking"
+                                 referencedTableName="bookings" referencedColumnNames="booking_id"/>
+        <addForeignKeyConstraint baseTableName="check_in_records" baseColumnNames="booking_id"
+                                 constraintName="fk_check_in_records_booking"
+                                 referencedTableName="bookings" referencedColumnNames="booking_id"/>
+        <addForeignKeyConstraint baseTableName="reviews" baseColumnNames="venue_id"
+                                 constraintName="fk_reviews_venue"
+                                 referencedTableName="venues" referencedColumnNames="venue_id"/>
+        <addForeignKeyConstraint baseTableName="reviews" baseColumnNames="booking_id"
+                                 constraintName="fk_reviews_booking"
+                                 referencedTableName="bookings" referencedColumnNames="booking_id"/>
+    </changeSet>
+</databaseChangeLog>

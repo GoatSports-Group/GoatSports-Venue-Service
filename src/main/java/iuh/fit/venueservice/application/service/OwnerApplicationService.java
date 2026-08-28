@@ -15,8 +15,6 @@ public interface OwnerApplicationService {
 
     OwnerApplication approveOwnerApplication(UUID applicationId, UUID reviewerId) throws ServiceException;
 
-    void createVenueOwnerProfile(UUID applicationId) throws ServiceException;
-
     OwnerApplication getOwnerApplicationDetail(String id) throws ServiceException;
 
     PageResult<OwnerApplication> getMyOwnerApplications(PageFilter filter, UUID userId);

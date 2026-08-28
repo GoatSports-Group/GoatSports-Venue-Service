@@ -11,8 +11,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import static jakarta.persistence.CascadeType.*;
-
 @Entity
 @Table(name = "owner_applications")
 @Getter
@@ -20,7 +18,7 @@ import static jakarta.persistence.CascadeType.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = { "ownerApplicationDocuments", "venueOwnerProfile", "address" })
+@ToString(exclude = { "ownerApplicationDocuments", "venue", "address" })
 public class OwnerApplicationEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -41,13 +39,16 @@ public class OwnerApplicationEntity extends BaseEntity {
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
 
-    @OneToOne(mappedBy = "ownerApplication", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
+    @JoinColumn(name = "address_id", nullable = false, unique = true)
     private AddressEntity address;
 
     @OneToMany(mappedBy = "ownerApplication", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnore
+    @Builder.Default
     private Set<OwnerApplicationDocumentEntity> ownerApplicationDocuments = new HashSet<>();
 
-    @OneToOne(mappedBy = "ownerApplication", cascade = CascadeType.ALL, orphanRemoval = true)
-    private VenueOwnerProfileEntity venueOwnerProfile;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "venue_id", unique = true)
+    private VenueEntity venue;
 }

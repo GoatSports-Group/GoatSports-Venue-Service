@@ -97,10 +97,4 @@ public class OwnerApplicationInternalController {
         return ResponseEntity.status(HttpStatus.OK).body(ownerApplicationConverter.toResponse(result));
     }
 
-    @PostMapping("/{id}/profile")
-    @AuditLog(action = "CREATE_VENUE_OWNER_PROFILE", description = "Tạo hồ sơ chủ sân cho đơn #{#id}")
-    public ResponseEntity<Void> createVenueOwnerProfile(@PathVariable String id) throws ServiceException {
-        ownerApplicationService.createVenueOwnerProfile(BaseUtil.uuid(id));
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
 }

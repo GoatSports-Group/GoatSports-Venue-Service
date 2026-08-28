@@ -14,7 +14,6 @@ public class VenueCourtResponse {
     private String sportType;
     private String name;
     private Integer capacity;
-    private Double pricePerHour;
-    private Boolean indoor;
+    private String surfaceType;
     private Boolean active;
 }

@@ -2,7 +2,7 @@ package iuh.fit.venueservice.presentation.response.venue;
 
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Getter
@@ -14,8 +14,8 @@ public class VenueResponse {
     private UUID venueId;
     private String name;
     private String description;
-    private LocalDateTime openTime;
-    private LocalDateTime closeTime;
+    private LocalTime openTime;
+    private LocalTime closeTime;
     private Boolean active;
     private Double minPrice;
     private Double maxPrice;

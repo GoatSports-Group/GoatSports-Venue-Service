@@ -12,8 +12,10 @@ public interface OwnerApplicationDocumentEntityMapper {
     @Mapping(target = "ownerApplication", ignore = true)
     OwnerApplicationDocumentEntity createEntity(OwnerApplicationDocument domain);
 
+    @Mapping(target = "ownerApplication", ignore = true)
     void updateEntity(OwnerApplicationDocument domain, @MappingTarget OwnerApplicationDocumentEntity entity);
 
+    @Mapping(target = "ownerApplicationId", source = "ownerApplication.ownerApplicationId")
     OwnerApplicationDocument toDomain(OwnerApplicationDocumentEntity entity);
 
     default OwnerApplicationDocumentEntity createEntity(OwnerApplicationDocument domain, OwnerApplicationEntity parent) {

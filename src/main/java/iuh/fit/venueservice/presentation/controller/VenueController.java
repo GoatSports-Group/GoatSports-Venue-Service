@@ -49,6 +49,14 @@ public class VenueController {
                 request.getMaxPrice(),
                 request.getPhone(),
                 request.getEmail(),
+                request.getAddress(),
+                request.getWard(),
+                request.getDistrict(),
+                request.getCity(),
+                request.getLatitude(),
+                request.getLongitude(),
+                request.getImageUrls(),
+                request.getAmenities(),
                 userId
         );
 
