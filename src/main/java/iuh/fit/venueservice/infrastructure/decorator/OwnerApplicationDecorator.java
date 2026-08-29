@@ -8,12 +8,14 @@ import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 @Service
+@Primary
 @RequiredArgsConstructor
 public class OwnerApplicationDecorator implements OwnerApplicationService {
     private final OwnerApplicationServiceImpl ownerApplicationServiceImpl;

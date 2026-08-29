@@ -6,10 +6,12 @@ import iuh.fit.venueservice.application.service.VenueCourtService;
 import iuh.fit.venueservice.application.service.impl.VenueCourtServiceImpl;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Primary
 @RequiredArgsConstructor
 public class VenueCourtDecorator implements VenueCourtService {
     private final VenueCourtServiceImpl venueCourtServiceImpl;
