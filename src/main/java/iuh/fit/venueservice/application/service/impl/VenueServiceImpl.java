@@ -2,25 +2,32 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CreateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
+import iuh.fit.venueservice.application.dto.request.file.FileMoveRequest;
+import iuh.fit.venueservice.application.dto.request.file.MoveFileRequest;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.Venue;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 public class VenueServiceImpl implements VenueService {
     private final VenueRepository venueRepository;
+    private final StoragePort storagePort;
 
-    public VenueServiceImpl(VenueRepository venueRepository) {
+    public VenueServiceImpl(VenueRepository venueRepository, StoragePort storagePort) {
         this.venueRepository = venueRepository;
+        this.storagePort = storagePort;
     }
 
     @Override
@@ -74,6 +81,7 @@ public class VenueServiceImpl implements VenueService {
     public Venue updateVenue(UpdateVenueCommand command) throws ServiceException {
         Venue venue = getOwnedVenue(command.venueId(), command.currentUserId());
         validate(command);
+        List<String> imageKeys = finalizeNewImages(command.imageUrls());
 
         venue.setName(command.name().trim());
         venue.setDescription(trimToNull(command.description()));
@@ -84,7 +92,7 @@ public class VenueServiceImpl implements VenueService {
         venue.setMaxPrice(command.maxPrice());
         venue.setPhone(command.phone().trim());
         venue.setEmail(command.email().trim());
-        venue.setImageUrls(cleanList(command.imageUrls()));
+        venue.setImageUrls(imageKeys);
         venue.setAmenities(cleanList(command.amenities()));
 
         Address address = venue.getAddress();
@@ -136,6 +144,37 @@ public class VenueServiceImpl implements VenueService {
                 .filter(value -> !value.isEmpty())
                 .distinct()
                 .toList();
+    }
+
+    private List<String> finalizeNewImages(List<String> values) throws ServiceException {
+        List<String> imageKeys = cleanList(values);
+        List<String> tempKeys = imageKeys.stream()
+                .filter(this::isTemporaryKey)
+                .toList();
+        if (tempKeys.isEmpty()) return imageKeys;
+
+        List<FileMoveRequest> requests = tempKeys.stream()
+                .map(FileMoveRequest::new)
+                .toList();
+        List<String> permanentKeys = storagePort.confirmFile(requests);
+        if (permanentKeys == null || permanentKeys.size() != tempKeys.size()
+                || permanentKeys.stream().anyMatch(key -> key == null || key.isBlank() || isTemporaryKey(key))) {
+            throw new ServiceException("Xác nhận hình ảnh cơ sở thất bại.");
+        }
+
+        Map<String, String> replacements = new HashMap<>();
+        for (int index = 0; index < tempKeys.size(); index++) {
+            replacements.put(tempKeys.get(index), permanentKeys.get(index));
+        }
+
+        storagePort.moveFile(new MoveFileRequest(requests, 0L));
+        return imageKeys.stream()
+                .map(key -> replacements.getOrDefault(key, key))
+                .toList();
+    }
+
+    private boolean isTemporaryKey(String key) {
+        return key.startsWith("temp/") || key.contains("/temp/");
     }
 
     private String trimToNull(String value) {

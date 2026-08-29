@@ -37,10 +37,11 @@ public class ApplicationServiceConfig {
 
     @Bean
     public VenueServiceImpl venueService(
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            StoragePort storagePort
     ) {
         return new VenueServiceImpl(
-                venueRepository
+                venueRepository, storagePort
         );
     }
 

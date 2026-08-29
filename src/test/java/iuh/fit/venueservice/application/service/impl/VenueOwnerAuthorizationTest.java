@@ -2,7 +2,9 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCourtCommand;
+import iuh.fit.venueservice.application.dto.request.file.MoveFileRequest;
 import iuh.fit.venueservice.application.exception.OwnershipException;
+import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.entity.Address;
@@ -23,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,6 +36,8 @@ class VenueOwnerAuthorizationTest {
     private VenueRepository venueRepository;
     @Mock
     private VenueCourtRepository venueCourtRepository;
+    @Mock
+    private StoragePort storagePort;
 
     private VenueServiceImpl venueService;
     private VenueCourtServiceImpl venueCourtService;
@@ -43,7 +48,7 @@ class VenueOwnerAuthorizationTest {
 
     @BeforeEach
     void setUp() {
-        venueService = new VenueServiceImpl(venueRepository);
+        venueService = new VenueServiceImpl(venueRepository, storagePort);
         venueCourtService = new VenueCourtServiceImpl(venueCourtRepository, venueRepository);
         venueId = UUID.randomUUID();
         ownerId = UUID.randomUUID();
@@ -83,6 +88,41 @@ class VenueOwnerAuthorizationTest {
     }
 
     @Test
+    void updateVenueConfirmsAndMovesOnlyNewTemporaryImages() throws Exception {
+        String oldKey = "venues/owner/old-image.png";
+        String tempKey = "temp/venues/owner/new-image.png";
+        String permanentKey = "venues/owner/new-image.png";
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
+        when(storagePort.confirmFile(any())).thenReturn(List.of(permanentKey));
+        when(venueRepository.save(any(Venue.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Venue updated = venueService.updateVenue(updateVenueCommand(ownerId, List.of(oldKey, tempKey)));
+
+        assertThat(updated.getImageUrls()).containsExactly(oldKey, permanentKey);
+        verify(storagePort).confirmFile(argThat(requests ->
+                requests.size() == 1 && requests.getFirst().tempKey().equals(tempKey)
+        ));
+        verify(storagePort).moveFile(argThat((MoveFileRequest request) ->
+                request.requests().size() == 1
+                        && request.requests().getFirst().tempKey().equals(tempKey)
+        ));
+    }
+
+    @Test
+    void updateVenueDoesNotPersistWhenStorageCannotConfirmTemporaryImage() throws Exception {
+        String tempKey = "temp/venues/owner/new-image.png";
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
+        when(storagePort.confirmFile(any())).thenReturn(List.of());
+
+        assertThatThrownBy(() -> venueService.updateVenue(
+                updateVenueCommand(ownerId, List.of(tempKey))
+        )).hasMessageContaining("Xác nhận hình ảnh");
+
+        verify(storagePort, never()).moveFile(any(MoveFileRequest.class));
+        verify(venueRepository, never()).save(any(Venue.class));
+    }
+
+    @Test
     void ownerCannotListCourtsFromAnotherOwnersVenue() {
         when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
 
@@ -116,6 +156,10 @@ class VenueOwnerAuthorizationTest {
     }
 
     private UpdateVenueCommand updateVenueCommand(UUID currentUserId) {
+        return updateVenueCommand(currentUserId, List.of("https://example.test/venue.jpg"));
+    }
+
+    private UpdateVenueCommand updateVenueCommand(UUID currentUserId, List<String> imageUrls) {
         return new UpdateVenueCommand(
                 venueId,
                 "Goat Sports Center",
@@ -133,7 +177,7 @@ class VenueOwnerAuthorizationTest {
                 "Hồ Chí Minh",
                 10.77,
                 106.70,
-                List.of("https://example.test/venue.jpg"),
+                imageUrls,
                 List.of("Bãi giữ xe", "Wifi", "Wifi"),
                 currentUserId
         );
