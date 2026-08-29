@@ -5,11 +5,17 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.VenueSearchResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.VenueCourt;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface VenueSearchService {
     PageResult<VenueSearchResponseCommand> searchVenues(SearchVenueCommand command);
 
     Venue getVenueDetails(UUID venueId) throws ServiceException;
+
+    List<VenueCourt> getVenueCourts(UUID venueId) throws ServiceException;
+
+    VenueCourt getVenueCourt(UUID venueCourtId) throws ServiceException;
 }

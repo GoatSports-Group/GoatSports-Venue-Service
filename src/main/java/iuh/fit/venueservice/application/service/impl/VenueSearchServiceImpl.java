@@ -4,6 +4,7 @@ import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.VenueSearchResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.VenueSearchService;
@@ -30,7 +31,9 @@ public class VenueSearchServiceImpl implements VenueSearchService {
         PageResult<Venue> pageResult = venueRepository.search(command);
 
         List<VenueSearchResponseCommand> dtoList = pageResult.items().stream().map(venue -> {
-            List<VenueCourt> courts = venueCourtRepository.findByVenueId(venue.getVenueId());
+            List<VenueCourt> courts = venueCourtRepository.findByVenueId(venue.getVenueId()).stream()
+                    .filter(court -> Boolean.TRUE.equals(court.getActive()))
+                    .toList();
 
             List<String> sportTypes = courts.stream()
                     .map(c -> c.getSportType() != null ? c.getSportType().name() : null)
@@ -84,12 +87,34 @@ public class VenueSearchServiceImpl implements VenueSearchService {
     @Override
     public Venue getVenueDetails(UUID venueId) throws ServiceException {
         Venue venue = venueRepository.findById(venueId)
-                .orElseThrow(() -> new ServiceException("Không tìm thấy cụm sân thể thao với ID: " + venueId));
+                .filter(item -> Boolean.TRUE.equals(item.getActive()))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cơ sở thể thao đang hoạt động."));
 
-        List<VenueCourt> courts = venueCourtRepository.findByVenueId(venueId);
+        List<VenueCourt> courts = getVenueCourts(venueId);
         venue.setCourts(new java.util.HashSet<>(courts));
 
         return venue;
+    }
+
+    @Override
+    public List<VenueCourt> getVenueCourts(UUID venueId) throws ServiceException {
+        Venue venue = venueRepository.findById(venueId)
+                .filter(item -> Boolean.TRUE.equals(item.getActive()))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cơ sở thể thao đang hoạt động."));
+        return venueCourtRepository.findByVenueId(venue.getVenueId()).stream()
+                .filter(court -> Boolean.TRUE.equals(court.getActive()))
+                .toList();
+    }
+
+    @Override
+    public VenueCourt getVenueCourt(UUID venueCourtId) throws ServiceException {
+        VenueCourt court = venueCourtRepository.findById(venueCourtId)
+                .filter(item -> Boolean.TRUE.equals(item.getActive()))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân thi đấu đang hoạt động."));
+        venueRepository.findById(court.getVenueId())
+                .filter(item -> Boolean.TRUE.equals(item.getActive()))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cơ sở thể thao đang hoạt động."));
+        return court;
     }
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {

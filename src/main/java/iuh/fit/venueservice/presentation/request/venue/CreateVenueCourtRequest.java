@@ -25,4 +25,6 @@ public class CreateVenueCourtRequest {
     @Min(value = 1, message = "Sức chứa tối thiểu là 1 người")
     private Integer capacity;
     private String surfaceType;
+    @NotNull(message = "Trạng thái hoạt động không được để trống")
+    private Boolean active;
 }

@@ -2,6 +2,8 @@ package iuh.fit.venueservice.infrastructure.exception;
 
 import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.exception.OwnershipException;
+import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -43,6 +45,28 @@ public class GlobalExceptionHandler {
         response.setMessage(e.getMessage());
         response.setError("Có lỗi xảy ra");
 
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(value = {
+            OwnershipException.class
+    })
+    ResponseEntity<Object> handleOwnershipException(OwnershipException e) {
+        BaseResponse<Object> response = new BaseResponse<>();
+
+        response.setStatusCode(HttpStatus.FORBIDDEN.value());
+        response.setMessage(e.getMessage());
+        response.setError("Không có quyền truy cập");
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ResponseEntity<Object> handleResourceNotFoundException(ResourceNotFoundException e) {
+        BaseResponse<Object> response = new BaseResponse<>();
+        response.setStatusCode(HttpStatus.NOT_FOUND.value());
+        response.setMessage(e.getMessage());
+        response.setError("Không tìm thấy tài nguyên");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 

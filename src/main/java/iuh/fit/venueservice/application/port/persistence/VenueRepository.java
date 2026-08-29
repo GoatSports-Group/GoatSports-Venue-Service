@@ -17,5 +17,5 @@ public interface VenueRepository {
 
     PageResult<Venue> search(SearchVenueCommand command);
 
-    List<Venue> findAll(int page, int size);
+    PageResult<Venue> findAll(int page, int size);
 }

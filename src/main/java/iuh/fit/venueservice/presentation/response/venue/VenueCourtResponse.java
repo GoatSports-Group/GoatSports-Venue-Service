@@ -11,6 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class VenueCourtResponse {
     private UUID venueCourtId;
+    private UUID venueId;
     private String sportType;
     private String name;
     private Integer capacity;

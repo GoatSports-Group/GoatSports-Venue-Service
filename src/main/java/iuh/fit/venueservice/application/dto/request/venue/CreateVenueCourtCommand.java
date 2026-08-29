@@ -8,5 +8,6 @@ public record CreateVenueCourtCommand(
         String name,
         Integer capacity,
         String surfaceType,
+        Boolean active,
         UUID currentUserId
 ) {}

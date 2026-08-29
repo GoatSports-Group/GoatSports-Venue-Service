@@ -95,7 +95,7 @@ public class VenueRepositoryImpl implements VenueRepository {
         };
 
         int page = Math.max(0, command.page());
-        int size = command.size() > 0 ? command.size() : 10;
+        int size = command.size() > 0 ? Math.min(command.size(), 100) : 10;
         Pageable pageable = PageRequest.of(page, size);
 
         Page<VenueEntity> pagedResult = jpaRepository.findAll(spec, pageable);
@@ -114,10 +114,18 @@ public class VenueRepositoryImpl implements VenueRepository {
     }
 
     @Override
-    public List<Venue> findAll(int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(0, page), size > 0 ? size : 10);
-        return jpaRepository.findAll(pageable).stream()
+    public PageResult<Venue> findAll(int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page), size > 0 ? Math.min(size, 100) : 10);
+        Page<VenueEntity> result = jpaRepository.findAll(pageable);
+        List<Venue> items = result.getContent().stream()
                 .map(venueEntityMapper::toDomain)
                 .collect(Collectors.toList());
+        return new PageResult<>(
+                items,
+                result.getTotalElements(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalPages()
+        );
     }
 }

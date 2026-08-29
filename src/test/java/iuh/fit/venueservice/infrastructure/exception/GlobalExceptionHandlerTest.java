@@ -1,6 +1,8 @@
 package iuh.fit.venueservice.infrastructure.exception;
 
 import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
+import iuh.fit.venueservice.application.exception.OwnershipException;
+import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -29,5 +31,23 @@ class GlobalExceptionHandlerTest {
         );
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void ownershipExceptionReturnsForbidden() {
+        ResponseEntity<Object> response = handler.handleOwnershipException(
+                new OwnershipException("Cross-owner venue access")
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+
+    @Test
+    void missingResourceReturnsNotFound() {
+        ResponseEntity<Object> response = handler.handleResourceNotFoundException(
+                new ResourceNotFoundException("Venue not found")
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 }

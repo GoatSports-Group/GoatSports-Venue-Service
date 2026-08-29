@@ -16,7 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -57,16 +56,22 @@ public class JwtFilter extends OncePerRequestFilter {
             String userId = request.getHeader("X-User-Id");
             String username = request.getHeader("X-User-Username");
             String email = request.getHeader("X-User-Email");
+            String rolesRaw = request.getHeader("X-User-Roles");
             String authoritiesRaw = request.getHeader("X-User-Authorities");
 
-            List<SimpleGrantedAuthority> authorities = Collections.emptyList();
-            if (hasText(authoritiesRaw)) {
-                authorities = Arrays.stream(authoritiesRaw.split(","))
+            List<SimpleGrantedAuthority> authorities = Stream.concat(
+                    hasText(authoritiesRaw) ? Arrays.stream(authoritiesRaw.split(",")) : Stream.empty(),
+                    hasText(rolesRaw) ? Arrays.stream(rolesRaw.split(","))
+                            .map(String::trim)
+                            .filter(role -> !role.isBlank())
+                            .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                            : Stream.empty()
+            )
                         .map(String::trim)
                         .filter(s -> !s.isBlank())
                         .map(SimpleGrantedAuthority::new)
+                        .distinct()
                         .toList();
-            }
 
             if (hasText(userId) || hasText(email) || hasText(username)) {
                 String principal = hasText(email) ? email : username;

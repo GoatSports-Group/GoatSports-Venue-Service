@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public record VenueCourtResponseCommand(
         UUID venueCourtId,
+        UUID venueId,
         SportType sportType,
         String name,
         Integer capacity,

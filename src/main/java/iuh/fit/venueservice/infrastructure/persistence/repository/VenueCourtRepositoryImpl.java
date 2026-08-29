@@ -22,9 +22,18 @@ public class VenueCourtRepositoryImpl implements VenueCourtRepository {
 
     @Override
     public VenueCourt save(VenueCourt venueCourt, Venue venue) {
-        VenueCourtEntity entity = venueCourtEntityMapper.createEntity(
-                venueCourt, jpaVenueRepository.getReferenceById(venue.getVenueId())
-        );
+        VenueCourtEntity entity;
+        if (venueCourt.getVenueCourtId() == null) {
+            entity = venueCourtEntityMapper.createEntity(
+                    venueCourt, jpaVenueRepository.getReferenceById(venue.getVenueId())
+            );
+        } else {
+            entity = jpaRepository.findById(venueCourt.getVenueCourtId())
+                    .orElseGet(() -> venueCourtEntityMapper.createEntity(
+                            venueCourt, jpaVenueRepository.getReferenceById(venue.getVenueId())
+                    ));
+            venueCourtEntityMapper.updateEntity(venueCourt, entity);
+        }
         VenueCourtEntity saved = jpaRepository.save(entity);
         return venueCourtEntityMapper.toDomain(saved);
     }
