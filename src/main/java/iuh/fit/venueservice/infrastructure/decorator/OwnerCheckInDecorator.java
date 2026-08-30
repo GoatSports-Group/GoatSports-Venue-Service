@@ -10,10 +10,12 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.OwnerCheckInService;
 import iuh.fit.venueservice.application.service.impl.OwnerCheckInServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Primary
 @RequiredArgsConstructor
 public class OwnerCheckInDecorator implements OwnerCheckInService {
     private final OwnerCheckInServiceImpl delegate;

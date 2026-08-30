@@ -210,7 +210,7 @@ class OwnerCheckInServiceImplTest {
         UUID slotId = UUID.randomUUID();
         TimeSlot slot = TimeSlot.builder()
                 .timeSlotId(slotId).venueCourtId(courtId).date(LocalDate.of(2026, 8, 30))
-                .startTime(LocalTime.of(8, 0)).endTime(LocalTime.of(9, 0))
+                .startTime(LocalTime.of(8, 30)).endTime(LocalTime.of(8, 31))
                 .status(TimeSlotStatus.AVAILABLE).pricePerHour(200_000.0).build();
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
                 VenueCourt.builder().venueCourtId(courtId).venueId(venueId).name("Sân A").build()
@@ -225,7 +225,7 @@ class OwnerCheckInServiceImplTest {
             return value;
         });
         when(bookingQrPort.issue(bookingId, LocalDateTime.of(
-                LocalDate.of(2026, 8, 30), LocalTime.of(9, 0)
+                LocalDate.of(2026, 8, 30), LocalTime.of(8, 31)
         ))).thenReturn("GSQR.v1.walk-in");
         when(timeSlotRepository.save(slot)).thenReturn(slot);
 
@@ -237,7 +237,8 @@ class OwnerCheckInServiceImplTest {
         assertThat(created.getPlayerId()).isNull();
         assertThat(created.getSource()).isEqualTo(BookingSource.WALK_IN);
         assertThat(created.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
-        assertThat(created.getTotalPrice()).isEqualTo(200_000.0);
+        assertThat(created.getTotalPrice()).isEqualTo(3_333.33);
+        assertThat(result.outstandingAmount()).isEqualByComparingTo("3333.33");
         assertThat(created.getWalkInCustomerPhone()).isEqualTo("0901234567");
         assertThat(created.getQrCode()).isEqualTo("GSQR.v1.walk-in");
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.BOOKED);

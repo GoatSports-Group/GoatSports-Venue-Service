@@ -4,6 +4,8 @@ import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -22,10 +24,18 @@ import java.util.List;
 
 @ControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
-    ResponseEntity<BaseResponse<Object>> handleAllExceptions(Exception e){
+    ResponseEntity<BaseResponse<Object>> handleAllExceptions(
+            Exception e, HttpServletRequest request
+    ) {
+        log.error(
+                "Unhandled exception while processing {} {}",
+                request.getMethod(), request.getRequestURI(), e
+        );
+
         BaseResponse<Object> response = new BaseResponse<>();
         response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         response.setMessage(e.getMessage());

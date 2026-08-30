@@ -2,10 +2,12 @@ package iuh.fit.venueservice.infrastructure.decorator;
 
 import iuh.fit.venueservice.application.service.OwnerApplicationDocumentService;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
+import iuh.fit.venueservice.application.service.OwnerCheckInService;
 import iuh.fit.venueservice.application.service.VenueCourtService;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationDocumentServiceImpl;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
+import iuh.fit.venueservice.application.service.impl.OwnerCheckInServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueCourtServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -26,11 +28,13 @@ class DecoratorBeanSelectionTest {
             );
             context.registerBean(VenueServiceImpl.class, () -> mock(VenueServiceImpl.class));
             context.registerBean(VenueCourtServiceImpl.class, () -> mock(VenueCourtServiceImpl.class));
+            context.registerBean(OwnerCheckInServiceImpl.class, () -> mock(OwnerCheckInServiceImpl.class));
             context.register(
                     OwnerApplicationDecorator.class,
                     OwnerApplicationDocumentDecorator.class,
                     VenueDecorator.class,
-                    VenueCourtDecorator.class
+                    VenueCourtDecorator.class,
+                    OwnerCheckInDecorator.class
             );
             context.refresh();
 
@@ -41,6 +45,7 @@ class DecoratorBeanSelectionTest {
             );
             assertInstanceOf(VenueDecorator.class, context.getBean(VenueService.class));
             assertInstanceOf(VenueCourtDecorator.class, context.getBean(VenueCourtService.class));
+            assertInstanceOf(OwnerCheckInDecorator.class, context.getBean(OwnerCheckInService.class));
         }
     }
 }

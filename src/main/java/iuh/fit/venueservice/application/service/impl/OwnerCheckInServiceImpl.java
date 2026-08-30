@@ -30,6 +30,7 @@ import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
@@ -162,7 +163,10 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         if (minutes <= 0 || slot.getPricePerHour() == null || slot.getPricePerHour() <= 0) {
             throw new ServiceException("Khung giờ chưa có thời lượng hoặc giá hợp lệ.");
         }
-        double total = slot.getPricePerHour() * minutes / 60.0;
+        double total = BigDecimal.valueOf(slot.getPricePerHour())
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP)
+                .doubleValue();
         Booking saved = bookingRepository.save(Booking.builder()
                 .venueCourtId(court.getVenueCourtId())
                 .playDate(slot.getDate()).startTime(slot.getStartTime()).endTime(slot.getEndTime())
@@ -360,7 +364,9 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     }
 
     private BigDecimal money(Double amount) {
-        return amount == null ? BigDecimal.ZERO : BigDecimal.valueOf(amount).setScale(2);
+        return amount == null
+                ? BigDecimal.ZERO.setScale(2)
+                : BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
     private String generateBookingCode() {

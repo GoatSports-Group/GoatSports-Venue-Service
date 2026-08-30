@@ -12,10 +12,13 @@ import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaReviewR
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,14 +56,51 @@ public class ReviewRepositoryImpl implements ReviewRepository {
                 ? null : filter.fromDate().atStartOfDay();
         LocalDateTime toTime = filter.toDate() == null
                 ? null : filter.toDate().plusDays(1).atStartOfDay();
-        var page = jpaRepository.findOwnedReviews(
-                filter.ownerId(), filter.venueId(), filter.venueCourtId(), filter.rating(),
-                fromTime, toTime, ReviewStatus.DELETED, PageRequest.of(filter.page(), filter.size())
+        Specification<ReviewEntity> specification = ownedReviewsSpecification(filter, fromTime, toTime);
+        var page = jpaRepository.findAll(
+                specification,
+                PageRequest.of(
+                        filter.page(), filter.size(),
+                        Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("reviewId"))
+                )
         );
         return new PageResult<>(
                 page.getContent().stream().map(this::toOwnerRecord).toList(),
                 page.getTotalElements(), page.getNumber(), page.getSize(), page.getTotalPages()
         );
+    }
+
+    private Specification<ReviewEntity> ownedReviewsSpecification(
+            OwnerReviewFilter filter, LocalDateTime fromTime, LocalDateTime toTime
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+            predicates.add(criteriaBuilder.equal(root.get("venue").get("ownerId"), filter.ownerId()));
+            predicates.add(criteriaBuilder.notEqual(root.get("status"), ReviewStatus.DELETED));
+
+            if (filter.venueId() != null) {
+                predicates.add(criteriaBuilder.equal(
+                        root.get("venue").get("venueId"), filter.venueId()
+                ));
+            }
+            if (filter.venueCourtId() != null) {
+                predicates.add(criteriaBuilder.equal(
+                        root.get("booking").get("venueCourt").get("venueCourtId"),
+                        filter.venueCourtId()
+                ));
+            }
+            if (filter.rating() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("rating"), filter.rating()));
+            }
+            if (fromTime != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), fromTime));
+            }
+            if (toTime != null) {
+                predicates.add(criteriaBuilder.lessThan(root.get("createdAt"), toTime));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
     }
 
     @Override

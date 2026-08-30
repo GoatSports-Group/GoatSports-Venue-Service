@@ -4,11 +4,14 @@ import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
 
@@ -16,8 +19,12 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void technicalExceptionReturnsInternalServerError() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getRequestURI()).thenReturn("/api/v1/owner/check-ins/walk-ins");
+
         ResponseEntity<BaseResponse<Object>> response = handler.handleAllExceptions(
-                new IllegalStateException("No active transaction")
+                new IllegalStateException("No active transaction"), request
         );
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
