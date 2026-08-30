@@ -48,6 +48,17 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
     }
 
     @Override
+    public List<TimeSlot> findByVenueCourtIdAndDateBetween(
+            UUID venueCourtId, LocalDate fromDate, LocalDate toDate
+    ) {
+        return jpaRepository
+                .findByVenueCourt_VenueCourtIdAndDateBetweenOrderByDateAscStartTimeAsc(
+                        venueCourtId, fromDate, toDate
+                )
+                .stream().map(mapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<TimeSlot> saveAll(List<TimeSlot> timeSlots) {
         var entities = timeSlots.stream().map(timeSlot -> {
             var entity = mapper.toEntity(timeSlot);
@@ -55,5 +66,10 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
             return entity;
         }).collect(Collectors.toList());
         return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteById(UUID timeSlotId) {
+        jpaRepository.deleteById(timeSlotId);
     }
 }

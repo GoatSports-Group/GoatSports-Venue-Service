@@ -1,5 +1,8 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
+import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
@@ -8,7 +11,10 @@ import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBooking
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueCourtRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -66,5 +72,72 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public long countByPlayerId(UUID playerId) {
         return jpaRepository.findByPlayerIdOrderByCreatedAtDesc(playerId, PageRequest.of(0, 1)).getTotalElements();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter) {
+        Specification<iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity> spec =
+                (root, query, cb) -> cb.equal(
+                        root.get("venueCourt").get("venue").get("ownerId"), filter.ownerId()
+                );
+        if (filter.venueId() != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(
+                    root.get("venueCourt").get("venue").get("venueId"), filter.venueId()
+            ));
+        }
+        if (filter.venueCourtId() != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(
+                    root.get("venueCourt").get("venueCourtId"), filter.venueCourtId()
+            ));
+        }
+        if (filter.status() != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), filter.status()));
+        }
+        if (filter.fromDate() != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(
+                    root.get("playDate"), filter.fromDate()
+            ));
+        }
+        if (filter.toDate() != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(
+                    root.get("playDate"), filter.toDate()
+            ));
+        }
+        if (filter.query() != null && !filter.query().isBlank()) {
+            String term = "%" + filter.query().trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("bookingCode")), term),
+                    cb.like(cb.lower(root.get("walkInCustomerName")), term),
+                    cb.like(cb.lower(root.get("walkInCustomerPhone")), term)
+            ));
+        }
+
+        var page = jpaRepository.findAll(
+                spec,
+                PageRequest.of(filter.page(), filter.size(), Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+        List<OwnerBookingRecord> records = page.getContent().stream()
+                .map(this::toOwnerRecord)
+                .toList();
+        return new PageResult<>(records, page.getTotalElements(), filter.page(), filter.size(), page.getTotalPages());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OwnerBookingRecord> findOwnedBookingById(UUID bookingId, UUID ownerId) {
+        return jpaRepository.findById(bookingId)
+                .filter(entity -> ownerId.equals(entity.getVenueCourt().getVenue().getOwnerId()))
+                .map(this::toOwnerRecord);
+    }
+
+    private OwnerBookingRecord toOwnerRecord(
+            iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity entity
+    ) {
+        var court = entity.getVenueCourt();
+        var venue = court.getVenue();
+        return new OwnerBookingRecord(
+                mapper.toDomain(entity), venue.getVenueId(), venue.getName(), court.getName()
+        );
     }
 }

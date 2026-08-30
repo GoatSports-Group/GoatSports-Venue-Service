@@ -14,4 +14,8 @@ public interface JpaTimeSlotRepository extends JpaRepository<TimeSlotEntity, UUI
     List<TimeSlotEntity> findByVenueCourt_VenueCourtIdAndDateOrderByStartTime(UUID venueCourtId, LocalDate date);
 
     List<TimeSlotEntity> findByVenueCourt_VenueCourtIdAndDateAndStatus(UUID venueCourtId, LocalDate date, TimeSlotStatus status);
+
+    List<TimeSlotEntity> findByVenueCourt_VenueCourtIdAndDateBetweenOrderByDateAscStartTimeAsc(
+            UUID venueCourtId, LocalDate fromDate, LocalDate toDate
+    );
 }

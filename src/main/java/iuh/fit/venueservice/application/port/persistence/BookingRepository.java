@@ -1,5 +1,8 @@
 package iuh.fit.venueservice.application.port.persistence;
 
+import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
 import iuh.fit.venueservice.domain.entity.Booking;
 
 import java.util.List;
@@ -20,4 +23,8 @@ public interface BookingRepository {
     List<Booking> findByPlayerIdAndStatus(UUID playerId, String status, int page, int size);
 
     long countByPlayerId(UUID playerId);
+
+    PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter);
+
+    Optional<OwnerBookingRecord> findOwnedBookingById(UUID bookingId, UUID ownerId);
 }

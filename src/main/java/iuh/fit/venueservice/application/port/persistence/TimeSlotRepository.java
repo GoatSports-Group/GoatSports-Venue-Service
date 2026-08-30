@@ -16,5 +16,11 @@ public interface TimeSlotRepository {
 
     List<TimeSlot> findAvailableSlots(UUID venueCourtId, LocalDate date);
 
+    List<TimeSlot> findByVenueCourtIdAndDateBetween(
+            UUID venueCourtId, LocalDate fromDate, LocalDate toDate
+    );
+
     List<TimeSlot> saveAll(List<TimeSlot> timeSlots);
+
+    void deleteById(UUID timeSlotId);
 }

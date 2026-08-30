@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface JpaCourtPricingRuleRepository extends JpaRepository<CourtPricingRuleEntity, UUID> {
-    List<CourtPricingRuleEntity> findByCourt_VenueCourtId(UUID courtId);
+    List<CourtPricingRuleEntity> findByCourt_VenueCourtIdOrderByDayOfWeekAscStartTimeAsc(UUID courtId);
 }

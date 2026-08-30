@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260830-harden-owner-schedule" author="codex">
+        <addUniqueConstraint tableName="time_slots"
+                             columnNames="venue_court_id,date,start_time,end_time"
+                             constraintName="uc_time_slots_court_date_time"/>
+        <createIndex tableName="time_slots" indexName="idx_time_slots_court_date_status">
+            <column name="venue_court_id"/>
+            <column name="date"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="court_pricing_rules" indexName="idx_pricing_rules_court_effective">
+            <column name="court_id"/>
+            <column name="day_of_week"/>
+            <column name="effective_from"/>
+            <column name="effective_to"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

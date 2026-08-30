@@ -4,6 +4,8 @@ import iuh.fit.venueservice.application.port.*;
 import iuh.fit.venueservice.application.port.persistence.*;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationDocumentServiceImpl;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
+import iuh.fit.venueservice.application.service.impl.OwnerBookingServiceImpl;
+import iuh.fit.venueservice.application.service.impl.OwnerScheduleServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueCourtServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import org.springframework.context.annotation.Bean;
@@ -77,6 +79,30 @@ public class ApplicationServiceConfig {
         return new iuh.fit.venueservice.application.service.impl.BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
                 checkInRecordRepository, venueCourtRepository, venueRepository
+        );
+    }
+
+    @Bean
+    public OwnerScheduleServiceImpl ownerScheduleService(
+            CourtPricingRuleRepository courtPricingRuleRepository,
+            TimeSlotRepository timeSlotRepository,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository
+    ) {
+        return new OwnerScheduleServiceImpl(
+                courtPricingRuleRepository, timeSlotRepository, venueCourtRepository, venueRepository
+        );
+    }
+
+    @Bean
+    public OwnerBookingServiceImpl ownerBookingService(
+            BookingRepository bookingRepository,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository,
+            PaymentQueryPort paymentQueryPort
+    ) {
+        return new OwnerBookingServiceImpl(
+                bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort
         );
     }
 }
