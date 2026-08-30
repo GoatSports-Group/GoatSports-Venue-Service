@@ -20,8 +20,6 @@ public interface BookingService {
 
     List<Booking> getBookingHistory(UUID userId, String status, int page, int size);
 
-    Booking checkIn(CheckInCommand command) throws ServiceException;
-
     BookingCancellation requestCancellation(CancelBookingCommand command) throws ServiceException;
 
     BookingCancellation processCancellation(UUID cancellationId, boolean approved, UUID processedByUserId, String processNote) throws ServiceException;

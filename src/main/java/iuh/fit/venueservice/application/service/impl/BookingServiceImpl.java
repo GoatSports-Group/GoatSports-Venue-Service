@@ -1,13 +1,11 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
-import iuh.fit.venueservice.application.dto.request.venue.CheckInCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
-import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -15,14 +13,12 @@ import iuh.fit.venueservice.application.service.BookingService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.CancellationPolicy;
-import iuh.fit.venueservice.domain.entity.CheckInRecord;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
-import iuh.fit.venueservice.domain.enums.CheckInMethod;
 
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -38,7 +34,6 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final BookingCancellationRepository bookingCancellationRepository;
-    private final CheckInRecordRepository checkInRecordRepository;
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
 
@@ -46,14 +41,12 @@ public class BookingServiceImpl implements BookingService {
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
             BookingCancellationRepository bookingCancellationRepository,
-            CheckInRecordRepository checkInRecordRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.bookingCancellationRepository = bookingCancellationRepository;
-        this.checkInRecordRepository = checkInRecordRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
     }
@@ -133,35 +126,6 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public Booking checkIn(CheckInCommand command) throws ServiceException {
-        Booking booking = findBookingForCheckIn(command);
-        if (booking.getStatus() == BookingStatus.CHECKED_IN) {
-            throw new ServiceException("Đơn đặt sân này đã được check-in.");
-        }
-        if (booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw new ServiceException("Chỉ đơn đã xác nhận thanh toán mới được check-in.");
-        }
-
-        CheckInMethod method = command.qrCode() != null && !command.qrCode().isBlank()
-                ? CheckInMethod.QR_CODE
-                : command.bookingCode() != null && !command.bookingCode().isBlank()
-                ? CheckInMethod.BOOKING_CODE
-                : CheckInMethod.MANUAL;
-
-        CheckInRecord record = checkInRecordRepository.save(CheckInRecord.builder()
-                .bookingId(booking.getBookingId())
-                .paymentId(booking.getRemainingPaymentId())
-                .checkedInBy(command.checkedInBy())
-                .method(method)
-                .checkedInAt(LocalDateTime.now())
-                .build());
-
-        booking.setCheckInRecord(record);
-        booking.setStatus(BookingStatus.CHECKED_IN);
-        return bookingRepository.save(booking);
-    }
-
-    @Override
     public BookingCancellation requestCancellation(CancelBookingCommand command) throws ServiceException {
         Booking booking = bookingRepository.findById(command.bookingId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân."));
@@ -229,22 +193,6 @@ public class BookingServiceImpl implements BookingService {
             code.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
         }
         return code.toString();
-    }
-
-    private Booking findBookingForCheckIn(CheckInCommand command) throws ServiceException {
-        Booking booking = command.bookingId() == null
-                ? null
-                : bookingRepository.findById(command.bookingId()).orElse(null);
-        if (booking == null && command.qrCode() != null && !command.qrCode().isBlank()) {
-            booking = bookingRepository.findByQrCode(command.qrCode().trim()).orElse(null);
-        }
-        if (booking == null && command.bookingCode() != null && !command.bookingCode().isBlank()) {
-            booking = bookingRepository.findByBookingCode(command.bookingCode().trim().toUpperCase()).orElse(null);
-        }
-        if (booking == null) {
-            throw new ServiceException("Không tìm thấy đơn đặt sân để check-in.");
-        }
-        return booking;
     }
 
     private double calculateRefundPercentage(CancellationPolicy policy, Booking booking) {

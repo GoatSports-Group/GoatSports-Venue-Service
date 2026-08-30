@@ -9,11 +9,10 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerBookingService;
 import iuh.fit.venueservice.application.util.BaseUtil;
-import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.presentation.request.venue.UpdateOwnerBookingStatusRequest;
 import iuh.fit.venueservice.presentation.response.venue.OwnerBookingResponse;
-import iuh.fit.venueservice.presentation.response.venue.OwnerPaymentResponse;
+import iuh.fit.venueservice.presentation.converter.OwnerBookingResponseMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +34,7 @@ import java.util.UUID;
 public class OwnerBookingController {
     private final OwnerBookingService ownerBookingService;
     private final CurrentUserProvider currentUserProvider;
+    private final OwnerBookingResponseMapper responseMapper;
 
     @GetMapping
     @PreAuthorize("hasAuthority('GET_OWN_BOOKINGS')")
@@ -56,7 +56,7 @@ public class OwnerBookingController {
                 result.page(), result.pageSize(), result.totalPages(), result.total()
         );
         return ResponseEntity.ok(new BaseListResponse(
-                meta, result.items().stream().map(this::toResponse).toList()
+                meta, result.items().stream().map(responseMapper::toResponse).toList()
         ));
     }
 
@@ -65,7 +65,7 @@ public class OwnerBookingController {
     public ResponseEntity<OwnerBookingResponse> getBooking(
             @PathVariable UUID bookingId
     ) throws ServiceException {
-        return ResponseEntity.ok(toResponse(ownerBookingService.getBooking(bookingId, currentUserId())));
+        return ResponseEntity.ok(responseMapper.toResponse(ownerBookingService.getBooking(bookingId, currentUserId())));
     }
 
     @PatchMapping("/{bookingId}/status")
@@ -74,34 +74,9 @@ public class OwnerBookingController {
             @PathVariable UUID bookingId,
             @Valid @RequestBody UpdateOwnerBookingStatusRequest request
     ) throws ServiceException {
-        return ResponseEntity.ok(toResponse(ownerBookingService.updateStatus(
+        return ResponseEntity.ok(responseMapper.toResponse(ownerBookingService.updateStatus(
                 new UpdateOwnerBookingStatusCommand(bookingId, request.getStatus(), currentUserId())
         )));
-    }
-
-    private OwnerBookingResponse toResponse(OwnerBookingView view) {
-        Booking booking = view.booking();
-        return OwnerBookingResponse.builder()
-                .bookingId(booking.getBookingId()).playerId(booking.getPlayerId())
-                .venueId(view.venueId()).venueCourtId(booking.getVenueCourtId())
-                .venueName(view.venueName()).courtName(view.courtName())
-                .playDate(booking.getPlayDate()).startTime(booking.getStartTime()).endTime(booking.getEndTime())
-                .status(booking.getStatus().name()).source(booking.getSource().name())
-                .totalPrice(booking.getTotalPrice()).depositAmount(booking.getDepositAmount())
-                .remainingAmount(booking.getRemainingAmount())
-                .depositPaymentId(booking.getDepositPaymentId()).remainingPaymentId(booking.getRemainingPaymentId())
-                .bookingCode(booking.getBookingCode()).qrCode(booking.getQrCode())
-                .walkInCustomerName(booking.getWalkInCustomerName())
-                .walkInCustomerPhone(booking.getWalkInCustomerPhone())
-                .matchmakingSessionId(booking.getMatchmakingSessionId())
-                .createdAt(booking.getCreatedAt()).updatedAt(booking.getUpdatedAt())
-                .payments(view.payments().stream().map(payment -> OwnerPaymentResponse.builder()
-                        .paymentId(payment.paymentId()).purpose(payment.purpose())
-                        .amount(payment.amount()).currency(payment.currency()).status(payment.status())
-                        .paidAt(payment.paidAt()).expiresAt(payment.expiresAt())
-                        .createdAt(payment.createdAt()).build()).toList())
-                .allowedTransitions(view.allowedTransitions().stream().map(Enum::name).toList())
-                .build();
     }
 
     private UUID currentUserId() throws ServiceException {

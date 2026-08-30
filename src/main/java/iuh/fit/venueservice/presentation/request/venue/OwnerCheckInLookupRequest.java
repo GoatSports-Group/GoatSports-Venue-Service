@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class CheckInRequest {
+public class OwnerCheckInLookupRequest {
     private UUID bookingId;
     private String qrCode;
     private String bookingCode;

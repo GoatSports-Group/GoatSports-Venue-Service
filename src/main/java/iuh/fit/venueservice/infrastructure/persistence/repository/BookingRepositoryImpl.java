@@ -131,6 +131,12 @@ public class BookingRepositoryImpl implements BookingRepository {
                 .map(this::toOwnerRecord);
     }
 
+    @Override
+    @Transactional
+    public Optional<OwnerBookingRecord> findOwnedBookingByIdForUpdate(UUID bookingId, UUID ownerId) {
+        return jpaRepository.findOwnedByIdForUpdate(bookingId, ownerId).map(this::toOwnerRecord);
+    }
+
     private OwnerBookingRecord toOwnerRecord(
             iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity entity
     ) {

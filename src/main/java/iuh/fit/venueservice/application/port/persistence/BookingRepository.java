@@ -27,4 +27,6 @@ public interface BookingRepository {
     PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter);
 
     Optional<OwnerBookingRecord> findOwnedBookingById(UUID bookingId, UUID ownerId);
+
+    Optional<OwnerBookingRecord> findOwnedBookingByIdForUpdate(UUID bookingId, UUID ownerId);
 }

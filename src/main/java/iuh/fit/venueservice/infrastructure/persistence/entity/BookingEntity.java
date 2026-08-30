@@ -22,7 +22,7 @@ public class BookingEntity extends BaseEntity {
     @Column(columnDefinition = "UUID")
     private UUID bookingId;
 
-    @Column(nullable = false, columnDefinition = "UUID")
+    @Column(columnDefinition = "UUID")
     private UUID playerId;
 
     @Column(nullable = false)

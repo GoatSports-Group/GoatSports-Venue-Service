@@ -35,6 +35,10 @@ class VenueControllerPermissionContractTest {
         assertPermission(OwnerBookingController.class, "getBookings", "GET_OWN_BOOKINGS");
         assertPermission(OwnerBookingController.class, "getBooking", "GET_OWN_BOOKING");
         assertPermission(OwnerBookingController.class, "updateStatus", "UPDATE_OWN_BOOKING_STATUS");
+        assertPermission(OwnerCheckInController.class, "lookup", "LOOKUP_OWN_CHECK_IN");
+        assertPermission(OwnerCheckInController.class, "history", "GET_OWN_CHECK_INS");
+        assertPermission(OwnerCheckInController.class, "confirm", "CONFIRM_OWN_CHECK_IN");
+        assertPermission(OwnerCheckInController.class, "createWalkIn", "CREATE_OWN_WALK_IN_BOOKING");
         assertPermission(VenueAdminController.class, "getVenues", "GET_ALL_VENUES");
         assertPermission(VenueAdminController.class, "getVenue", "GET_ANY_VENUE");
         assertPermission(VenueCourtAdminController.class, "getVenueCourts", "GET_ANY_VENUE_COURTS");

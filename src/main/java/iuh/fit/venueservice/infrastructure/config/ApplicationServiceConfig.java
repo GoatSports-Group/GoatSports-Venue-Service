@@ -5,14 +5,24 @@ import iuh.fit.venueservice.application.port.persistence.*;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationDocumentServiceImpl;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
 import iuh.fit.venueservice.application.service.impl.OwnerBookingServiceImpl;
+import iuh.fit.venueservice.application.service.impl.OwnerCheckInServiceImpl;
+import iuh.fit.venueservice.application.service.impl.BookingPaymentEventServiceImpl;
 import iuh.fit.venueservice.application.service.impl.OwnerScheduleServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueCourtServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Clock;
+import java.time.ZoneId;
+
 @Configuration
 public class ApplicationServiceConfig {
+
+    @Bean
+    public Clock businessClock() {
+        return Clock.system(ZoneId.of("Asia/Ho_Chi_Minh"));
+    }
 
     @Bean
     public OwnerApplicationServiceImpl ownerApplicationService(
@@ -72,13 +82,12 @@ public class ApplicationServiceConfig {
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
             BookingCancellationRepository bookingCancellationRepository,
-            CheckInRecordRepository checkInRecordRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository
     ) {
         return new iuh.fit.venueservice.application.service.impl.BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
-                checkInRecordRepository, venueCourtRepository, venueRepository
+                venueCourtRepository, venueRepository
         );
     }
 
@@ -104,5 +113,32 @@ public class ApplicationServiceConfig {
         return new OwnerBookingServiceImpl(
                 bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort
         );
+    }
+
+    @Bean
+    public OwnerCheckInServiceImpl ownerCheckInService(
+            BookingRepository bookingRepository,
+            CheckInRecordRepository checkInRecordRepository,
+            TimeSlotRepository timeSlotRepository,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository,
+            PaymentQueryPort paymentQueryPort,
+            PaymentCollectionPort paymentCollectionPort,
+            BookingQrPort bookingQrPort,
+            Clock clock
+    ) {
+        return new OwnerCheckInServiceImpl(
+                bookingRepository, checkInRecordRepository, timeSlotRepository,
+                venueCourtRepository, venueRepository, paymentQueryPort,
+                paymentCollectionPort, bookingQrPort, clock
+        );
+    }
+
+    @Bean
+    public BookingPaymentEventServiceImpl bookingPaymentEventService(
+            BookingRepository bookingRepository,
+            BookingQrPort bookingQrPort
+    ) {
+        return new BookingPaymentEventServiceImpl(bookingRepository, bookingQrPort);
     }
 }

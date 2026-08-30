@@ -3,7 +3,6 @@ package iuh.fit.venueservice.application.service.impl;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
-import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -33,7 +32,6 @@ class BookingServiceImplTest {
     @Mock BookingRepository bookingRepository;
     @Mock TimeSlotRepository timeSlotRepository;
     @Mock BookingCancellationRepository bookingCancellationRepository;
-    @Mock CheckInRecordRepository checkInRecordRepository;
     @Mock VenueCourtRepository venueCourtRepository;
     @Mock VenueRepository venueRepository;
 
@@ -61,7 +59,7 @@ class BookingServiceImplTest {
 
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
-                checkInRecordRepository, venueCourtRepository, venueRepository
+                venueCourtRepository, venueRepository
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(

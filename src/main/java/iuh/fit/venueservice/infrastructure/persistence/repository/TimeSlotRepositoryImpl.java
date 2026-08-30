@@ -36,6 +36,11 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
     }
 
     @Override
+    public Optional<TimeSlot> findByIdForUpdate(UUID id) {
+        return jpaRepository.findLockedByTimeSlotId(id).map(mapper::toDomain);
+    }
+
+    @Override
     public List<TimeSlot> findByVenueCourtIdAndDate(UUID venueCourtId, LocalDate date) {
         return jpaRepository.findByVenueCourt_VenueCourtIdAndDateOrderByStartTime(venueCourtId, date)
                 .stream().map(mapper::toDomain).collect(Collectors.toList());

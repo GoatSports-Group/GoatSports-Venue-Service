@@ -12,6 +12,8 @@ public interface TimeSlotRepository {
 
     Optional<TimeSlot> findById(UUID id);
 
+    Optional<TimeSlot> findByIdForUpdate(UUID id);
+
     List<TimeSlot> findByVenueCourtIdAndDate(UUID venueCourtId, LocalDate date);
 
     List<TimeSlot> findAvailableSlots(UUID venueCourtId, LocalDate date);

@@ -1,7 +1,6 @@
 package iuh.fit.venueservice.presentation.controller;
 
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
-import iuh.fit.venueservice.application.dto.request.venue.CheckInCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
@@ -12,7 +11,6 @@ import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.presentation.converter.BookingConverter;
 import iuh.fit.venueservice.presentation.request.venue.CancelBookingRequest;
-import iuh.fit.venueservice.presentation.request.venue.CheckInRequest;
 import iuh.fit.venueservice.presentation.request.venue.CreateBookingRequest;
 import iuh.fit.venueservice.presentation.request.venue.ProcessCancellationRequest;
 import iuh.fit.venueservice.presentation.response.venue.BookingCancellationResponse;
@@ -97,25 +95,6 @@ public class BookingController {
         BookingCancellation cancellation = bookingService.requestCancellation(command);
 
         return ResponseEntity.ok(bookingConverter.toCancellationResponse(cancellation));
-    }
-
-    @PostMapping("/check-in")
-    public ResponseEntity<BookingResponse> checkIn(
-            @Valid @RequestBody CheckInRequest request
-    ) throws ServiceException {
-        String userIdStr = currentUserProvider.getCurrentUserId()
-                .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để thực hiện check-in."));
-        UUID userId = BaseUtil.uuid(userIdStr);
-
-        CheckInCommand command = new CheckInCommand(
-                request.getBookingId(),
-                request.getQrCode(),
-                request.getBookingCode(),
-                userId
-        );
-
-        Booking booking = bookingService.checkIn(command);
-        return ResponseEntity.ok(bookingConverter.toResponse(booking));
     }
 
     @PostMapping("/cancellations/{id}/process")
