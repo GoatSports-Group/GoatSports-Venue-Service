@@ -16,6 +16,8 @@ public interface BookingRepository {
 
     Optional<Booking> findById(UUID id);
 
+    Optional<Booking> findByIdForUpdate(UUID id);
+
     Optional<Booking> findByBookingCode(String bookingCode);
 
     Optional<Booking> findByQrCode(String qrCode);

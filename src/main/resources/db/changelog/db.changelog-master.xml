@@ -9,4 +9,5 @@
     <include file="/db/changelog/schema/28-08-2026/add-venue-discovery-fields.xml"/>
     <include file="/db/changelog/schema/28-08-2026/align-venue-domain-model.xml"/>
     <include file="/db/changelog/schema/30-08-2026/harden-owner-schedule.xml"/>
+    <include file="/db/changelog/schema/30-08-2026/harden-reviews.xml"/>
 </databaseChangeLog>

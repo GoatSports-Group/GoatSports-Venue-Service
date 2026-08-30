@@ -39,6 +39,10 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             @Param("ownerId") UUID ownerId
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select booking from BookingEntity booking where booking.bookingId = :bookingId")
+    Optional<BookingEntity> findByIdForUpdate(@Param("bookingId") UUID bookingId);
+
     @Query("""
             select booking from BookingEntity booking
             join fetch booking.venueCourt court

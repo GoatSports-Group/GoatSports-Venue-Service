@@ -49,6 +49,12 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    @Transactional
+    public Optional<Booking> findByIdForUpdate(UUID id) {
+        return jpaRepository.findByIdForUpdate(id).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Booking> findByBookingCode(String bookingCode) {
         return jpaRepository.findByBookingCode(bookingCode).map(mapper::toDomain);
     }

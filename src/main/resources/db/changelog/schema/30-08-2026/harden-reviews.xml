@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260830-harden-player-reviews" author="codex">
+        <addNotNullConstraint tableName="reviews" columnName="player_id" columnDataType="UUID"/>
+        <addNotNullConstraint tableName="reviews" columnName="rating" columnDataType="INT"/>
+        <addNotNullConstraint tableName="reviews" columnName="status" columnDataType="VARCHAR(30)"/>
+        <sql>
+            ALTER TABLE reviews
+            ADD CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5);
+        </sql>
+        <createIndex tableName="reviews" indexName="idx_reviews_venue_created">
+            <column name="venue_id"/>
+            <column name="created_at" descending="true"/>
+        </createIndex>
+        <createIndex tableName="reviews" indexName="idx_reviews_player">
+            <column name="player_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

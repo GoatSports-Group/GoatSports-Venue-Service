@@ -9,6 +9,7 @@ import iuh.fit.venueservice.application.service.impl.OwnerCheckInServiceImpl;
 import iuh.fit.venueservice.application.service.impl.BookingPaymentEventServiceImpl;
 import iuh.fit.venueservice.application.service.impl.OwnerScheduleServiceImpl;
 import iuh.fit.venueservice.application.service.impl.OwnerRevenueServiceImpl;
+import iuh.fit.venueservice.application.service.impl.ReviewServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueCourtServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import org.springframework.context.annotation.Bean;
@@ -124,6 +125,18 @@ public class ApplicationServiceConfig {
     ) {
         return new OwnerRevenueServiceImpl(
                 bookingRepository, venueRepository, paymentQueryPort
+        );
+    }
+
+    @Bean
+    public ReviewServiceImpl reviewService(
+            ReviewRepository reviewRepository,
+            BookingRepository bookingRepository,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository
+    ) {
+        return new ReviewServiceImpl(
+                reviewRepository, bookingRepository, venueCourtRepository, venueRepository
         );
     }
 
