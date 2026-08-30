@@ -3,8 +3,10 @@ package iuh.fit.venueservice.application.port.persistence;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.domain.entity.Booking;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,4 +31,8 @@ public interface BookingRepository {
     Optional<OwnerBookingRecord> findOwnedBookingById(UUID bookingId, UUID ownerId);
 
     Optional<OwnerBookingRecord> findOwnedBookingByIdForUpdate(UUID bookingId, UUID ownerId);
+
+    List<RevenueBookingRecord> findOwnedRevenueBookings(
+            UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
+    );
 }

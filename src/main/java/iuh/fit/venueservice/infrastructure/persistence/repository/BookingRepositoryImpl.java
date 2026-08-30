@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -135,6 +137,16 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Transactional
     public Optional<OwnerBookingRecord> findOwnedBookingByIdForUpdate(UUID bookingId, UUID ownerId) {
         return jpaRepository.findOwnedByIdForUpdate(bookingId, ownerId).map(this::toOwnerRecord);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RevenueBookingRecord> findOwnedRevenueBookings(
+            UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
+    ) {
+        return jpaRepository.findOwnedForRevenue(ownerId, venueId, fromDate, toDate).stream()
+                .map(entity -> new RevenueBookingRecord(entity.getBookingId(), entity.getPlayDate()))
+                .toList();
     }
 
     private OwnerBookingRecord toOwnerRecord(

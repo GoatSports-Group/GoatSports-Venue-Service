@@ -13,6 +13,8 @@ import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Repository
@@ -35,5 +37,21 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
     Optional<BookingEntity> findOwnedByIdForUpdate(
             @Param("bookingId") UUID bookingId,
             @Param("ownerId") UUID ownerId
+    );
+
+    @Query("""
+            select booking from BookingEntity booking
+            join fetch booking.venueCourt court
+            join fetch court.venue venue
+            where venue.ownerId = :ownerId
+              and (:venueId is null or venue.venueId = :venueId)
+              and booking.playDate between :fromDate and :toDate
+            order by booking.playDate, booking.startTime, booking.bookingId
+            """)
+    List<BookingEntity> findOwnedForRevenue(
+            @Param("ownerId") UUID ownerId,
+            @Param("venueId") UUID venueId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
     );
 }
