@@ -1,6 +1,8 @@
 package iuh.fit.venueservice.presentation.request.application;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -32,10 +34,15 @@ public class SubmitOwnerApplicationRequest {
     private String address;
     @NotBlank(message = "Tỉnh/Thành phố không được để trống")
     private String province;
-    @NotBlank(message = "Quận/Huyện không được để trống")
     private String district;
     @NotBlank(message = "Phường/Xã không được để trống")
     private String ward;
     @NotBlank(message = "Thành phố không được để trống")
     private String city;
+    @DecimalMin(value = "-90", message = "Vĩ độ không hợp lệ")
+    @DecimalMax(value = "90", message = "Vĩ độ không hợp lệ")
+    private Double latitude;
+    @DecimalMin(value = "-180", message = "Kinh độ không hợp lệ")
+    @DecimalMax(value = "180", message = "Kinh độ không hợp lệ")
+    private Double longitude;
 }

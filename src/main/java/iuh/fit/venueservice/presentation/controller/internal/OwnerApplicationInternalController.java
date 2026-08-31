@@ -53,7 +53,9 @@ public class OwnerApplicationInternalController {
                 request.getProvince(),
                 request.getDistrict(),
                 request.getWard(),
-                request.getCity()
+                request.getCity(),
+                request.getLatitude(),
+                request.getLongitude()
         );
 
         OwnerApplicationResponseCommand result = ownerApplicationMapper.toOwnerApplicationResponseCommand(

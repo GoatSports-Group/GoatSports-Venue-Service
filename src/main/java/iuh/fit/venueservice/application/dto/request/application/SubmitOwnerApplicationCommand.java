@@ -16,5 +16,7 @@ public record SubmitOwnerApplicationCommand(
         String province,
         String district,
         String ward,
-        String city
+        String city,
+        Double latitude,
+        Double longitude
 ) {}

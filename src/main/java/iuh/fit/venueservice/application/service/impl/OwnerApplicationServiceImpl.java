@@ -48,6 +48,8 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .district(command.district())
                 .ward(command.ward())
                 .city(command.city())
+                .latitude(command.latitude())
+                .longitude(command.longitude())
                 .build();
 
         OwnerApplication ownerApplication = OwnerApplication.builder()
