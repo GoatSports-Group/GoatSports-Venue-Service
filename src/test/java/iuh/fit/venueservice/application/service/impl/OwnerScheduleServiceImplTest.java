@@ -122,6 +122,33 @@ class OwnerScheduleServiceImplTest {
     }
 
     @Test
+    void synchronizesRemainingSlotsWhenAnExistingBookedSlotPartiallyOverlaps() throws Exception {
+        LocalDate monday = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+        CourtPricingRule rule = rule(UUID.randomUUID(), LocalTime.of(8, 0), LocalTime.of(10, 0));
+        rule.setEffectiveFrom(monday.minusDays(1));
+        rule.setEffectiveTo(monday.plusDays(1));
+        TimeSlot bookedSlot = TimeSlot.builder()
+                .timeSlotId(UUID.randomUUID()).venueCourtId(courtId).date(monday)
+                .startTime(LocalTime.of(8, 10)).endTime(LocalTime.of(8, 20))
+                .status(TimeSlotStatus.BOOKED).pricePerHour(180_000.0).build();
+        when(pricingRuleRepository.findByCourtId(courtId)).thenReturn(List.of(rule));
+        when(timeSlotRepository.findByVenueCourtIdAndDateBetween(courtId, monday, monday))
+                .thenReturn(new ArrayList<>(List.of(bookedSlot)));
+        when(timeSlotRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<TimeSlot> result = service.generateTimeSlots(
+                new GenerateTimeSlotsCommand(courtId, monday, monday, 60, ownerId)
+        );
+
+        assertThat(result).hasSize(2);
+        assertThat(result).anySatisfy(slot -> {
+            assertThat(slot.getStartTime()).isEqualTo(LocalTime.of(9, 0));
+            assertThat(slot.getEndTime()).isEqualTo(LocalTime.of(10, 0));
+            assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.AVAILABLE);
+        });
+    }
+
+    @Test
     void preventsOwnerFromChangingBookedSlot() {
         UUID slotId = UUID.randomUUID();
         when(timeSlotRepository.findById(slotId)).thenReturn(Optional.of(TimeSlot.builder()

@@ -170,7 +170,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         Booking saved = bookingRepository.save(Booking.builder()
                 .venueCourtId(court.getVenueCourtId())
                 .playDate(slot.getDate()).startTime(slot.getStartTime()).endTime(slot.getEndTime())
-                .status(BookingStatus.CONFIRMED).source(BookingSource.WALK_IN)
+                .status(BookingStatus.PENDING_PAYMENT).source(BookingSource.WALK_IN)
                 .totalPrice(total).depositAmount(0.0).remainingAmount(total)
                 .bookingCode(generateBookingCode())
                 .walkInCustomerName(command.customerName().trim())

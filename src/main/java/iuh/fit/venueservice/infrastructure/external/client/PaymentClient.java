@@ -2,8 +2,10 @@ package iuh.fit.venueservice.infrastructure.external.client;
 
 import iuh.fit.venueservice.application.dto.request.payment.PaymentReferenceQueryRequest;
 import iuh.fit.venueservice.application.dto.request.payment.CollectBookingCashRequest;
+import iuh.fit.venueservice.application.dto.request.payment.CreateBookingCheckoutRequest;
 import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
+import iuh.fit.venueservice.application.dto.response.venue.BookingCheckoutSnapshot;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,5 +32,11 @@ public interface PaymentClient {
     BaseResponse<PaymentSnapshot> collectBookingCash(
             @RequestHeader("X-User-Id") UUID collectorId,
             @RequestBody CollectBookingCashRequest request
+    );
+
+    @PostMapping("/booking-checkouts")
+    BaseResponse<BookingCheckoutSnapshot> createBookingCheckout(
+            @RequestHeader("X-User-Id") UUID payerId,
+            @RequestBody CreateBookingCheckoutRequest request
     );
 }

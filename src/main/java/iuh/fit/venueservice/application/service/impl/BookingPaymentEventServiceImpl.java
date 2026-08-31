@@ -4,22 +4,31 @@ import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededComm
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
+import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.domain.enums.BookingSource;
 
 import java.time.LocalDateTime;
 
 public class BookingPaymentEventServiceImpl implements BookingPaymentEventService {
     private final BookingRepository bookingRepository;
     private final BookingQrPort bookingQrPort;
+    private final VenueCourtRepository venueCourtRepository;
+    private final VenueRepository venueRepository;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
-            BookingQrPort bookingQrPort
+            BookingQrPort bookingQrPort,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
+        this.venueCourtRepository = venueCourtRepository;
+        this.venueRepository = venueRepository;
     }
 
     @Override
@@ -33,7 +42,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         }
         Booking booking = bookingRepository.findById(command.referenceId()).orElse(null);
         if (booking == null) return false;
-        if (booking.getPlayerId() == null || !booking.getPlayerId().equals(command.payerId())) {
+        if (!isExpectedPayer(booking, command.payerId())) {
             throw new ServiceException("Payer của payment event không khớp booking.");
         }
         if (!"VND".equals(command.currency())) {
@@ -64,12 +73,28 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
 
         if ("BOOKING_REMAINING".equals(command.purpose())) {
             validateAmount(command.amount(), booking.getRemainingAmount());
-            if (command.paymentId().equals(booking.getRemainingPaymentId())) return false;
+            boolean changed = !command.paymentId().equals(booking.getRemainingPaymentId());
             booking.setRemainingPaymentId(command.paymentId());
-            bookingRepository.save(booking);
-            return true;
+            if (booking.getSource() == BookingSource.WALK_IN
+                    && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                booking.setStatus(BookingStatus.CONFIRMED);
+                changed = true;
+            }
+            if (changed) bookingRepository.save(booking);
+            return changed;
         }
         return false;
+    }
+
+    private boolean isExpectedPayer(Booking booking, java.util.UUID payerId) throws ServiceException {
+        if (booking.getSource() != BookingSource.WALK_IN) {
+            return booking.getPlayerId() != null && booking.getPlayerId().equals(payerId);
+        }
+        var court = venueCourtRepository.findById(booking.getVenueCourtId())
+                .orElseThrow(() -> new ServiceException("Không tìm thấy sân của booking walk-in."));
+        var venue = venueRepository.findById(court.getVenueId())
+                .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của booking walk-in."));
+        return payerId.equals(venue.getOwnerId());
     }
 
     private void validateAmount(Double actual, Double expected) throws ServiceException {

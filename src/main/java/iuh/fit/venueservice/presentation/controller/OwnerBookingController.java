@@ -2,15 +2,18 @@ package iuh.fit.venueservice.presentation.controller;
 
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateOwnerBookingStatusCommand;
+import iuh.fit.venueservice.application.dto.request.venue.CreateOwnerBookingPaymentCommand;
 import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingView;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingPaymentResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerBookingService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.presentation.request.venue.UpdateOwnerBookingStatusRequest;
+import iuh.fit.venueservice.presentation.request.venue.CreateOwnerBookingPaymentRequest;
 import iuh.fit.venueservice.presentation.response.venue.OwnerBookingResponse;
 import iuh.fit.venueservice.presentation.converter.OwnerBookingResponseMapper;
 import jakarta.validation.Valid;
@@ -19,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -76,6 +80,17 @@ public class OwnerBookingController {
     ) throws ServiceException {
         return ResponseEntity.ok(responseMapper.toResponse(ownerBookingService.updateStatus(
                 new UpdateOwnerBookingStatusCommand(bookingId, request.getStatus(), currentUserId())
+        )));
+    }
+
+    @PostMapping("/{bookingId}/payments")
+    @PreAuthorize("hasAuthority('CREATE_OWN_WALK_IN_BOOKING')")
+    public ResponseEntity<OwnerBookingPaymentResult> createPayment(
+            @PathVariable UUID bookingId,
+            @Valid @RequestBody CreateOwnerBookingPaymentRequest request
+    ) throws ServiceException {
+        return ResponseEntity.ok(ownerBookingService.createPayment(new CreateOwnerBookingPaymentCommand(
+                bookingId, currentUserId(), request.getMethod()
         )));
     }
 

@@ -1,14 +1,19 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
+import iuh.fit.venueservice.application.dto.request.venue.CreateOwnerBookingPaymentCommand;
+import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingPaymentMethod;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateOwnerBookingStatusCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingView;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
+import iuh.fit.venueservice.application.dto.response.venue.BookingCheckoutSnapshot;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingPaymentResult;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
+import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -17,6 +22,7 @@ import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.domain.enums.BookingSource;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -34,17 +40,20 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
     private final PaymentQueryPort paymentQueryPort;
+    private final PaymentCollectionPort paymentCollectionPort;
 
     public OwnerBookingServiceImpl(
             BookingRepository bookingRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
-            PaymentQueryPort paymentQueryPort
+            PaymentQueryPort paymentQueryPort,
+            PaymentCollectionPort paymentCollectionPort
     ) {
         this.bookingRepository = bookingRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
         this.paymentQueryPort = paymentQueryPort;
+        this.paymentCollectionPort = paymentCollectionPort;
     }
 
     @Override
@@ -95,6 +104,66 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         return toView(new OwnerBookingRecord(
                 saved, record.venueId(), record.venueName(), record.courtName()
         ), payments);
+    }
+
+    @Override
+    public OwnerBookingPaymentResult createPayment(CreateOwnerBookingPaymentCommand command) throws ServiceException {
+        if (command == null || command.bookingId() == null || command.ownerId() == null
+                || command.method() == null) {
+            throw new ServiceException("Booking, owner và phương thức thanh toán là bắt buộc.");
+        }
+        OwnerBookingRecord record = getOwnedBooking(command.bookingId(), command.ownerId());
+        Booking booking = record.booking();
+        if (booking.getSource() != BookingSource.WALK_IN) {
+            throw new ServiceException("Thu tiền tại quầy chỉ áp dụng cho booking walk-in.");
+        }
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new ServiceException("Booking không còn ở trạng thái chờ thanh toán.");
+        }
+        if (booking.getRemainingAmount() == null || booking.getRemainingAmount() <= 0) {
+            throw new ServiceException("Booking không có khoản tiền cần thu.");
+        }
+
+        List<PaymentSnapshot> payments = paymentQueryPort.findByBookingIds(Set.of(command.bookingId()));
+        PaymentSnapshot succeeded = payments.stream()
+                .filter(payment -> "BOOKING_REMAINING".equals(payment.purpose()))
+                .filter(payment -> "SUCCEEDED".equals(payment.status()))
+                .findFirst().orElse(null);
+        if (succeeded != null) {
+            confirmPaidWalkIn(booking, succeeded.paymentId());
+            return new OwnerBookingPaymentResult(
+                    booking.getBookingId(), succeeded.paymentId(), command.method(),
+                    succeeded.status(), null, succeeded.expiresAt()
+            );
+        }
+
+        if (command.method() == OwnerBookingPaymentMethod.CASH) {
+            PaymentSnapshot payment = paymentCollectionPort.collectBookingRemaining(
+                    booking.getBookingId(), command.ownerId(), command.ownerId(), booking.getRemainingAmount()
+            );
+            if (!"SUCCEEDED".equals(payment.status())) {
+                throw new ServiceException("Payment-service chưa xác nhận thu tiền mặt thành công.");
+            }
+            confirmPaidWalkIn(booking, payment.paymentId());
+            return new OwnerBookingPaymentResult(
+                    booking.getBookingId(), payment.paymentId(), command.method(),
+                    payment.status(), null, payment.expiresAt()
+            );
+        }
+
+        BookingCheckoutSnapshot checkout = paymentCollectionPort.createBookingCheckout(
+                booking.getBookingId(), command.ownerId(), booking.getRemainingAmount()
+        );
+        return new OwnerBookingPaymentResult(
+                booking.getBookingId(), checkout.paymentId(), command.method(),
+                checkout.status(), checkout.checkoutUrl(), checkout.expiresAt()
+        );
+    }
+
+    private void confirmPaidWalkIn(Booking booking, UUID paymentId) {
+        booking.setRemainingPaymentId(paymentId);
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
     }
 
     private void validateFilter(OwnerBookingFilter filter) throws ServiceException {

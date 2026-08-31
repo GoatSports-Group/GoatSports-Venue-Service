@@ -110,10 +110,12 @@ public class ApplicationServiceConfig {
             BookingRepository bookingRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
-            PaymentQueryPort paymentQueryPort
+            PaymentQueryPort paymentQueryPort,
+            PaymentCollectionPort paymentCollectionPort
     ) {
         return new OwnerBookingServiceImpl(
-                bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort
+                bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
+                paymentCollectionPort
         );
     }
 
@@ -162,8 +164,12 @@ public class ApplicationServiceConfig {
     @Bean
     public BookingPaymentEventServiceImpl bookingPaymentEventService(
             BookingRepository bookingRepository,
-            BookingQrPort bookingQrPort
+            BookingQrPort bookingQrPort,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository
     ) {
-        return new BookingPaymentEventServiceImpl(bookingRepository, bookingQrPort);
+        return new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+        );
     }
 }

@@ -182,11 +182,15 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
                     || generated.stream().anyMatch(slot -> slot.getDate().equals(date)
                     && slot.getStartTime().equals(slotStart) && slot.getEndTime().equals(slotEnd));
             if (!exactExists) {
-                boolean overlaps = existing.stream().anyMatch(slot -> slot.getDate().equals(date)
-                        && overlaps(slotStart, slotEnd, slot.getStartTime(), slot.getEndTime()))
-                        || generated.stream().anyMatch(slot -> slot.getDate().equals(date)
+                boolean overlapsExisting = existing.stream().anyMatch(slot -> slot.getDate().equals(date)
                         && overlaps(slotStart, slotEnd, slot.getStartTime(), slot.getEndTime()));
-                if (overlaps) {
+                if (overlapsExisting) {
+                    cursor = end;
+                    continue;
+                }
+                boolean overlapsGenerated = generated.stream().anyMatch(slot -> slot.getDate().equals(date)
+                        && overlaps(slotStart, slotEnd, slot.getStartTime(), slot.getEndTime()));
+                if (overlapsGenerated) {
                     throw new ServiceException("Lịch đã có slot chồng lấn; hãy xóa hoặc điều chỉnh lịch hiện tại.");
                 }
                 TimeSlot slot = TimeSlot.builder()
