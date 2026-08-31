@@ -3,8 +3,8 @@ package iuh.fit.venueservice.infrastructure.external.adapter;
 import iuh.fit.venueservice.application.dto.request.payment.CollectBookingCashRequest;
 import iuh.fit.venueservice.application.dto.request.payment.CreateBookingCheckoutRequest;
 import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
-import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.dto.response.venue.BookingCheckoutSnapshot;
+import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.infrastructure.external.client.PaymentClient;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,18 @@ public class PaymentCollectionAdapter implements PaymentCollectionPort {
                 payerId, new CreateBookingCheckoutRequest(bookingId, amount, "VND", "vn")
         );
         if (response == null || response.getData() == null) {
-            throw new IllegalStateException("Payment-service không trả kết quả checkout MoMo.");
+            throw new IllegalStateException("Payment-service không trả kết quả tạo mã VietQR.");
+        }
+        return response.getData();
+    }
+
+    @Override
+    public PaymentSnapshot confirmBookingTransfer(UUID bookingId, UUID payerId, Double amount) {
+        BaseResponse<PaymentSnapshot> response = paymentClient.confirmBookingTransfer(
+                payerId, new CreateBookingCheckoutRequest(bookingId, amount, "VND", "vn")
+        );
+        if (response == null || response.getData() == null) {
+            throw new IllegalStateException("Payment-service không xác nhận được giao dịch VietQR.");
         }
         return response.getData();
     }

@@ -151,6 +151,29 @@ class OwnerBookingServiceImplTest {
         verify(bookingRepository, never()).save(any());
     }
 
+    @Test
+    void confirmsWalkInOnlyAfterOwnerVerifiesVietQrTransfer() throws Exception {
+        Booking booking = booking(BookingStatus.PENDING_PAYMENT, LocalDate.now().plusDays(1));
+        booking.setSource(BookingSource.WALK_IN);
+        PaymentSnapshot confirmedPayment = new PaymentSnapshot(
+                UUID.randomUUID(), bookingId, "BOOKING_REMAINING", 140_000.0, "VND",
+                "SUCCEEDED", LocalDateTime.now(), null, LocalDateTime.now().minusMinutes(2)
+        );
+        when(bookingRepository.findOwnedBookingById(bookingId, ownerId))
+                .thenReturn(Optional.of(record(booking)));
+        when(paymentCollectionPort.confirmBookingTransfer(bookingId, ownerId, 140_000.0))
+                .thenReturn(confirmedPayment);
+        when(bookingRepository.save(booking)).thenReturn(booking);
+
+        var result = service.confirmVietQrPayment(bookingId, ownerId);
+
+        assertThat(result.status()).isEqualTo("SUCCEEDED");
+        assertThat(result.method().name()).isEqualTo("VIETQR");
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(booking.getRemainingPaymentId()).isEqualTo(confirmedPayment.paymentId());
+        verify(bookingRepository).save(booking);
+    }
+
     private OwnerBookingFilter filter(UUID requestedVenueId, UUID requestedCourtId) {
         return new OwnerBookingFilter(
                 ownerId, requestedVenueId, requestedCourtId, null, null,

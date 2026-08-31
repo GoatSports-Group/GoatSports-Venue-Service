@@ -143,7 +143,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
                         || "PENDING".equals(payment.status()));
         if (command.method() == OwnerBookingPaymentMethod.CASH && pendingOnlinePayment) {
             throw new ServiceException(
-                    "Booking đang có giao dịch MoMo chờ thanh toán. Hãy tiếp tục giao dịch MoMo hiện tại; "
+                    "Booking đang có giao dịch VietQR chờ xác nhận. Hãy tiếp tục giao dịch hiện tại; "
                             + "không thể chuyển sang tiền mặt để tránh thu tiền hai lần."
             );
         }
@@ -169,6 +169,42 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
                 booking.getBookingId(), checkout.paymentId(), command.method(),
                 checkout.status(), checkout.checkoutUrl(), checkout.deeplink(),
                 checkout.qrCodeContent(), checkout.expiresAt()
+        );
+    }
+
+    @Override
+    public OwnerBookingPaymentResult confirmVietQrPayment(
+            UUID bookingId,
+            UUID ownerId
+    ) throws ServiceException {
+        OwnerBookingRecord record = getOwnedBooking(bookingId, ownerId);
+        Booking booking = record.booking();
+        if (booking.getSource() != BookingSource.WALK_IN) {
+            throw new ServiceException("Xác nhận VietQR chỉ áp dụng cho booking walk-in.");
+        }
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new ServiceException("Booking không còn ở trạng thái chờ thanh toán.");
+        }
+        if (booking.getRemainingAmount() == null || booking.getRemainingAmount() <= 0) {
+            throw new ServiceException("Booking không có khoản tiền cần xác nhận.");
+        }
+
+        PaymentSnapshot payment = paymentCollectionPort.confirmBookingTransfer(
+                bookingId, ownerId, booking.getRemainingAmount()
+        );
+        if (!"SUCCEEDED".equals(payment.status())) {
+            throw new ServiceException("Payment-service chưa xác nhận giao dịch VietQR thành công.");
+        }
+        confirmPaidWalkIn(booking, payment.paymentId());
+        return new OwnerBookingPaymentResult(
+                bookingId,
+                payment.paymentId(),
+                OwnerBookingPaymentMethod.VIETQR,
+                payment.status(),
+                null,
+                null,
+                null,
+                payment.expiresAt()
         );
     }
 

@@ -46,4 +46,11 @@ public class OwnerBookingDecorator implements OwnerBookingService {
             throws ServiceException {
         return delegate.createPayment(command);
     }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public OwnerBookingPaymentResult confirmVietQrPayment(UUID bookingId, UUID ownerId)
+            throws ServiceException {
+        return delegate.confirmVietQrPayment(bookingId, ownerId);
+    }
 }
