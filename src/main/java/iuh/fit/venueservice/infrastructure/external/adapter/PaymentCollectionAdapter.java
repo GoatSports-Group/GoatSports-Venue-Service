@@ -35,9 +35,8 @@ public class PaymentCollectionAdapter implements PaymentCollectionPort {
         BaseResponse<BookingCheckoutSnapshot> response = paymentClient.createBookingCheckout(
                 payerId, new CreateBookingCheckoutRequest(bookingId, amount, "VND", "vn")
         );
-        if (response == null || response.getData() == null
-                || response.getData().checkoutUrl() == null || response.getData().checkoutUrl().isBlank()) {
-            throw new IllegalStateException("Payment-service không trả checkout URL MoMo.");
+        if (response == null || response.getData() == null) {
+            throw new IllegalStateException("Payment-service không trả kết quả checkout MoMo.");
         }
         return response.getData();
     }

@@ -4,7 +4,12 @@ import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededComm
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
+import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.entity.Booking;
+import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.VenueCourt;
+import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +32,8 @@ import static org.mockito.Mockito.when;
 class BookingPaymentEventServiceImplTest {
     @Mock private BookingRepository bookingRepository;
     @Mock private BookingQrPort bookingQrPort;
+    @Mock private VenueCourtRepository venueCourtRepository;
+    @Mock private VenueRepository venueRepository;
 
     @Test
     void confirmsBookingAndIssuesSignedQrExactlyOnceForValidDeposit() throws Exception {
@@ -39,7 +46,9 @@ class BookingPaymentEventServiceImplTest {
                 LocalDate.of(2026, 9, 1), LocalTime.of(9, 0)
         ))).thenReturn("GSQR.v1.signed");
         when(bookingRepository.save(booking)).thenReturn(booking);
-        var service = new BookingPaymentEventServiceImpl(bookingRepository, bookingQrPort);
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+        );
         var event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
 
         assertThat(service.applySucceededPayment(event)).isTrue();
@@ -57,7 +66,9 @@ class BookingPaymentEventServiceImplTest {
         UUID payerId = UUID.randomUUID();
         Booking booking = booking(bookingId, payerId);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
-        var service = new BookingPaymentEventServiceImpl(bookingRepository, bookingQrPort);
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+        );
 
         assertThatThrownBy(() -> service.applySucceededPayment(event(
                 UUID.randomUUID(), UUID.randomUUID(), bookingId, "BOOKING_DEPOSIT", 60_000.0
@@ -67,6 +78,37 @@ class BookingPaymentEventServiceImplTest {
         ))).isInstanceOf(ServiceException.class).hasMessageContaining("không khớp");
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.PENDING_PAYMENT);
         verify(bookingRepository, never()).save(booking);
+    }
+
+    @Test
+    void confirmsWalkInWhenOwnerPaysRemainingAmount() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID courtId = UUID.randomUUID();
+        UUID venueId = UUID.randomUUID();
+        UUID paymentId = UUID.randomUUID();
+        Booking booking = Booking.builder()
+                .bookingId(bookingId).venueCourtId(courtId).source(BookingSource.WALK_IN)
+                .status(BookingStatus.PENDING_PAYMENT).remainingAmount(100_000.0)
+                .playDate(LocalDate.of(2026, 9, 1)).startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(9, 0)).build();
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()
+        ));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).ownerId(ownerId).build()
+        ));
+        when(bookingRepository.save(booking)).thenReturn(booking);
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+        );
+
+        assertThat(service.applySucceededPayment(event(
+                paymentId, ownerId, bookingId, "BOOKING_REMAINING", 100_000.0
+        ))).isTrue();
+        assertThat(booking.getRemainingPaymentId()).isEqualTo(paymentId);
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
     }
 
     private Booking booking(UUID bookingId, UUID payerId) {

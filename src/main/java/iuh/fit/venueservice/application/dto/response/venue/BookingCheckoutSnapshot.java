@@ -7,6 +7,8 @@ public record BookingCheckoutSnapshot(
         UUID paymentId,
         String status,
         String checkoutUrl,
+        String deeplink,
+        String qrCodeContent,
         LocalDateTime expiresAt
 ) {
 }

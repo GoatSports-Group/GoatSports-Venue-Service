@@ -11,6 +11,8 @@ public record OwnerBookingPaymentResult(
         OwnerBookingPaymentMethod method,
         String status,
         String checkoutUrl,
+        String deeplink,
+        String qrCodeContent,
         LocalDateTime expiresAt
 ) {
 }

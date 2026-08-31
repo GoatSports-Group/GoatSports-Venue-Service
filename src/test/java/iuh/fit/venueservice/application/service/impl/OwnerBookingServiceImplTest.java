@@ -8,6 +8,7 @@ import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
+import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -42,6 +43,7 @@ class OwnerBookingServiceImplTest {
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
     @Mock private PaymentQueryPort paymentQueryPort;
+    @Mock private PaymentCollectionPort paymentCollectionPort;
 
     private OwnerBookingServiceImpl service;
     private UUID ownerId;
@@ -52,7 +54,8 @@ class OwnerBookingServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new OwnerBookingServiceImpl(
-                bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort
+                bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
+                paymentCollectionPort
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();

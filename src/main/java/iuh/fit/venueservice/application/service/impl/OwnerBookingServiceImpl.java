@@ -133,7 +133,18 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
             confirmPaidWalkIn(booking, succeeded.paymentId());
             return new OwnerBookingPaymentResult(
                     booking.getBookingId(), succeeded.paymentId(), command.method(),
-                    succeeded.status(), null, succeeded.expiresAt()
+                    succeeded.status(), null, null, null, succeeded.expiresAt()
+            );
+        }
+
+        boolean pendingOnlinePayment = payments.stream()
+                .filter(payment -> "BOOKING_REMAINING".equals(payment.purpose()))
+                .anyMatch(payment -> "CREATED".equals(payment.status())
+                        || "PENDING".equals(payment.status()));
+        if (command.method() == OwnerBookingPaymentMethod.CASH && pendingOnlinePayment) {
+            throw new ServiceException(
+                    "Booking đang có giao dịch MoMo chờ thanh toán. Hãy tiếp tục giao dịch MoMo hiện tại; "
+                            + "không thể chuyển sang tiền mặt để tránh thu tiền hai lần."
             );
         }
 
@@ -147,7 +158,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
             confirmPaidWalkIn(booking, payment.paymentId());
             return new OwnerBookingPaymentResult(
                     booking.getBookingId(), payment.paymentId(), command.method(),
-                    payment.status(), null, payment.expiresAt()
+                    payment.status(), null, null, null, payment.expiresAt()
             );
         }
 
@@ -156,7 +167,8 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         );
         return new OwnerBookingPaymentResult(
                 booking.getBookingId(), checkout.paymentId(), command.method(),
-                checkout.status(), checkout.checkoutUrl(), checkout.expiresAt()
+                checkout.status(), checkout.checkoutUrl(), checkout.deeplink(),
+                checkout.qrCodeContent(), checkout.expiresAt()
         );
     }
 
