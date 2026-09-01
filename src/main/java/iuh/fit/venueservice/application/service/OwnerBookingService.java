@@ -18,6 +18,4 @@ public interface OwnerBookingService {
     OwnerBookingView updateStatus(UpdateOwnerBookingStatusCommand command) throws ServiceException;
 
     OwnerBookingPaymentResult createPayment(CreateOwnerBookingPaymentCommand command) throws ServiceException;
-
-    OwnerBookingPaymentResult confirmVietQrPayment(UUID bookingId, UUID ownerId) throws ServiceException;
 }

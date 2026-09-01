@@ -36,18 +36,7 @@ public class PaymentCollectionAdapter implements PaymentCollectionPort {
                 payerId, new CreateBookingCheckoutRequest(bookingId, amount, "VND", "vn")
         );
         if (response == null || response.getData() == null) {
-            throw new IllegalStateException("Payment-service không trả kết quả tạo mã VietQR.");
-        }
-        return response.getData();
-    }
-
-    @Override
-    public PaymentSnapshot confirmBookingTransfer(UUID bookingId, UUID payerId, Double amount) {
-        BaseResponse<PaymentSnapshot> response = paymentClient.confirmBookingTransfer(
-                payerId, new CreateBookingCheckoutRequest(bookingId, amount, "VND", "vn")
-        );
-        if (response == null || response.getData() == null) {
-            throw new IllegalStateException("Payment-service không xác nhận được giao dịch VietQR.");
+            throw new IllegalStateException("Payment-service không trả kết quả tạo mã payOS.");
         }
         return response.getData();
     }

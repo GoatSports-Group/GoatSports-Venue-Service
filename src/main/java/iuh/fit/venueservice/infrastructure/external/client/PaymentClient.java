@@ -40,9 +40,4 @@ public interface PaymentClient {
             @RequestBody CreateBookingCheckoutRequest request
     );
 
-    @PostMapping("/booking-bank-transfer-confirmations")
-    BaseResponse<PaymentSnapshot> confirmBookingTransfer(
-            @RequestHeader("X-User-Id") UUID payerId,
-            @RequestBody CreateBookingCheckoutRequest request
-    );
 }

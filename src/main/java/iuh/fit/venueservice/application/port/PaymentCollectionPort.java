@@ -19,9 +19,4 @@ public interface PaymentCollectionPort {
             Double amount
     );
 
-    PaymentSnapshot confirmBookingTransfer(
-            UUID bookingId,
-            UUID payerId,
-            Double amount
-    );
 }

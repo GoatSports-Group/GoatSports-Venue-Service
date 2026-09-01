@@ -94,16 +94,6 @@ public class OwnerBookingController {
         )));
     }
 
-    @PostMapping("/{bookingId}/payments/vietqr/confirm")
-    @PreAuthorize("hasAuthority('CREATE_OWN_WALK_IN_BOOKING')")
-    public ResponseEntity<OwnerBookingPaymentResult> confirmVietQrPayment(
-            @PathVariable UUID bookingId
-    ) throws ServiceException {
-        return ResponseEntity.ok(ownerBookingService.confirmVietQrPayment(
-                bookingId, currentUserId()
-        ));
-    }
-
     private UUID currentUserId() throws ServiceException {
         return BaseUtil.uuid(currentUserProvider.getCurrentUserId()
                 .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để quản lý booking.")));

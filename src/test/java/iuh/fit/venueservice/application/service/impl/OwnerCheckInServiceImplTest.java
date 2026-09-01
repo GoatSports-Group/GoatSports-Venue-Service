@@ -236,7 +236,7 @@ class OwnerCheckInServiceImplTest {
         Booking created = result.bookingRecord().booking();
         assertThat(created.getPlayerId()).isNull();
         assertThat(created.getSource()).isEqualTo(BookingSource.WALK_IN);
-        assertThat(created.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(created.getStatus()).isEqualTo(BookingStatus.PENDING_PAYMENT);
         assertThat(created.getTotalPrice()).isEqualTo(3_333.33);
         assertThat(result.outstandingAmount()).isEqualByComparingTo("3333.33");
         assertThat(created.getWalkInCustomerPhone()).isEqualTo("0901234567");
