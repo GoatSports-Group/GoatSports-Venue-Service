@@ -7,25 +7,42 @@ import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.service.VenueCourtService;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
+import iuh.fit.venueservice.domain.entity.TimeSlot;
+import iuh.fit.venueservice.domain.enums.CourtAvailabilityStatus;
 import iuh.fit.venueservice.domain.enums.SportType;
+import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class VenueCourtServiceImpl implements VenueCourtService {
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
+    private final TimeSlotRepository timeSlotRepository;
+    private final Clock clock;
 
     public VenueCourtServiceImpl(
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            TimeSlotRepository timeSlotRepository,
+            Clock clock
     ) {
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
+        this.timeSlotRepository = timeSlotRepository;
+        this.clock = clock;
     }
 
     @Override
@@ -43,18 +60,18 @@ public class VenueCourtServiceImpl implements VenueCourtService {
                 .active(command.active())
                 .build();
 
-        return venueCourtRepository.save(court, venue);
+        return enrichAvailability(venueCourtRepository.save(court, venue));
     }
 
     @Override
     public List<VenueCourt> getVenueCourts(UUID venueId, UUID currentUserId) throws ServiceException {
         Venue venue = getOwnedVenue(venueId, currentUserId);
-        return venueCourtRepository.findByVenueId(venue.getVenueId());
+        return enrichAvailability(venueCourtRepository.findByVenueId(venue.getVenueId()));
     }
 
     @Override
     public VenueCourt getVenueCourt(UUID venueCourtId, UUID currentUserId) throws ServiceException {
-        return getOwnedCourt(venueCourtId, currentUserId).court();
+        return enrichAvailability(getOwnedCourt(venueCourtId, currentUserId).court());
     }
 
     @Override
@@ -66,30 +83,32 @@ public class VenueCourtServiceImpl implements VenueCourtService {
         court.setCapacity(command.capacity());
         court.setSurfaceType(trimToNull(command.surfaceType()));
         court.setActive(command.active());
-        return venueCourtRepository.save(court, owned.venue());
+        return enrichAvailability(venueCourtRepository.save(court, owned.venue()));
     }
 
     @Override
     public VenueCourt updateActive(UUID venueCourtId, Boolean active, UUID currentUserId) throws ServiceException {
         OwnedCourt owned = getOwnedCourt(venueCourtId, currentUserId);
         owned.court().setActive(active);
-        return venueCourtRepository.save(owned.court(), owned.venue());
+        return enrichAvailability(venueCourtRepository.save(owned.court(), owned.venue()));
     }
 
     @Override
     public List<VenueCourt> getVenueCourts(UUID venueId) throws ServiceException {
         getVenue(venueId);
-        return venueCourtRepository.findByVenueId(venueId);
+        return enrichAvailability(venueCourtRepository.findByVenueId(venueId));
     }
 
     @Override
     public VenueCourt getVenueCourt(UUID venueCourtId) throws ServiceException {
-        return venueCourtRepository.findById(venueCourtId)
+        VenueCourt court = venueCourtRepository.findById(venueCourtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân thi đấu."));
+        return enrichAvailability(court);
     }
 
     private OwnedCourt getOwnedCourt(UUID venueCourtId, UUID currentUserId) throws ServiceException {
-        VenueCourt court = getVenueCourt(venueCourtId);
+        VenueCourt court = venueCourtRepository.findById(venueCourtId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân thi đấu."));
         Venue venue = getOwnedVenue(court.getVenueId(), currentUserId);
         return new OwnedCourt(court, venue);
     }
@@ -123,6 +142,59 @@ public class VenueCourtServiceImpl implements VenueCourtService {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private List<VenueCourt> enrichAvailability(List<VenueCourt> courts) {
+        if (courts.isEmpty()) return courts;
+        LocalDateTime now = LocalDateTime.now(clock);
+        Set<UUID> courtIds = courts.stream().map(VenueCourt::getVenueCourtId).collect(Collectors.toSet());
+        Map<UUID, TimeSlot> blockingSlots = timeSlotRepository
+                .findBlockingSlotsAt(courtIds, now.toLocalDate(), now.toLocalTime())
+                .stream()
+                .collect(Collectors.toMap(
+                        TimeSlot::getVenueCourtId,
+                        Function.identity(),
+                        this::higherPriority
+                ));
+        courts.forEach(court -> applyAvailability(court, blockingSlots.get(court.getVenueCourtId())));
+        return courts;
+    }
+
+    private VenueCourt enrichAvailability(VenueCourt court) {
+        return enrichAvailability(new ArrayList<>(List.of(court))).getFirst();
+    }
+
+    private void applyAvailability(VenueCourt court, TimeSlot blockingSlot) {
+        if (!Boolean.TRUE.equals(court.getActive())) {
+            court.setAvailabilityStatus(CourtAvailabilityStatus.INACTIVE);
+            court.setUnavailableUntil(null);
+            return;
+        }
+        if (blockingSlot == null) {
+            court.setAvailabilityStatus(CourtAvailabilityStatus.AVAILABLE);
+            court.setUnavailableUntil(null);
+            return;
+        }
+        court.setAvailabilityStatus(switch (blockingSlot.getStatus()) {
+            case LOCKED -> CourtAvailabilityStatus.HELD;
+            case BOOKED -> CourtAvailabilityStatus.OCCUPIED;
+            case MAINTENANCE -> CourtAvailabilityStatus.MAINTENANCE;
+            case AVAILABLE -> CourtAvailabilityStatus.AVAILABLE;
+        });
+        court.setUnavailableUntil(blockingSlot.getEndTime());
+    }
+
+    private TimeSlot higherPriority(TimeSlot left, TimeSlot right) {
+        return priority(left.getStatus()) >= priority(right.getStatus()) ? left : right;
+    }
+
+    private int priority(TimeSlotStatus status) {
+        return switch (status) {
+            case MAINTENANCE -> 3;
+            case BOOKED -> 2;
+            case LOCKED -> 1;
+            case AVAILABLE -> 0;
+        };
     }
 
     private record OwnedCourt(VenueCourt court, Venue venue) {}

@@ -12,10 +12,13 @@ import iuh.fit.venueservice.application.service.impl.OwnerRevenueServiceImpl;
 import iuh.fit.venueservice.application.service.impl.ReviewServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueCourtServiceImpl;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.ZoneId;
 
 @Configuration
@@ -62,10 +65,12 @@ public class ApplicationServiceConfig {
     @Bean
     public VenueCourtServiceImpl venueCourtService(
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            TimeSlotRepository timeSlotRepository,
+            Clock clock
     ) {
         return new VenueCourtServiceImpl(
-                venueCourtRepository, venueRepository
+                venueCourtRepository, venueRepository, timeSlotRepository, clock
         );
     }
 
@@ -85,12 +90,23 @@ public class ApplicationServiceConfig {
             TimeSlotRepository timeSlotRepository,
             BookingCancellationRepository bookingCancellationRepository,
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            Clock clock,
+            @Value("${booking.payment-hold-duration:PT15M}") Duration paymentHoldDuration
     ) {
         return new iuh.fit.venueservice.application.service.impl.BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
-                venueCourtRepository, venueRepository
+                venueCourtRepository, venueRepository, timeSlotLifecycleService, clock, paymentHoldDuration
         );
+    }
+
+    @Bean
+    public TimeSlotLifecycleService timeSlotLifecycleService(
+            TimeSlotRepository timeSlotRepository,
+            Clock clock
+    ) {
+        return new TimeSlotLifecycleService(timeSlotRepository, clock);
     }
 
     @Bean
@@ -111,11 +127,13 @@ public class ApplicationServiceConfig {
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             PaymentQueryPort paymentQueryPort,
-            PaymentCollectionPort paymentCollectionPort
+            PaymentCollectionPort paymentCollectionPort,
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            Clock clock
     ) {
         return new OwnerBookingServiceImpl(
                 bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort
+                paymentCollectionPort, timeSlotLifecycleService, clock
         );
     }
 
@@ -152,12 +170,13 @@ public class ApplicationServiceConfig {
             PaymentQueryPort paymentQueryPort,
             PaymentCollectionPort paymentCollectionPort,
             BookingQrPort bookingQrPort,
-            Clock clock
+            Clock clock,
+            @Value("${booking.payment-hold-duration:PT15M}") Duration paymentHoldDuration
     ) {
         return new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, bookingQrPort, clock
+                paymentCollectionPort, bookingQrPort, clock, paymentHoldDuration
         );
     }
 
@@ -166,10 +185,12 @@ public class ApplicationServiceConfig {
             BookingRepository bookingRepository,
             BookingQrPort bookingQrPort,
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            TimeSlotLifecycleService timeSlotLifecycleService
     ) {
         return new BookingPaymentEventServiceImpl(
-                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService
         );
     }
 }

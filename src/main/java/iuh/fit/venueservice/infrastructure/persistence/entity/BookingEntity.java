@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -67,6 +68,9 @@ public class BookingEntity extends BaseEntity {
 
     @Column(columnDefinition = "UUID")
     private UUID matchmakingSessionId;
+
+    @Column(name = "hold_expires_at")
+    private LocalDateTime holdExpiresAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "venue_court_id", nullable = false)

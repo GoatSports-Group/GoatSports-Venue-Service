@@ -4,6 +4,7 @@ import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.dto.response.venue.BookingCheckoutSnapshot;
 
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 public interface PaymentCollectionPort {
     PaymentSnapshot collectBookingRemaining(
@@ -16,7 +17,8 @@ public interface PaymentCollectionPort {
     BookingCheckoutSnapshot createBookingCheckout(
             UUID bookingId,
             UUID payerId,
-            Double amount
+            Double amount,
+            LocalDateTime expiresAt
     );
 
 }

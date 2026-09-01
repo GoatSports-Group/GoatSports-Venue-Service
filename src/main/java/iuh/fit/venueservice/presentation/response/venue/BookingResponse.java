@@ -35,5 +35,6 @@ public class BookingResponse {
     private String walkInCustomerName;
     private String walkInCustomerPhone;
     private UUID matchmakingSessionId;
+    private LocalDateTime holdExpiresAt;
     private LocalDateTime createdAt;
 }

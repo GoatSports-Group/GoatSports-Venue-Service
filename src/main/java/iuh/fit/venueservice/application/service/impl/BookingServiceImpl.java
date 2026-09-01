@@ -10,6 +10,7 @@ import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.BookingService;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.CancellationPolicy;
@@ -22,6 +23,7 @@ import iuh.fit.venueservice.domain.enums.CancellationStatus;
 
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,19 +38,28 @@ public class BookingServiceImpl implements BookingService {
     private final BookingCancellationRepository bookingCancellationRepository;
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
+    private final TimeSlotLifecycleService timeSlotLifecycleService;
+    private final Clock clock;
+    private final Duration paymentHoldDuration;
 
     public BookingServiceImpl(
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
             BookingCancellationRepository bookingCancellationRepository,
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            Clock clock,
+            Duration paymentHoldDuration
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.bookingCancellationRepository = bookingCancellationRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
+        this.timeSlotLifecycleService = timeSlotLifecycleService;
+        this.clock = clock;
+        this.paymentHoldDuration = paymentHoldDuration;
     }
 
     @Override
@@ -66,11 +77,17 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public Booking createBooking(CreateBookingCommand command) throws ServiceException {
-        venueCourtRepository.findById(command.venueCourtId())
+        VenueCourt court = venueCourtRepository.findById(command.venueCourtId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân con."));
 
-        if (command.playDate().isBefore(LocalDate.now())) {
-            throw new ServiceException("Không thể đặt sân trong quá khứ.");
+        if (!Boolean.TRUE.equals(court.getActive())) {
+            throw new ServiceException("Sân đang tạm ngừng hoạt động.");
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime requestedStart = LocalDateTime.of(command.playDate(), command.startTime());
+        if (!requestedStart.isAfter(now)) {
+            throw new ServiceException("Không thể đặt khung giờ đã bắt đầu hoặc nằm trong quá khứ.");
         }
 
         double durationHours = Duration.between(command.startTime(), command.endTime()).toMinutes() / 60.0;
@@ -78,11 +95,14 @@ public class BookingServiceImpl implements BookingService {
             throw new ServiceException("Khung giờ đặt không hợp lệ.");
         }
 
-        TimeSlot slot = timeSlotRepository.findAvailableSlots(command.venueCourtId(), command.playDate()).stream()
-                .filter(candidate -> candidate.getStartTime().equals(command.startTime())
-                        && candidate.getEndTime().equals(command.endTime()))
-                .findFirst()
-                .orElseThrow(() -> new ServiceException("Khung giờ chưa được cấu hình hoặc không còn khả dụng."));
+        TimeSlot slot = timeSlotRepository.findByCourtAndTimeForUpdate(
+                        command.venueCourtId(), command.playDate(), command.startTime(), command.endTime()
+                )
+                .orElseThrow(() -> new ServiceException("Khung giờ chưa được cấu hình."));
+
+        if (slot.getStatus() != iuh.fit.venueservice.domain.enums.TimeSlotStatus.AVAILABLE) {
+            throw new ServiceException("Khung giờ không còn khả dụng.");
+        }
 
         if (slot.getPricePerHour() == null) {
             throw new ServiceException("Khung giờ chưa có giá hợp lệ.");
@@ -106,8 +126,11 @@ public class BookingServiceImpl implements BookingService {
                 .walkInCustomerName(command.walkInCustomerName())
                 .walkInCustomerPhone(command.walkInCustomerPhone())
                 .matchmakingSessionId(command.matchmakingSessionId())
+                .holdExpiresAt(now.plus(paymentHoldDuration))
                 .build();
 
+        slot.setStatus(iuh.fit.venueservice.domain.enums.TimeSlotStatus.LOCKED);
+        timeSlotRepository.save(slot);
         return bookingRepository.save(booking);
     }
 
@@ -166,14 +189,14 @@ public class BookingServiceImpl implements BookingService {
 
         cancellation.setProcessedBy(processedByUserId);
         cancellation.setDecisionReason(processNote);
-        cancellation.setProcessedAt(LocalDateTime.now());
+        cancellation.setProcessedAt(LocalDateTime.now(clock));
 
         if (!approved) {
             cancellation.setStatus(CancellationStatus.REJECTED);
             return bookingCancellationRepository.save(cancellation);
         }
 
-        Booking booking = bookingRepository.findById(cancellation.getBookingId())
+        Booking booking = bookingRepository.findByIdForUpdate(cancellation.getBookingId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân."));
         if (cancellation.getRefundAmount() != null && cancellation.getRefundAmount() > 0) {
             cancellation.setStatus(CancellationStatus.REFUND_PROCESSING);
@@ -182,6 +205,7 @@ public class BookingServiceImpl implements BookingService {
             cancellation.setStatus(CancellationStatus.APPROVED);
             booking.setStatus(BookingStatus.CANCELLED);
         }
+        timeSlotLifecycleService.releaseBookingSlot(booking);
         bookingRepository.save(booking);
         return bookingCancellationRepository.save(cancellation);
     }
@@ -198,7 +222,7 @@ public class BookingServiceImpl implements BookingService {
     private double calculateRefundPercentage(CancellationPolicy policy, Booking booking) {
         if (policy == null) return 0.0;
         long hoursBefore = Duration.between(
-                LocalDateTime.now(), LocalDateTime.of(booking.getPlayDate(), booking.getStartTime())
+                LocalDateTime.now(clock), LocalDateTime.of(booking.getPlayDate(), booking.getStartTime())
         ).toHours();
         if (hoursBefore >= policy.getFullRefundHoursBefore()) return 100.0;
         if (hoursBefore >= policy.getPartialRefundHoursBefore()) {

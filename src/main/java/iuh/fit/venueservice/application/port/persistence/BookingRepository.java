@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.domain.entity.Booking;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,8 @@ public interface BookingRepository {
     List<Booking> findByPlayerIdAndStatus(UUID playerId, String status, int page, int size);
 
     long countByPlayerId(UUID playerId);
+
+    List<Booking> findExpiredPaymentHoldsForUpdate(LocalDateTime cutoff);
 
     PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter);
 

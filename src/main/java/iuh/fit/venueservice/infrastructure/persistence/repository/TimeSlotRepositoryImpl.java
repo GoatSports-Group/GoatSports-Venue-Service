@@ -10,9 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -41,6 +43,14 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
     }
 
     @Override
+    public Optional<TimeSlot> findByCourtAndTimeForUpdate(
+            UUID venueCourtId, LocalDate date, LocalTime startTime, LocalTime endTime
+    ) {
+        return jpaRepository.findByCourtAndTimeForUpdate(venueCourtId, date, startTime, endTime)
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public List<TimeSlot> findByVenueCourtIdAndDate(UUID venueCourtId, LocalDate date) {
         return jpaRepository.findByVenueCourt_VenueCourtIdAndDateOrderByStartTime(venueCourtId, date)
                 .stream().map(mapper::toDomain).collect(Collectors.toList());
@@ -49,6 +59,16 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
     @Override
     public List<TimeSlot> findAvailableSlots(UUID venueCourtId, LocalDate date) {
         return jpaRepository.findByVenueCourt_VenueCourtIdAndDateAndStatus(venueCourtId, date, TimeSlotStatus.AVAILABLE)
+                .stream().map(mapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TimeSlot> findBlockingSlotsAt(Set<UUID> venueCourtIds, LocalDate date, LocalTime time) {
+        if (venueCourtIds == null || venueCourtIds.isEmpty()) return List.of();
+        return jpaRepository.findBlockingSlotsAt(
+                        venueCourtIds, date, time,
+                        Set.of(TimeSlotStatus.LOCKED, TimeSlotStatus.BOOKED, TimeSlotStatus.MAINTENANCE)
+                )
                 .stream().map(mapper::toDomain).collect(Collectors.toList());
     }
 

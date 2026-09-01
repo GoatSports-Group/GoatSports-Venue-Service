@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.BookingSource;
@@ -18,17 +19,20 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     private final BookingQrPort bookingQrPort;
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
+    private final TimeSlotLifecycleService timeSlotLifecycleService;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
             BookingQrPort bookingQrPort,
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            TimeSlotLifecycleService timeSlotLifecycleService
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
+        this.timeSlotLifecycleService = timeSlotLifecycleService;
     }
 
     @Override
@@ -40,7 +44,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         if (command.paymentId() == null || command.referenceId() == null || command.payerId() == null) {
             throw new ServiceException("Payment event thiếu định danh bắt buộc.");
         }
-        Booking booking = bookingRepository.findById(command.referenceId()).orElse(null);
+        Booking booking = bookingRepository.findByIdForUpdate(command.referenceId()).orElse(null);
         if (booking == null) return false;
         if (!isExpectedPayer(booking, command.payerId())) {
             throw new ServiceException("Payer của payment event không khớp booking.");
@@ -67,12 +71,17 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 ));
                 changed = true;
             }
+            timeSlotLifecycleService.confirmBookingSlot(booking);
             if (changed) bookingRepository.save(booking);
             return changed;
         }
 
         if ("BOOKING_REMAINING".equals(command.purpose())) {
             validateAmount(command.amount(), booking.getRemainingAmount());
+            if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
+                    && booking.getStatus() != BookingStatus.CONFIRMED) {
+                return false;
+            }
             boolean changed = !command.paymentId().equals(booking.getRemainingPaymentId());
             booking.setRemainingPaymentId(command.paymentId());
             if (booking.getSource() == BookingSource.WALK_IN
@@ -80,6 +89,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 booking.setStatus(BookingStatus.CONFIRMED);
                 changed = true;
             }
+            timeSlotLifecycleService.confirmBookingSlot(booking);
             if (changed) bookingRepository.save(booking);
             return changed;
         }

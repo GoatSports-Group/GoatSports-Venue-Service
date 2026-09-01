@@ -12,6 +12,7 @@ import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.enums.BookingSource;
@@ -25,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +46,7 @@ class OwnerBookingServiceImplTest {
     @Mock private VenueRepository venueRepository;
     @Mock private PaymentQueryPort paymentQueryPort;
     @Mock private PaymentCollectionPort paymentCollectionPort;
+    @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
 
     private OwnerBookingServiceImpl service;
     private UUID ownerId;
@@ -55,7 +58,7 @@ class OwnerBookingServiceImplTest {
     void setUp() {
         service = new OwnerBookingServiceImpl(
                 bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort
+                paymentCollectionPort, timeSlotLifecycleService, Clock.systemDefaultZone()
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();
@@ -109,7 +112,7 @@ class OwnerBookingServiceImplTest {
     @Test
     void onlyCheckedInPastBookingCanBeCompleted() {
         Booking booking = booking(BookingStatus.CONFIRMED, LocalDate.now().minusDays(1));
-        when(bookingRepository.findOwnedBookingById(bookingId, ownerId))
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
                 .thenReturn(Optional.of(record(booking)));
 
         assertThatThrownBy(() -> service.updateStatus(new UpdateOwnerBookingStatusCommand(
@@ -122,7 +125,7 @@ class OwnerBookingServiceImplTest {
     void completesCheckedInBookingWithoutChangingPaymentState() throws Exception {
         Booking booking = booking(BookingStatus.CHECKED_IN, LocalDate.now().minusDays(1));
         PaymentSnapshot payment = payment("BOOKING_DEPOSIT", "SUCCEEDED");
-        when(bookingRepository.findOwnedBookingById(bookingId, ownerId))
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
                 .thenReturn(Optional.of(record(booking)));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(payment));
         when(bookingRepository.save(booking)).thenReturn(booking);
@@ -139,7 +142,7 @@ class OwnerBookingServiceImplTest {
     @Test
     void paymentFailureDoesNotProduceSuccessOrMutateBooking() {
         Booking booking = booking(BookingStatus.CHECKED_IN, LocalDate.now().minusDays(1));
-        when(bookingRepository.findOwnedBookingById(bookingId, ownerId))
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
                 .thenReturn(Optional.of(record(booking)));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId)))
                 .thenThrow(new IllegalStateException("payment unavailable"));

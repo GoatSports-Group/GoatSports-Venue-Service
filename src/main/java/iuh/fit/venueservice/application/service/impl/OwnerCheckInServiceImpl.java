@@ -55,6 +55,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     private final PaymentCollectionPort paymentCollectionPort;
     private final BookingQrPort bookingQrPort;
     private final Clock clock;
+    private final Duration paymentHoldDuration;
 
     public OwnerCheckInServiceImpl(
             BookingRepository bookingRepository,
@@ -65,7 +66,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
             PaymentQueryPort paymentQueryPort,
             PaymentCollectionPort paymentCollectionPort,
             BookingQrPort bookingQrPort,
-            Clock clock
+            Clock clock,
+            Duration paymentHoldDuration
     ) {
         this.bookingRepository = bookingRepository;
         this.checkInRecordRepository = checkInRecordRepository;
@@ -76,6 +78,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         this.paymentCollectionPort = paymentCollectionPort;
         this.bookingQrPort = bookingQrPort;
         this.clock = clock;
+        this.paymentHoldDuration = paymentHoldDuration;
     }
 
     @Override
@@ -175,10 +178,11 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 .bookingCode(generateBookingCode())
                 .walkInCustomerName(command.customerName().trim())
                 .walkInCustomerPhone(normalizePhone(command.customerPhone()))
+                .holdExpiresAt(LocalDateTime.now(clock).plus(paymentHoldDuration))
                 .build());
         saved.setQrCode(bookingQrPort.issue(saved.getBookingId(), end));
         saved = bookingRepository.save(saved);
-        slot.setStatus(TimeSlotStatus.BOOKED);
+        slot.setStatus(TimeSlotStatus.LOCKED);
         timeSlotRepository.save(slot);
         return view(new OwnerBookingRecord(
                 saved, venue.getVenueId(), venue.getName(), court.getName()

@@ -10,6 +10,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -36,6 +37,7 @@ public class Booking extends BaseEntity {
     private String walkInCustomerName;
     private String walkInCustomerPhone;
     private UUID matchmakingSessionId;
+    private LocalDateTime holdExpiresAt;
 
     private BookingCancellation cancellation;
     private CheckInRecord checkInRecord;

@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
@@ -34,6 +35,7 @@ class BookingPaymentEventServiceImplTest {
     @Mock private BookingQrPort bookingQrPort;
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
+    @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
 
     @Test
     void confirmsBookingAndIssuesSignedQrExactlyOnceForValidDeposit() throws Exception {
@@ -41,13 +43,14 @@ class BookingPaymentEventServiceImplTest {
         UUID payerId = UUID.randomUUID();
         UUID paymentId = UUID.randomUUID();
         Booking booking = booking(bookingId, payerId);
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(bookingQrPort.issue(bookingId, LocalDateTime.of(
                 LocalDate.of(2026, 9, 1), LocalTime.of(9, 0)
         ))).thenReturn("GSQR.v1.signed");
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
-                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService
         );
         var event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
 
@@ -58,6 +61,7 @@ class BookingPaymentEventServiceImplTest {
 
         assertThat(service.applySucceededPayment(event)).isFalse();
         verify(bookingRepository).save(booking);
+        verify(timeSlotLifecycleService, org.mockito.Mockito.times(2)).confirmBookingSlot(booking);
     }
 
     @Test
@@ -65,9 +69,10 @@ class BookingPaymentEventServiceImplTest {
         UUID bookingId = UUID.randomUUID();
         UUID payerId = UUID.randomUUID();
         Booking booking = booking(bookingId, payerId);
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         var service = new BookingPaymentEventServiceImpl(
-                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService
         );
 
         assertThatThrownBy(() -> service.applySucceededPayment(event(
@@ -92,7 +97,7 @@ class BookingPaymentEventServiceImplTest {
                 .status(BookingStatus.PENDING_PAYMENT).remainingAmount(100_000.0)
                 .playDate(LocalDate.of(2026, 9, 1)).startTime(LocalTime.of(8, 0))
                 .endTime(LocalTime.of(9, 0)).build();
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
                 VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()
         ));
@@ -101,7 +106,8 @@ class BookingPaymentEventServiceImplTest {
         ));
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
-                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService
         );
 
         assertThat(service.applySucceededPayment(event(
@@ -109,6 +115,7 @@ class BookingPaymentEventServiceImplTest {
         ))).isTrue();
         assertThat(booking.getRemainingPaymentId()).isEqualTo(paymentId);
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        verify(timeSlotLifecycleService).confirmBookingSlot(booking);
     }
 
     private Booking booking(UUID bookingId, UUID payerId) {

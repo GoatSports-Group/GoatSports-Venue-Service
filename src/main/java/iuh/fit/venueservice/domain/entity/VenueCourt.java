@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.domain.entity;
 
 import iuh.fit.venueservice.domain.enums.SportType;
+import iuh.fit.venueservice.domain.enums.CourtAvailabilityStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -25,6 +27,8 @@ public class VenueCourt extends BaseEntity {
     private Integer capacity;
     private String surfaceType;
     private Boolean active;
+    private CourtAvailabilityStatus availabilityStatus;
+    private LocalTime unavailableUntil;
     @Builder.Default
     private Set<CourtPricingRule> pricingRules = new HashSet<>();
     @Builder.Default

@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
@@ -18,6 +19,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,28 +43,31 @@ class BookingServiceImplTest {
     @Test
     void createBookingStaysPendingPaymentWithoutFakeProviderSuccess() throws Exception {
         UUID courtId = UUID.randomUUID();
-        LocalDate playDate = LocalDate.now().plusDays(1);
+        Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDate playDate = LocalDate.now(clock).plusDays(1);
         LocalTime startTime = LocalTime.of(18, 0);
         LocalTime endTime = LocalTime.of(19, 0);
 
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
-                VenueCourt.builder().venueCourtId(courtId).build()
+                VenueCourt.builder().venueCourtId(courtId).active(true).build()
         ));
-        when(timeSlotRepository.findAvailableSlots(courtId, playDate)).thenReturn(List.of(
-                TimeSlot.builder()
+        TimeSlot slot = TimeSlot.builder()
                         .venueCourtId(courtId)
                         .date(playDate)
                         .startTime(startTime)
                         .endTime(endTime)
                         .pricePerHour(200_000.0)
                         .status(TimeSlotStatus.AVAILABLE)
-                        .build()
-        ));
+                        .build();
+        when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, startTime, endTime))
+                .thenReturn(Optional.of(slot));
+        when(timeSlotRepository.save(slot)).thenReturn(slot);
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
-                venueCourtRepository, venueRepository
+                venueCourtRepository, venueRepository,
+                new TimeSlotLifecycleService(timeSlotRepository, clock), clock, Duration.ofMinutes(15)
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -72,5 +80,7 @@ class BookingServiceImplTest {
         assertThat(result.getRemainingPaymentId()).isNull();
         assertThat(result.getQrCode()).isNull();
         assertThat(result.getTotalPrice()).isEqualTo(200_000.0);
+        assertThat(result.getHoldExpiresAt()).isEqualTo(LocalDate.now(clock).atTime(8, 15));
+        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.LOCKED);
     }
 }

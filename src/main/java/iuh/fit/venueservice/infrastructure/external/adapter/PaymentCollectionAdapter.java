@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -31,9 +32,11 @@ public class PaymentCollectionAdapter implements PaymentCollectionPort {
     }
 
     @Override
-    public BookingCheckoutSnapshot createBookingCheckout(UUID bookingId, UUID payerId, Double amount) {
+    public BookingCheckoutSnapshot createBookingCheckout(
+            UUID bookingId, UUID payerId, Double amount, LocalDateTime expiresAt
+    ) {
         BaseResponse<BookingCheckoutSnapshot> response = paymentClient.createBookingCheckout(
-                payerId, new CreateBookingCheckoutRequest(bookingId, amount, "VND", "vn")
+                payerId, new CreateBookingCheckoutRequest(bookingId, amount, "VND", "vn", expiresAt)
         );
         if (response == null || response.getData() == null) {
             throw new IllegalStateException("Payment-service không trả kết quả tạo mã payOS.");

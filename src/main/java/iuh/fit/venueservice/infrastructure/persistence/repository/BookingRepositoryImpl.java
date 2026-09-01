@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -80,6 +81,14 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public long countByPlayerId(UUID playerId) {
         return jpaRepository.findByPlayerIdOrderByCreatedAtDesc(playerId, PageRequest.of(0, 1)).getTotalElements();
+    }
+
+    @Override
+    @Transactional
+    public List<Booking> findExpiredPaymentHoldsForUpdate(LocalDateTime cutoff) {
+        return jpaRepository.findExpiredPaymentHoldsForUpdate(cutoff).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 
     @Override

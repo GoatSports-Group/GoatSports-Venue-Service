@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260901-add-booking-hold-expiration" author="codex">
+        <addColumn tableName="bookings">
+            <column name="hold_expires_at" type="TIMESTAMP"/>
+        </addColumn>
+        <sql>
+            UPDATE bookings
+            SET hold_expires_at = COALESCE(created_at, CURRENT_TIMESTAMP) + INTERVAL '15 minutes'
+            WHERE status = 'PENDING_PAYMENT' AND hold_expires_at IS NULL;
+        </sql>
+        <createIndex tableName="bookings" indexName="idx_bookings_status_hold_expires">
+            <column name="status"/>
+            <column name="hold_expires_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260901-align-existing-booking-slot-status" author="codex">
+        <sql>
+            UPDATE time_slots slot
+            SET status = 'LOCKED'
+            WHERE slot.status IN ('AVAILABLE', 'BOOKED')
+              AND EXISTS (
+                SELECT 1
+                FROM bookings booking
+                WHERE booking.venue_court_id = slot.venue_court_id
+                  AND booking.play_date = slot.date
+                  AND booking.start_time = slot.start_time
+                  AND booking.end_time = slot.end_time
+                  AND booking.status = 'PENDING_PAYMENT'
+              );
+
+            UPDATE time_slots slot
+            SET status = 'BOOKED'
+            WHERE slot.status IN ('AVAILABLE', 'LOCKED')
+              AND EXISTS (
+                SELECT 1
+                FROM bookings booking
+                WHERE booking.venue_court_id = slot.venue_court_id
+                  AND booking.play_date = slot.date
+                  AND booking.start_time = slot.start_time
+                  AND booking.end_time = slot.end_time
+                  AND booking.status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED')
+              );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

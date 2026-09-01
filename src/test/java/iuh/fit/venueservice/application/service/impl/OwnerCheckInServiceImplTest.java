@@ -35,6 +35,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -77,7 +78,7 @@ class OwnerCheckInServiceImplTest {
         service = new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, bookingQrPort, clock
+                paymentCollectionPort, bookingQrPort, clock, Duration.ofMinutes(15)
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();
@@ -206,7 +207,7 @@ class OwnerCheckInServiceImplTest {
     }
 
     @Test
-    void createsAnonymousWalkInFromLockedAvailableSlotAndMarksItBooked() throws Exception {
+    void createsAnonymousWalkInFromAvailableSlotAndHoldsItUntilPayment() throws Exception {
         UUID slotId = UUID.randomUUID();
         TimeSlot slot = TimeSlot.builder()
                 .timeSlotId(slotId).venueCourtId(courtId).date(LocalDate.of(2026, 8, 30))
@@ -241,7 +242,8 @@ class OwnerCheckInServiceImplTest {
         assertThat(result.outstandingAmount()).isEqualByComparingTo("3333.33");
         assertThat(created.getWalkInCustomerPhone()).isEqualTo("0901234567");
         assertThat(created.getQrCode()).isEqualTo("GSQR.v1.walk-in");
-        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.BOOKED);
+        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.LOCKED);
+        assertThat(created.getHoldExpiresAt()).isEqualTo(LocalDateTime.of(2026, 8, 30, 8, 45));
     }
 
     @Test

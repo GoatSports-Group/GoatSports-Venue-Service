@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
@@ -18,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +40,8 @@ class VenueOwnerAuthorizationTest {
     private VenueCourtRepository venueCourtRepository;
     @Mock
     private StoragePort storagePort;
+    @Mock
+    private TimeSlotRepository timeSlotRepository;
 
     private VenueServiceImpl venueService;
     private VenueCourtServiceImpl venueCourtService;
@@ -49,7 +53,9 @@ class VenueOwnerAuthorizationTest {
     @BeforeEach
     void setUp() {
         venueService = new VenueServiceImpl(venueRepository, storagePort);
-        venueCourtService = new VenueCourtServiceImpl(venueCourtRepository, venueRepository);
+        venueCourtService = new VenueCourtServiceImpl(
+                venueCourtRepository, venueRepository, timeSlotRepository, Clock.systemUTC()
+        );
         venueId = UUID.randomUUID();
         ownerId = UUID.randomUUID();
         otherOwnerId = UUID.randomUUID();

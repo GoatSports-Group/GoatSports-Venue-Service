@@ -3,6 +3,7 @@ package iuh.fit.venueservice.presentation.response.venue;
 import lombok.*;
 
 import java.util.UUID;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -17,4 +18,6 @@ public class VenueCourtResponse {
     private Integer capacity;
     private String surfaceType;
     private Boolean active;
+    private String availabilityStatus;
+    private LocalTime unavailableUntil;
 }

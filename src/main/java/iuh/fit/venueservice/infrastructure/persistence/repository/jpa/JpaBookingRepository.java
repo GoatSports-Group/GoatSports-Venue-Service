@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.List;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Repository
@@ -42,6 +43,16 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select booking from BookingEntity booking where booking.bookingId = :bookingId")
     Optional<BookingEntity> findByIdForUpdate(@Param("bookingId") UUID bookingId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select booking from BookingEntity booking
+            where booking.status = iuh.fit.venueservice.domain.enums.BookingStatus.PENDING_PAYMENT
+              and booking.holdExpiresAt is not null
+              and booking.holdExpiresAt <= :cutoff
+            order by booking.holdExpiresAt asc
+            """)
+    List<BookingEntity> findExpiredPaymentHoldsForUpdate(@Param("cutoff") LocalDateTime cutoff);
 
     @Query("""
             select booking from BookingEntity booking

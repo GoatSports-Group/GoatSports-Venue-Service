@@ -18,6 +18,7 @@ import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.OwnerBookingService;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
@@ -25,6 +26,7 @@ import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -41,19 +43,25 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     private final VenueRepository venueRepository;
     private final PaymentQueryPort paymentQueryPort;
     private final PaymentCollectionPort paymentCollectionPort;
+    private final TimeSlotLifecycleService timeSlotLifecycleService;
+    private final Clock clock;
 
     public OwnerBookingServiceImpl(
             BookingRepository bookingRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             PaymentQueryPort paymentQueryPort,
-            PaymentCollectionPort paymentCollectionPort
+            PaymentCollectionPort paymentCollectionPort,
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            Clock clock
     ) {
         this.bookingRepository = bookingRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
         this.paymentQueryPort = paymentQueryPort;
         this.paymentCollectionPort = paymentCollectionPort;
+        this.timeSlotLifecycleService = timeSlotLifecycleService;
+        this.clock = clock;
     }
 
     @Override
@@ -85,7 +93,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
                 || command.status() == null) {
             throw new ServiceException("Booking, trạng thái và owner là bắt buộc.");
         }
-        OwnerBookingRecord record = getOwnedBooking(command.bookingId(), command.ownerId());
+        OwnerBookingRecord record = getOwnedBookingForUpdate(command.bookingId(), command.ownerId());
         Booking booking = record.booking();
         if (command.status() != BookingStatus.COMPLETED) {
             throw new ServiceException("Chủ sân không được cập nhật trạng thái thanh toán hoặc trạng thái hệ thống.");
@@ -94,7 +102,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
             throw new ServiceException("Chỉ booking đã check-in mới được chuyển sang hoàn tất.");
         }
         LocalDateTime playEnd = LocalDateTime.of(booking.getPlayDate(), booking.getEndTime());
-        if (playEnd.isAfter(LocalDateTime.now())) {
+        if (playEnd.isAfter(LocalDateTime.now(clock))) {
             throw new ServiceException("Chưa thể hoàn tất booking trước giờ kết thúc.");
         }
 
@@ -112,7 +120,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
                 || command.method() == null) {
             throw new ServiceException("Booking, owner và phương thức thanh toán là bắt buộc.");
         }
-        OwnerBookingRecord record = getOwnedBooking(command.bookingId(), command.ownerId());
+        OwnerBookingRecord record = getOwnedBookingForUpdate(command.bookingId(), command.ownerId());
         Booking booking = record.booking();
         if (booking.getSource() != BookingSource.WALK_IN) {
             throw new ServiceException("Thu tiền tại quầy chỉ áp dụng cho booking walk-in.");
@@ -122,6 +130,9 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         }
         if (booking.getRemainingAmount() == null || booking.getRemainingAmount() <= 0) {
             throw new ServiceException("Booking không có khoản tiền cần thu.");
+        }
+        if (booking.getHoldExpiresAt() != null && !booking.getHoldExpiresAt().isAfter(LocalDateTime.now(clock))) {
+            throw new ServiceException("Thời gian giữ chỗ đã hết. Vui lòng tạo booking mới.");
         }
 
         List<PaymentSnapshot> payments = paymentQueryPort.findByBookingIds(Set.of(command.bookingId()));
@@ -163,7 +174,8 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         }
 
         BookingCheckoutSnapshot checkout = paymentCollectionPort.createBookingCheckout(
-                booking.getBookingId(), command.ownerId(), booking.getRemainingAmount()
+                booking.getBookingId(), command.ownerId(), booking.getRemainingAmount(),
+                booking.getHoldExpiresAt()
         );
         return new OwnerBookingPaymentResult(
                 booking.getBookingId(), checkout.paymentId(), command.method(),
@@ -172,9 +184,10 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         );
     }
 
-    private void confirmPaidWalkIn(Booking booking, UUID paymentId) {
+    private void confirmPaidWalkIn(Booking booking, UUID paymentId) throws ServiceException {
         booking.setRemainingPaymentId(paymentId);
         booking.setStatus(BookingStatus.CONFIRMED);
+        timeSlotLifecycleService.confirmBookingSlot(booking);
         bookingRepository.save(booking);
     }
 
@@ -226,6 +239,16 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
                             ? new OwnershipException("Booking không thuộc Venue của bạn.")
                             : new ServiceException("Không tìm thấy booking.");
                 });
+    }
+
+    private OwnerBookingRecord getOwnedBookingForUpdate(UUID bookingId, UUID ownerId) throws ServiceException {
+        if (bookingId == null || ownerId == null) {
+            throw new ServiceException("Booking và owner là bắt buộc.");
+        }
+        return bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId)
+                .orElseThrow(() -> bookingRepository.findById(bookingId).isPresent()
+                        ? new OwnershipException("Booking không thuộc Venue của bạn.")
+                        : new ServiceException("Không tìm thấy booking."));
     }
 
     private Venue getOwnedVenue(UUID venueId, UUID ownerId) throws ServiceException {
