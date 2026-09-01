@@ -1,6 +1,8 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.request.venue.OwnerCustomerMetricsQuery;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerRevenueQuery;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.application.exception.OwnershipException;
@@ -20,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -170,6 +173,46 @@ class OwnerRevenueServiceImplTest {
         assertThatThrownBy(() -> service.getRevenue(query(null)))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("tiền tệ");
+    }
+
+    @Test
+    void returnsExactCustomerMetricsForCurrentAndPreviousMonth() throws Exception {
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(ownedVenue()));
+        when(bookingRepository.findOwnedCustomerMetrics(
+                ownerId,
+                venueId,
+                LocalDate.of(2026, 8, 1),
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 10, 1)
+        )).thenReturn(new OwnerCustomerMetricsRecord(20, 13, 7, 10, 4, 6));
+
+        var result = service.getCustomerMetrics(new OwnerCustomerMetricsQuery(
+                ownerId, venueId, YearMonth.of(2026, 9)
+        ));
+
+        assertThat(result.scopeVenueId()).isEqualTo(venueId);
+        assertThat(result.periodBasis()).isEqualTo("BOOKING_PLAY_DATE");
+        assertThat(result.currentPeriod().fromDate()).isEqualTo(LocalDate.of(2026, 9, 1));
+        assertThat(result.currentPeriod().toDate()).isEqualTo(LocalDate.of(2026, 9, 30));
+        assertThat(result.currentPeriod().newCustomers()).isEqualTo(13);
+        assertThat(result.currentPeriod().returningCustomers()).isEqualTo(7);
+        assertThat(result.currentPeriod().returningRate()).isEqualByComparingTo("35.00");
+        assertThat(result.previousPeriod().fromDate()).isEqualTo(LocalDate.of(2026, 8, 1));
+        assertThat(result.previousPeriod().toDate()).isEqualTo(LocalDate.of(2026, 8, 31));
+        assertThat(result.previousPeriod().returningRate()).isEqualByComparingTo("60.00");
+    }
+
+    @Test
+    void rejectsCrossOwnerVenueBeforeAggregatingCustomerHistory() {
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).ownerId(UUID.randomUUID()).build()
+        ));
+
+        assertThatThrownBy(() -> service.getCustomerMetrics(new OwnerCustomerMetricsQuery(
+                ownerId, venueId, YearMonth.of(2026, 9)
+        ))).isInstanceOf(OwnershipException.class);
+
+        verify(bookingRepository, never()).findOwnedCustomerMetrics(any(), any(), any(), any(), any());
     }
 
     private OwnerRevenueQuery query(UUID requestedVenueId) {

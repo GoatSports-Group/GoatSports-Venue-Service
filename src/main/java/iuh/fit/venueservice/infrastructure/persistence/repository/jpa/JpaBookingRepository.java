@@ -69,4 +69,56 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate
     );
+
+    @Query(value = """
+            WITH scoped_bookings AS (
+                SELECT CASE
+                           WHEN booking.player_id IS NOT NULL
+                               THEN 'PLAYER:' || CAST(booking.player_id AS text)
+                           ELSE 'PHONE:' || NULLIF(
+                               regexp_replace(COALESCE(booking.walk_in_customer_phone, ''), '[^0-9+]', '', 'g'),
+                               ''
+                           )
+                       END AS customer_key,
+                       booking.play_date
+                FROM bookings booking
+                JOIN venue_courts court ON court.venue_court_id = booking.venue_court_id
+                JOIN venues venue ON venue.venue_id = court.venue_id
+                WHERE venue.owner_id = :ownerId
+                  AND venue.venue_id = :venueId
+                  AND booking.status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED')
+                  AND booking.play_date < :currentToExclusive
+            ),
+            customer_history AS (
+                SELECT customer_key,
+                       MIN(play_date) AS first_play_date,
+                       BOOL_OR(play_date >= :currentFrom) AS active_in_current,
+                       BOOL_OR(play_date >= :previousFrom AND play_date < :currentFrom) AS active_in_previous
+                FROM scoped_bookings
+                WHERE customer_key IS NOT NULL
+                GROUP BY customer_key
+            )
+            SELECT COUNT(*) FILTER (WHERE active_in_current) AS "currentTotalCustomers",
+                   COUNT(*) FILTER (
+                       WHERE active_in_current AND first_play_date >= :currentFrom
+                   ) AS "currentNewCustomers",
+                   COUNT(*) FILTER (
+                       WHERE active_in_current AND first_play_date < :currentFrom
+                   ) AS "currentReturningCustomers",
+                   COUNT(*) FILTER (WHERE active_in_previous) AS "previousTotalCustomers",
+                   COUNT(*) FILTER (
+                       WHERE active_in_previous AND first_play_date >= :previousFrom
+                   ) AS "previousNewCustomers",
+                   COUNT(*) FILTER (
+                       WHERE active_in_previous AND first_play_date < :previousFrom
+                   ) AS "previousReturningCustomers"
+            FROM customer_history
+            """, nativeQuery = true)
+    OwnerCustomerMetricsProjection findOwnedCustomerMetrics(
+            @Param("ownerId") UUID ownerId,
+            @Param("venueId") UUID venueId,
+            @Param("previousFrom") LocalDate previousFrom,
+            @Param("currentFrom") LocalDate currentFrom,
+            @Param("currentToExclusive") LocalDate currentToExclusive
+    );
 }

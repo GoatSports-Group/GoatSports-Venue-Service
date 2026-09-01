@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.domain.entity.Booking;
@@ -164,6 +165,33 @@ public class BookingRepositoryImpl implements BookingRepository {
                         entity.getBookingId(), entity.getPlayDate(), entity.getStartTime()
                 ))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OwnerCustomerMetricsRecord findOwnedCustomerMetrics(
+            UUID ownerId,
+            UUID venueId,
+            LocalDate previousFrom,
+            LocalDate currentFrom,
+            LocalDate currentToExclusive
+    ) {
+        var row = jpaRepository.findOwnedCustomerMetrics(
+                ownerId, venueId, previousFrom, currentFrom, currentToExclusive
+        );
+
+        return new OwnerCustomerMetricsRecord(
+                number(row.getCurrentTotalCustomers()),
+                number(row.getCurrentNewCustomers()),
+                number(row.getCurrentReturningCustomers()),
+                number(row.getPreviousTotalCustomers()),
+                number(row.getPreviousNewCustomers()),
+                number(row.getPreviousReturningCustomers())
+        );
+    }
+
+    private long number(Number value) {
+        return value == null ? 0 : value.longValue();
     }
 
     private OwnerBookingRecord toOwnerRecord(

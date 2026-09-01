@@ -1,6 +1,10 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.request.venue.OwnerCustomerMetricsQuery;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerRevenueQuery;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsPeriod;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsView;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerDailyRevenue;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerHourlyRevenue;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerRevenuePeriod;
@@ -19,6 +23,7 @@ import iuh.fit.venueservice.domain.entity.Venue;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -75,6 +80,35 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
                         BigDecimal.valueOf(previous.summary().bookingCount())
                 ),
                 current.statusBreakdown(), current.dailyRevenue(), current.hourlyRevenue()
+        );
+    }
+
+    @Override
+    public OwnerCustomerMetricsView getCustomerMetrics(OwnerCustomerMetricsQuery query) throws ServiceException {
+        validateCustomerMetrics(query);
+        validateVenueScope(query.venueId(), query.ownerId());
+
+        YearMonth currentMonth = query.month();
+        YearMonth previousMonth = currentMonth.minusMonths(1);
+        LocalDate currentFrom = currentMonth.atDay(1);
+        LocalDate currentToExclusive = currentMonth.plusMonths(1).atDay(1);
+        LocalDate previousFrom = previousMonth.atDay(1);
+        OwnerCustomerMetricsRecord metrics = bookingRepository.findOwnedCustomerMetrics(
+                query.ownerId(), query.venueId(), previousFrom, currentFrom, currentToExclusive
+        );
+
+        return new OwnerCustomerMetricsView(
+                query.venueId(), PERIOD_BASIS,
+                customerPeriod(
+                        currentFrom, currentToExclusive.minusDays(1),
+                        metrics.currentTotalCustomers(), metrics.currentNewCustomers(),
+                        metrics.currentReturningCustomers()
+                ),
+                customerPeriod(
+                        previousFrom, currentFrom.minusDays(1),
+                        metrics.previousTotalCustomers(), metrics.previousNewCustomers(),
+                        metrics.previousReturningCustomers()
+                )
         );
     }
 
@@ -178,6 +212,29 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
         if (days > MAX_DATE_RANGE_DAYS) {
             throw new ServiceException("Khoảng thời gian doanh thu tối đa 366 ngày.");
         }
+    }
+
+    private void validateCustomerMetrics(OwnerCustomerMetricsQuery query) throws ServiceException {
+        if (query == null || query.ownerId() == null || query.venueId() == null || query.month() == null) {
+            throw new ServiceException("Owner, cơ sở và tháng thống kê là bắt buộc.");
+        }
+    }
+
+    private OwnerCustomerMetricsPeriod customerPeriod(
+            LocalDate fromDate,
+            LocalDate toDate,
+            long totalCustomers,
+            long newCustomers,
+            long returningCustomers
+    ) {
+        BigDecimal returningRate = totalCustomers == 0
+                ? BigDecimal.ZERO.setScale(2)
+                : BigDecimal.valueOf(returningCustomers)
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
+        return new OwnerCustomerMetricsPeriod(
+                fromDate, toDate, totalCustomers, newCustomers, returningCustomers, returningRate
+        );
     }
 
     private void validateVenueScope(UUID venueId, UUID ownerId) throws ServiceException {

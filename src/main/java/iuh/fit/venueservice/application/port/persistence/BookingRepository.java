@@ -3,6 +3,7 @@ package iuh.fit.venueservice.application.port.persistence;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.domain.entity.Booking;
 
@@ -39,5 +40,13 @@ public interface BookingRepository {
 
     List<RevenueBookingRecord> findOwnedRevenueBookings(
             UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
+    );
+
+    OwnerCustomerMetricsRecord findOwnedCustomerMetrics(
+            UUID ownerId,
+            UUID venueId,
+            LocalDate previousFrom,
+            LocalDate currentFrom,
+            LocalDate currentToExclusive
     );
 }
