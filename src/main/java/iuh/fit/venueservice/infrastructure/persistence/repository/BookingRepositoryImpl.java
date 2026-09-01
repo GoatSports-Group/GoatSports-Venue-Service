@@ -160,7 +160,9 @@ public class BookingRepositoryImpl implements BookingRepository {
             UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
     ) {
         return jpaRepository.findOwnedForRevenue(ownerId, venueId, fromDate, toDate).stream()
-                .map(entity -> new RevenueBookingRecord(entity.getBookingId(), entity.getPlayDate()))
+                .map(entity -> new RevenueBookingRecord(
+                        entity.getBookingId(), entity.getPlayDate(), entity.getStartTime()
+                ))
                 .toList();
     }
 

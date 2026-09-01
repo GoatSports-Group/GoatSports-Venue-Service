@@ -13,6 +13,7 @@ public record OwnerRevenueView(
         BigDecimal revenueChangePercentage,
         BigDecimal bookingCountChangePercentage,
         List<OwnerRevenueStatusBreakdown> paymentStatusBreakdown,
-        List<OwnerDailyRevenue> dailyRevenue
+        List<OwnerDailyRevenue> dailyRevenue,
+        List<OwnerHourlyRevenue> hourlyRevenue
 ) {
 }

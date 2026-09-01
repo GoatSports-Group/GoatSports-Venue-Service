@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -96,6 +97,10 @@ class OwnerRevenueServiceImplTest {
                         new BigDecimal("200000.00"), BigDecimal.ZERO.setScale(2),
                         BigDecimal.ZERO.setScale(2)
                 );
+        assertThat(result.hourlyRevenue()).hasSize(24);
+        assertThat(result.hourlyRevenue().get(10).hour()).isEqualTo(10);
+        assertThat(result.hourlyRevenue().get(10).revenue()).isEqualByComparingTo("200000.00");
+        assertThat(result.hourlyRevenue().get(10).succeededPaymentCount()).isEqualTo(2);
     }
 
     @Test
@@ -121,6 +126,8 @@ class OwnerRevenueServiceImplTest {
         assertThat(result.currentPeriod().totalRevenue()).isEqualByComparingTo("0.00");
         assertThat(result.paymentStatusBreakdown()).isEmpty();
         assertThat(result.dailyRevenue()).hasSize(31)
+                .allMatch(point -> point.revenue().compareTo(BigDecimal.ZERO) == 0);
+        assertThat(result.hourlyRevenue()).hasSize(24)
                 .allMatch(point -> point.revenue().compareTo(BigDecimal.ZERO) == 0);
         verify(paymentQueryPort, never()).findByBookingIds(any());
     }
@@ -177,7 +184,7 @@ class OwnerRevenueServiceImplTest {
     }
 
     private RevenueBookingRecord booking(UUID bookingId, LocalDate playDate) {
-        return new RevenueBookingRecord(bookingId, playDate);
+        return new RevenueBookingRecord(bookingId, playDate, LocalTime.of(10, 0));
     }
 
     private PaymentSnapshot payment(UUID bookingId, String status, double amount) {

@@ -2,6 +2,7 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.OwnerRevenueQuery;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerDailyRevenue;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerHourlyRevenue;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerRevenuePeriod;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerRevenueStatusBreakdown;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerRevenueView;
@@ -73,7 +74,7 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
                         BigDecimal.valueOf(current.summary().bookingCount()),
                         BigDecimal.valueOf(previous.summary().bookingCount())
                 ),
-                current.statusBreakdown(), current.dailyRevenue()
+                current.statusBreakdown(), current.dailyRevenue(), current.hourlyRevenue()
         );
     }
 
@@ -88,16 +89,20 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
     private PeriodAnalysis analyze(
             LocalDate fromDate, LocalDate toDate, List<RevenueBookingRecord> bookings
     ) throws ServiceException {
-        Map<UUID, LocalDate> bookingDates = new LinkedHashMap<>();
+        Map<UUID, RevenueBookingRecord> bookingRecords = new LinkedHashMap<>();
         for (RevenueBookingRecord booking : bookings) {
-            bookingDates.put(booking.bookingId(), booking.playDate());
+            bookingRecords.put(booking.bookingId(), booking);
         }
 
-        List<PaymentSnapshot> payments = loadPayments(new ArrayList<>(bookingDates.keySet()));
+        List<PaymentSnapshot> payments = loadPayments(new ArrayList<>(bookingRecords.keySet()));
         Map<String, StatusAccumulator> breakdown = new TreeMap<>();
         Map<LocalDate, DailyAccumulator> daily = new LinkedHashMap<>();
+        Map<Integer, DailyAccumulator> hourly = new LinkedHashMap<>();
         for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
             daily.put(date, new DailyAccumulator());
+        }
+        for (int hour = 0; hour < 24; hour++) {
+            hourly.put(hour, new DailyAccumulator());
         }
 
         BigDecimal revenue = BigDecimal.ZERO;
@@ -107,8 +112,8 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
             if (payment.paymentId() == null || !seenPaymentIds.add(payment.paymentId())) {
                 continue;
             }
-            LocalDate playDate = bookingDates.get(payment.referenceId());
-            if (playDate == null) {
+            RevenueBookingRecord booking = bookingRecords.get(payment.referenceId());
+            if (booking == null) {
                 continue;
             }
             validatePayment(payment);
@@ -121,12 +126,13 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
             if (SUCCEEDED.equals(payment.status())) {
                 revenue = revenue.add(amount);
                 paidBookingIds.add(payment.referenceId());
-                daily.get(playDate).add(amount);
+                daily.get(booking.playDate()).add(amount);
+                hourly.get(booking.startTime().getHour()).add(amount);
             }
         }
 
         OwnerRevenuePeriod summary = new OwnerRevenuePeriod(
-                fromDate, toDate, bookingDates.size(), paidBookingIds.size(), money(revenue)
+                fromDate, toDate, bookingRecords.size(), paidBookingIds.size(), money(revenue)
         );
         List<OwnerRevenueStatusBreakdown> statusRows = breakdown.entrySet().stream()
                 .map(entry -> new OwnerRevenueStatusBreakdown(
@@ -138,7 +144,12 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
                         entry.getKey(), money(entry.getValue().amount), entry.getValue().count
                 ))
                 .toList();
-        return new PeriodAnalysis(summary, statusRows, dailyRows);
+        List<OwnerHourlyRevenue> hourlyRows = hourly.entrySet().stream()
+                .map(entry -> new OwnerHourlyRevenue(
+                        entry.getKey(), money(entry.getValue().amount), entry.getValue().count
+                ))
+                .toList();
+        return new PeriodAnalysis(summary, statusRows, dailyRows, hourlyRows);
     }
 
     private List<PaymentSnapshot> loadPayments(List<UUID> bookingIds) {
@@ -207,7 +218,8 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
     private record PeriodAnalysis(
             OwnerRevenuePeriod summary,
             List<OwnerRevenueStatusBreakdown> statusBreakdown,
-            List<OwnerDailyRevenue> dailyRevenue
+            List<OwnerDailyRevenue> dailyRevenue,
+            List<OwnerHourlyRevenue> hourlyRevenue
     ) {
     }
 
