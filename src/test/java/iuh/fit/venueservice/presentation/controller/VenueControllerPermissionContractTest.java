@@ -19,6 +19,8 @@ class VenueControllerPermissionContractTest {
         assertPermission(OwnerVenueController.class, "getMyVenues", "GET_OWN_VENUES");
         assertPermission(OwnerVenueController.class, "getOwnedVenue", "GET_OWN_VENUE");
         assertPermission(OwnerVenueController.class, "updateVenue", "UPDATE_OWN_VENUE");
+        assertPermission(OwnerVenueController.class, "getFacilityLayout", "GET_OWN_VENUE");
+        assertPermission(OwnerVenueController.class, "updateFacilityLayout", "UPDATE_OWN_VENUE");
         assertPermission(OwnerVenueCourtController.class, "getVenueCourts", "GET_OWN_VENUE_COURTS");
         assertPermission(OwnerVenueCourtController.class, "createVenueCourt", "CREATE_OWN_VENUE_COURT");
         assertPermission(OwnerVenueCourtController.class, "getVenueCourt", "GET_OWN_VENUE_COURT");

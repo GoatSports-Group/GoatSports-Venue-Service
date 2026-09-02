@@ -13,12 +13,15 @@ import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 
-import java.util.List;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public class VenueServiceImpl implements VenueService {
@@ -108,6 +111,60 @@ public class VenueServiceImpl implements VenueService {
         address.setLongitude(command.longitude());
 
         return venueRepository.save(venue);
+    }
+
+    @Override
+    public Optional<VenueFacilityLayout> getFacilityLayout(UUID venueId, UUID currentUserId)
+            throws ServiceException {
+        return Optional.ofNullable(getOwnedVenue(venueId, currentUserId).getFacilityLayout());
+    }
+
+    @Override
+    public VenueFacilityLayout updateFacilityLayout(
+            UUID venueId,
+            VenueFacilityLayout layout,
+            UUID currentUserId
+    ) throws ServiceException {
+        Venue venue = getOwnedVenue(venueId, currentUserId);
+        validateFacilityLayout(venue, layout);
+        VenueFacilityLayout savedLayout = new VenueFacilityLayout(
+                1,
+                venueId,
+                List.copyOf(layout.items()),
+                List.copyOf(layout.zones()),
+                java.time.LocalDateTime.now()
+        );
+        venue.setFacilityLayout(savedLayout);
+        venueRepository.save(venue);
+        return savedLayout;
+    }
+
+    private void validateFacilityLayout(Venue venue, VenueFacilityLayout layout) throws ServiceException {
+        if (layout == null || layout.items() == null || layout.zones() == null) {
+            throw new ServiceException("Dữ liệu bố cục cơ sở không hợp lệ.");
+        }
+        Set<String> zoneIds = new HashSet<>();
+        for (VenueFacilityLayout.Zone zone : layout.zones()) {
+            if (!zoneIds.add(zone.id())) {
+                throw new ServiceException("Mỗi khu vực trong bố cục phải có mã riêng.");
+            }
+        }
+        Set<String> itemIds = new HashSet<>();
+        Set<UUID> ownedCourtIds = venue.getCourts().stream()
+                .map(court -> court.getVenueCourtId())
+                .collect(java.util.stream.Collectors.toSet());
+        for (VenueFacilityLayout.Item item : layout.items()) {
+            if (!itemIds.add(item.id())) {
+                throw new ServiceException("Mỗi đối tượng trong bố cục phải có mã riêng.");
+            }
+            if ("COURT".equals(item.type())
+                    && (item.courtId() == null || !ownedCourtIds.contains(item.courtId()))) {
+                throw new ServiceException("Bố cục chứa sân không thuộc cơ sở này.");
+            }
+            if (item.zoneId() != null && !item.zoneId().isBlank() && !zoneIds.contains(item.zoneId())) {
+                throw new ServiceException("Đối tượng đang tham chiếu khu vực không tồn tại.");
+            }
+        }
     }
 
     @Override

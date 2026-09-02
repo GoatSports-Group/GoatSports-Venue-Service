@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,23 @@ public class VenueDecorator implements VenueService {
     @Transactional(rollbackFor = ServiceException.class)
     public Venue updateVenue(UpdateVenueCommand command) throws ServiceException {
         return venueServiceImpl.updateVenue(command);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<VenueFacilityLayout> getFacilityLayout(UUID venueId, UUID currentUserId)
+            throws ServiceException {
+        return venueServiceImpl.getFacilityLayout(venueId, currentUserId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public VenueFacilityLayout updateFacilityLayout(
+            UUID venueId,
+            VenueFacilityLayout layout,
+            UUID currentUserId
+    ) throws ServiceException {
+        return venueServiceImpl.updateFacilityLayout(venueId, layout, currentUserId);
     }
 
     @Override

@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 
 @Entity
 @Table(name = "venues")
@@ -45,6 +46,10 @@ public class VenueEntity extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<String> amenities;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "facility_layout", columnDefinition = "jsonb")
+    private VenueFacilityLayout facilityLayout;
 
     @Column(nullable = false, columnDefinition = "UUID")
     private UUID ownerId;

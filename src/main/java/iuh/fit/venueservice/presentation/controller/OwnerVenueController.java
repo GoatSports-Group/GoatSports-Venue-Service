@@ -6,8 +6,10 @@ import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import iuh.fit.venueservice.presentation.converter.VenueSearchConverter;
 import iuh.fit.venueservice.presentation.request.venue.UpdateVenueRequest;
+import iuh.fit.venueservice.presentation.request.venue.UpdateVenueFacilityLayoutRequest;
 import iuh.fit.venueservice.presentation.response.venue.VenueDetailResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -79,6 +81,40 @@ public class OwnerVenueController {
         );
         Venue updated = venueService.updateVenue(command);
         return ResponseEntity.ok(venueSearchConverter.toDetailResponse(updated));
+    }
+
+    @GetMapping("/{venueId}/facility-layout")
+    @PreAuthorize("hasAuthority('GET_OWN_VENUE')")
+    public ResponseEntity<VenueFacilityLayout> getFacilityLayout(@PathVariable UUID venueId)
+            throws ServiceException {
+        return venueService.getFacilityLayout(venueId, currentUserId())
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @PutMapping("/{venueId}/facility-layout")
+    @PreAuthorize("hasAuthority('UPDATE_OWN_VENUE')")
+    public ResponseEntity<VenueFacilityLayout> updateFacilityLayout(
+            @PathVariable UUID venueId,
+            @Valid @RequestBody UpdateVenueFacilityLayoutRequest request
+    ) throws ServiceException {
+        VenueFacilityLayout layout = new VenueFacilityLayout(
+                1,
+                venueId,
+                request.items().stream()
+                        .map(item -> new VenueFacilityLayout.Item(
+                                item.id(), item.type(), item.courtId(), item.label(), item.x(), item.y(),
+                                item.width(), item.height(), item.rotation(), item.zoneId(), item.icon()
+                        ))
+                        .toList(),
+                request.zones().stream()
+                        .map(zone -> new VenueFacilityLayout.Zone(
+                                zone.id(), zone.name(), zone.x(), zone.y(), zone.width(), zone.height()
+                        ))
+                        .toList(),
+                null
+        );
+        return ResponseEntity.ok(venueService.updateFacilityLayout(venueId, layout, currentUserId()));
     }
 
     private UUID currentUserId() throws ServiceException {

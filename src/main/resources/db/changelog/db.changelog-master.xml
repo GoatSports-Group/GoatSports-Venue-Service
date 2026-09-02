@@ -12,4 +12,5 @@
     <include file="/db/changelog/schema/30-08-2026/harden-reviews.xml"/>
     <include file="/db/changelog/schema/01-09-2026/add-booking-slot-lifecycle.xml"/>
     <include file="/db/changelog/schema/02-09-2026/optimize-customer-metrics.xml"/>
+    <include file="/db/changelog/schema/03-09-2026/add-venue-facility-layout.xml"/>
 </databaseChangeLog>

@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -17,6 +18,14 @@ public interface VenueService {
     Venue getOwnedVenue(UUID venueId, UUID currentUserId) throws ServiceException;
 
     Venue updateVenue(UpdateVenueCommand command) throws ServiceException;
+
+    Optional<VenueFacilityLayout> getFacilityLayout(UUID venueId, UUID currentUserId) throws ServiceException;
+
+    VenueFacilityLayout updateFacilityLayout(
+            UUID venueId,
+            VenueFacilityLayout layout,
+            UUID currentUserId
+    ) throws ServiceException;
 
     PageResult<Venue> getVenues(int page, int size);
 

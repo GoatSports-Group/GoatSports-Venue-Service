@@ -34,6 +34,7 @@ public class Venue extends BaseEntity {
 
     private List<String> imageUrls;
     private List<String> amenities;
+    private VenueFacilityLayout facilityLayout;
     private UUID ownerId;
 
     private Address address;
