@@ -19,6 +19,7 @@ import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.CheckInRecord;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
@@ -63,6 +64,7 @@ class OwnerCheckInServiceImplTest {
     @Mock private PaymentQueryPort paymentQueryPort;
     @Mock private PaymentCollectionPort paymentCollectionPort;
     @Mock private BookingQrPort bookingQrPort;
+    @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
 
     private OwnerCheckInServiceImpl service;
     private UUID ownerId;
@@ -78,7 +80,7 @@ class OwnerCheckInServiceImplTest {
         service = new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, bookingQrPort, clock, Duration.ofMinutes(15),
+                paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
                 Duration.ofMinutes(30)
         );
         ownerId = UUID.randomUUID();
@@ -142,6 +144,19 @@ class OwnerCheckInServiceImplTest {
     }
 
     @Test
+    void rejectsOnlineCheckInUntilDepositConfirmsTheReservation() {
+        Booking booking = booking(BookingStatus.PENDING_PAYMENT, LocalTime.of(8, 0), LocalTime.of(9, 0));
+        booking.setHoldExpiresAt(LocalDateTime.of(2026, 8, 30, 8, 45));
+        when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
+
+        assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
+                ownerId, bookingId, null, null
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("tiền cọc");
+
+        verify(paymentQueryPort, never()).findByBookingIds(any());
+    }
+
+    @Test
     void doesNotApplyOnlineEarlyWindowToWalkIn() {
         Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(9, 0), LocalTime.of(10, 0));
         booking.setSource(BookingSource.WALK_IN);
@@ -154,7 +169,7 @@ class OwnerCheckInServiceImplTest {
     }
 
     @Test
-    void rejectsManualWalkInCheckInUntilPaymentSucceeds() {
+    void allowsUnpaidWalkInToCheckInAndDefersPayment() throws Exception {
         Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(8, 0), LocalTime.of(9, 0));
         booking.setSource(BookingSource.WALK_IN);
         booking.setPlayerId(null);
@@ -163,10 +178,18 @@ class OwnerCheckInServiceImplTest {
         when(checkInRecordRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.confirm(new ConfirmOwnerCheckInCommand(
+        when(checkInRecordRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(bookingRepository.save(booking)).thenReturn(booking);
+
+        var result = service.confirm(new ConfirmOwnerCheckInCommand(
                 ownerId, bookingId, CheckInMethod.MANUAL, PaymentCollectionMode.NONE, null, null
-        ))).isInstanceOf(ServiceException.class).hasMessageContaining("thanh toán thành công");
-        verify(checkInRecordRepository, never()).save(any());
+        ));
+
+        assertThat(result.bookingRecord().booking().getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
+        assertThat(result.outstandingAmount()).isEqualByComparingTo("140000.00");
+        assertThat(result.checkInRecord().getRemainingAmountCollected()).isZero();
+        verify(paymentCollectionPort, never()).collectBookingRemaining(any(), any(), any(), any());
+        verify(timeSlotLifecycleService).confirmBookingSlot(booking);
     }
 
     @Test
@@ -247,7 +270,7 @@ class OwnerCheckInServiceImplTest {
     }
 
     @Test
-    void createsAnonymousWalkInFromAvailableSlotAndHoldsItUntilPayment() throws Exception {
+    void createsConfirmedAnonymousWalkInWithQrAndBookedSlot() throws Exception {
         UUID slotId = UUID.randomUUID();
         TimeSlot slot = TimeSlot.builder()
                 .timeSlotId(slotId).venueCourtId(courtId).date(LocalDate.of(2026, 8, 30))
@@ -277,13 +300,13 @@ class OwnerCheckInServiceImplTest {
         Booking created = result.bookingRecord().booking();
         assertThat(created.getPlayerId()).isNull();
         assertThat(created.getSource()).isEqualTo(BookingSource.WALK_IN);
-        assertThat(created.getStatus()).isEqualTo(BookingStatus.PENDING_PAYMENT);
+        assertThat(created.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
         assertThat(created.getTotalPrice()).isEqualTo(3_333.33);
         assertThat(result.outstandingAmount()).isEqualByComparingTo("3333.33");
         assertThat(created.getWalkInCustomerPhone()).isEqualTo("0901234567");
         assertThat(created.getQrCode()).isEqualTo("GSQR.v1.walk-in");
-        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.LOCKED);
-        assertThat(created.getHoldExpiresAt()).isEqualTo(LocalDateTime.of(2026, 8, 30, 8, 45));
+        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.BOOKED);
+        assertThat(created.getHoldExpiresAt()).isNull();
     }
 
     @Test

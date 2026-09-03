@@ -71,7 +71,10 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 ));
                 changed = true;
             }
-            timeSlotLifecycleService.confirmBookingSlot(booking);
+            if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
+                    || booking.getStatus() == BookingStatus.CONFIRMED) {
+                timeSlotLifecycleService.confirmBookingSlot(booking);
+            }
             if (changed) bookingRepository.save(booking);
             return changed;
         }
@@ -79,7 +82,9 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         if ("BOOKING_REMAINING".equals(command.purpose())) {
             validateAmount(command.amount(), booking.getRemainingAmount());
             if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
-                    && booking.getStatus() != BookingStatus.CONFIRMED) {
+                    && booking.getStatus() != BookingStatus.CONFIRMED
+                    && booking.getStatus() != BookingStatus.CHECKED_IN
+                    && booking.getStatus() != BookingStatus.COMPLETED) {
                 return false;
             }
             boolean changed = !command.paymentId().equals(booking.getRemainingPaymentId());
@@ -89,7 +94,10 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 booking.setStatus(BookingStatus.CONFIRMED);
                 changed = true;
             }
-            timeSlotLifecycleService.confirmBookingSlot(booking);
+            if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
+                    || booking.getStatus() == BookingStatus.CONFIRMED) {
+                timeSlotLifecycleService.confirmBookingSlot(booking);
+            }
             if (changed) bookingRepository.save(booking);
             return changed;
         }

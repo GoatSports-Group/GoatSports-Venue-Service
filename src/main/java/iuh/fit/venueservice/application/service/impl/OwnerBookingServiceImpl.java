@@ -23,10 +23,10 @@ import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
-import iuh.fit.venueservice.domain.enums.BookingSource;
 
 import java.time.LocalDateTime;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +45,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     private final PaymentCollectionPort paymentCollectionPort;
     private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final Clock clock;
+    private final Duration paymentCheckoutDuration;
 
     public OwnerBookingServiceImpl(
             BookingRepository bookingRepository,
@@ -53,7 +54,8 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
             PaymentQueryPort paymentQueryPort,
             PaymentCollectionPort paymentCollectionPort,
             TimeSlotLifecycleService timeSlotLifecycleService,
-            Clock clock
+            Clock clock,
+            Duration paymentCheckoutDuration
     ) {
         this.bookingRepository = bookingRepository;
         this.venueCourtRepository = venueCourtRepository;
@@ -62,6 +64,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         this.paymentCollectionPort = paymentCollectionPort;
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.clock = clock;
+        this.paymentCheckoutDuration = paymentCheckoutDuration;
     }
 
     @Override
@@ -122,16 +125,18 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         }
         OwnerBookingRecord record = getOwnedBookingForUpdate(command.bookingId(), command.ownerId());
         Booking booking = record.booking();
-        if (booking.getSource() != BookingSource.WALK_IN) {
-            throw new ServiceException("Thu tiền tại quầy chỉ áp dụng cho booking walk-in.");
-        }
-        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
-            throw new ServiceException("Booking không còn ở trạng thái chờ thanh toán.");
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
+                && booking.getStatus() != BookingStatus.CONFIRMED
+                && booking.getStatus() != BookingStatus.CHECKED_IN
+                && booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new ServiceException("Trạng thái booking không cho phép thu khoản còn lại.");
         }
         if (booking.getRemainingAmount() == null || booking.getRemainingAmount() <= 0) {
             throw new ServiceException("Booking không có khoản tiền cần thu.");
         }
-        if (booking.getHoldExpiresAt() != null && !booking.getHoldExpiresAt().isAfter(LocalDateTime.now(clock))) {
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
+                && booking.getHoldExpiresAt() != null
+                && !booking.getHoldExpiresAt().isAfter(LocalDateTime.now(clock))) {
             throw new ServiceException("Thời gian giữ chỗ đã hết. Vui lòng tạo booking mới.");
         }
 
@@ -141,7 +146,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
                 .filter(payment -> "SUCCEEDED".equals(payment.status()))
                 .findFirst().orElse(null);
         if (succeeded != null) {
-            confirmPaidWalkIn(booking, succeeded.paymentId());
+            applySuccessfulRemainingPayment(booking, succeeded.paymentId());
             return new OwnerBookingPaymentResult(
                     booking.getBookingId(), succeeded.paymentId(), command.method(),
                     succeeded.status(), null, null, null, succeeded.expiresAt()
@@ -160,22 +165,28 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         }
 
         if (command.method() == OwnerBookingPaymentMethod.CASH) {
+            UUID payerId = booking.getPlayerId() == null ? command.ownerId() : booking.getPlayerId();
             PaymentSnapshot payment = paymentCollectionPort.collectBookingRemaining(
-                    booking.getBookingId(), command.ownerId(), command.ownerId(), booking.getRemainingAmount()
+                    booking.getBookingId(), payerId, command.ownerId(), booking.getRemainingAmount()
             );
             if (!"SUCCEEDED".equals(payment.status())) {
                 throw new ServiceException("Payment-service chưa xác nhận thu tiền mặt thành công.");
             }
-            confirmPaidWalkIn(booking, payment.paymentId());
+            applySuccessfulRemainingPayment(booking, payment.paymentId());
             return new OwnerBookingPaymentResult(
                     booking.getBookingId(), payment.paymentId(), command.method(),
                     payment.status(), null, null, null, payment.expiresAt()
             );
         }
 
+        LocalDateTime checkoutExpiresAt = booking.getHoldExpiresAt() != null
+                && booking.getHoldExpiresAt().isAfter(LocalDateTime.now(clock))
+                ? booking.getHoldExpiresAt()
+                : LocalDateTime.now(clock).plus(paymentCheckoutDuration);
         BookingCheckoutSnapshot checkout = paymentCollectionPort.createBookingCheckout(
-                booking.getBookingId(), command.ownerId(), booking.getRemainingAmount(),
-                booking.getHoldExpiresAt()
+                booking.getBookingId(), booking.getPlayerId() == null ? command.ownerId() : booking.getPlayerId(),
+                booking.getRemainingAmount(),
+                checkoutExpiresAt
         );
         return new OwnerBookingPaymentResult(
                 booking.getBookingId(), checkout.paymentId(), command.method(),
@@ -184,10 +195,12 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         );
     }
 
-    private void confirmPaidWalkIn(Booking booking, UUID paymentId) throws ServiceException {
+    private void applySuccessfulRemainingPayment(Booking booking, UUID paymentId) throws ServiceException {
         booking.setRemainingPaymentId(paymentId);
-        booking.setStatus(BookingStatus.CONFIRMED);
-        timeSlotLifecycleService.confirmBookingSlot(booking);
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            timeSlotLifecycleService.confirmBookingSlot(booking);
+        }
         bookingRepository.save(booking);
     }
 

@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
+import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
@@ -39,6 +40,7 @@ class BookingServiceImplTest {
     @Mock BookingCancellationRepository bookingCancellationRepository;
     @Mock VenueCourtRepository venueCourtRepository;
     @Mock VenueRepository venueRepository;
+    @Mock BookingQrPort bookingQrPort;
 
     @Test
     void createBookingStaysPendingPaymentWithoutFakeProviderSuccess() throws Exception {
@@ -62,12 +64,19 @@ class BookingServiceImplTest {
         when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, startTime, endTime))
                 .thenReturn(Optional.of(slot));
         when(timeSlotRepository.save(slot)).thenReturn(slot);
-        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        UUID bookingId = UUID.randomUUID();
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
+            Booking booking = invocation.getArgument(0);
+            if (booking.getBookingId() == null) booking.setBookingId(bookingId);
+            return booking;
+        });
+        when(bookingQrPort.issue(bookingId, playDate.atTime(endTime))).thenReturn("GSQR.v1.online");
 
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
                 venueCourtRepository, venueRepository,
-                new TimeSlotLifecycleService(timeSlotRepository, clock), clock, Duration.ofMinutes(15)
+                new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort,
+                clock, Duration.ofMinutes(15)
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -78,7 +87,7 @@ class BookingServiceImplTest {
         assertThat(result.getStatus()).isEqualTo(BookingStatus.PENDING_PAYMENT);
         assertThat(result.getDepositPaymentId()).isNull();
         assertThat(result.getRemainingPaymentId()).isNull();
-        assertThat(result.getQrCode()).isNull();
+        assertThat(result.getQrCode()).isEqualTo("GSQR.v1.online");
         assertThat(result.getTotalPrice()).isEqualTo(200_000.0);
         assertThat(result.getHoldExpiresAt()).isEqualTo(LocalDate.now(clock).atTime(8, 15));
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.LOCKED);

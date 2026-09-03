@@ -20,6 +20,7 @@ import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.OwnerCheckInService;
+import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.CheckInRecord;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
@@ -55,8 +56,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     private final PaymentQueryPort paymentQueryPort;
     private final PaymentCollectionPort paymentCollectionPort;
     private final BookingQrPort bookingQrPort;
+    private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final Clock clock;
-    private final Duration paymentHoldDuration;
     private final Duration onlineEarlyCheckInWindow;
 
     public OwnerCheckInServiceImpl(
@@ -68,8 +69,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
             PaymentQueryPort paymentQueryPort,
             PaymentCollectionPort paymentCollectionPort,
             BookingQrPort bookingQrPort,
+            TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
-            Duration paymentHoldDuration,
             Duration onlineEarlyCheckInWindow
     ) {
         this.bookingRepository = bookingRepository;
@@ -80,8 +81,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         this.paymentQueryPort = paymentQueryPort;
         this.paymentCollectionPort = paymentCollectionPort;
         this.bookingQrPort = bookingQrPort;
+        this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.clock = clock;
-        this.paymentHoldDuration = paymentHoldDuration;
         this.onlineEarlyCheckInWindow = onlineEarlyCheckInWindow;
     }
 
@@ -112,23 +113,20 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         List<PaymentSnapshot> payments = loadPayments(booking.getBookingId());
         PaymentSnapshot remainingPayment = succeededRemainingPayment(payments, booking.getRemainingAmount());
         BigDecimal remaining = money(booking.getRemainingAmount());
+        BigDecimal collectedAtCheckIn = BigDecimal.ZERO;
         if (remaining.signum() > 0 && remainingPayment == null) {
-            if (command.method() == CheckInMethod.MANUAL) {
-                throw new ServiceException("Booking walk-in phải thanh toán thành công trước khi check-in.");
-            }
             if (command.paymentMode() == PaymentCollectionMode.ONLINE) {
                 throw new ServiceException("Khoản tiền còn lại chưa được payment-service xác nhận thành công.");
             }
-            if (command.paymentMode() != PaymentCollectionMode.CASH) {
-                throw new ServiceException("Bạn phải chọn cách thu khoản tiền còn lại.");
-            }
-            if (booking.getPlayerId() != null) {
+            if (command.paymentMode() == PaymentCollectionMode.CASH) {
+                UUID payerId = booking.getPlayerId() == null ? command.ownerId() : booking.getPlayerId();
                 remainingPayment = paymentCollectionPort.collectBookingRemaining(
-                        booking.getBookingId(), booking.getPlayerId(), command.ownerId(), booking.getRemainingAmount()
+                        booking.getBookingId(), payerId, command.ownerId(), booking.getRemainingAmount()
                 );
                 if (!"SUCCEEDED".equals(remainingPayment.status())) {
                     throw new ServiceException("Payment-service chưa xác nhận thu tiền mặt thành công.");
                 }
+                collectedAtCheckIn = remaining;
                 payments = loadPayments(booking.getBookingId());
             }
         }
@@ -138,12 +136,13 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 .paymentId(remainingPayment == null ? null : remainingPayment.paymentId())
                 .checkedInBy(command.ownerId())
                 .method(command.method())
-                .remainingAmountCollected(remaining)
+                .remainingAmountCollected(collectedAtCheckIn)
                 .checkedInAt(LocalDateTime.now(clock))
                 .build());
         if (remainingPayment != null) {
             booking.setRemainingPaymentId(remainingPayment.paymentId());
         }
+        timeSlotLifecycleService.confirmBookingSlot(booking);
         booking.setStatus(BookingStatus.CHECKED_IN);
         Booking saved = bookingRepository.save(booking);
         return view(new OwnerBookingRecord(
@@ -183,16 +182,15 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         Booking saved = bookingRepository.save(Booking.builder()
                 .venueCourtId(court.getVenueCourtId())
                 .playDate(slot.getDate()).startTime(slot.getStartTime()).endTime(slot.getEndTime())
-                .status(BookingStatus.PENDING_PAYMENT).source(BookingSource.WALK_IN)
+                .status(BookingStatus.CONFIRMED).source(BookingSource.WALK_IN)
                 .totalPrice(total).depositAmount(0.0).remainingAmount(total)
                 .bookingCode(generateBookingCode())
                 .walkInCustomerName(command.customerName().trim())
                 .walkInCustomerPhone(normalizePhone(command.customerPhone()))
-                .holdExpiresAt(LocalDateTime.now(clock).plus(paymentHoldDuration))
                 .build());
         saved.setQrCode(bookingQrPort.issue(saved.getBookingId(), end));
         saved = bookingRepository.save(saved);
-        slot.setStatus(TimeSlotStatus.LOCKED);
+        slot.setStatus(TimeSlotStatus.BOOKED);
         timeSlotRepository.save(slot);
         return view(new OwnerBookingRecord(
                 saved, venue.getVenueId(), venue.getName(), court.getName()
@@ -255,10 +253,20 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 || booking.getStatus() == BookingStatus.EXPIRED) {
             throw new ServiceException("Đơn đặt sân đã bị hủy hoặc hết hạn, không thể check-in.");
         }
-        if (booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw new ServiceException("Chỉ đơn đã xác nhận mới được check-in.");
+        if (booking.getStatus() != BookingStatus.CONFIRMED
+                && booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new ServiceException("Chỉ đơn còn hiệu lực mới được check-in.");
+        }
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
+                && booking.getSource() != BookingSource.WALK_IN) {
+            throw new ServiceException("Booking online chưa hoàn tất tiền cọc nên chưa thể check-in.");
         }
         LocalDateTime now = LocalDateTime.now(clock);
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
+                && booking.getHoldExpiresAt() != null
+                && !now.isBefore(booking.getHoldExpiresAt())) {
+            throw new ServiceException("Đơn đặt sân đã hết thời gian giữ chỗ, không thể check-in.");
+        }
         LocalDateTime start = LocalDateTime.of(booking.getPlayDate(), booking.getStartTime());
         LocalDateTime end = LocalDateTime.of(booking.getPlayDate(), booking.getEndTime());
         boolean walkIn = booking.getSource() == BookingSource.WALK_IN;

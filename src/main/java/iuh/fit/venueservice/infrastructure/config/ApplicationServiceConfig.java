@@ -83,12 +83,14 @@ public class ApplicationServiceConfig {
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
+            BookingQrPort bookingQrPort,
             Clock clock,
             @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration
     ) {
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
-                venueCourtRepository, venueRepository, timeSlotLifecycleService, clock, paymentHoldDuration
+                venueCourtRepository, venueRepository, timeSlotLifecycleService, bookingQrPort,
+                clock, paymentHoldDuration
         );
     }
 
@@ -120,11 +122,12 @@ public class ApplicationServiceConfig {
             PaymentQueryPort paymentQueryPort,
             PaymentCollectionPort paymentCollectionPort,
             TimeSlotLifecycleService timeSlotLifecycleService,
-            Clock clock
+            Clock clock,
+            @Value("${booking.payment-checkout-duration:PT15M}") Duration paymentCheckoutDuration
     ) {
         return new OwnerBookingServiceImpl(
                 bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, timeSlotLifecycleService, clock
+                paymentCollectionPort, timeSlotLifecycleService, clock, paymentCheckoutDuration
         );
     }
 
@@ -161,14 +164,14 @@ public class ApplicationServiceConfig {
             PaymentQueryPort paymentQueryPort,
             PaymentCollectionPort paymentCollectionPort,
             BookingQrPort bookingQrPort,
+            TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
-            @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration,
             @Value("${booking.online-check-in-early-window}") Duration onlineEarlyCheckInWindow
     ) {
         return new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, bookingQrPort, clock, paymentHoldDuration,
+                paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
                 onlineEarlyCheckInWindow
         );
     }

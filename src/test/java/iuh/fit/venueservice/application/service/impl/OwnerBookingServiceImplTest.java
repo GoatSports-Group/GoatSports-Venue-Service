@@ -1,6 +1,8 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
+import iuh.fit.venueservice.application.dto.request.venue.CreateOwnerBookingPaymentCommand;
+import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingPaymentMethod;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateOwnerBookingStatusCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
@@ -27,6 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -58,7 +61,8 @@ class OwnerBookingServiceImplTest {
     void setUp() {
         service = new OwnerBookingServiceImpl(
                 bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, timeSlotLifecycleService, Clock.systemDefaultZone()
+                paymentCollectionPort, timeSlotLifecycleService, Clock.systemDefaultZone(),
+                Duration.ofMinutes(15)
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();
@@ -152,6 +156,32 @@ class OwnerBookingServiceImplTest {
         ))).isInstanceOf(IllegalStateException.class).hasMessage("payment unavailable");
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
         verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void collectsRemainingPaymentAfterOnlineBookingWasCheckedInWithoutRegressingStatus() throws Exception {
+        Booking booking = booking(BookingStatus.CHECKED_IN, LocalDate.now());
+        UUID paymentId = UUID.randomUUID();
+        PaymentSnapshot remainingPayment = new PaymentSnapshot(
+                paymentId, bookingId, "BOOKING_REMAINING", 140_000.0, "VND", "SUCCEEDED",
+                LocalDateTime.now(), null, LocalDateTime.now()
+        );
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
+                .thenReturn(Optional.of(record(booking)));
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
+        when(paymentCollectionPort.collectBookingRemaining(
+                bookingId, booking.getPlayerId(), ownerId, booking.getRemainingAmount()
+        )).thenReturn(remainingPayment);
+        when(bookingRepository.save(booking)).thenReturn(booking);
+
+        var result = service.createPayment(new CreateOwnerBookingPaymentCommand(
+                bookingId, ownerId, OwnerBookingPaymentMethod.CASH
+        ));
+
+        assertThat(result.status()).isEqualTo("SUCCEEDED");
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
+        assertThat(booking.getRemainingPaymentId()).isEqualTo(paymentId);
+        verify(timeSlotLifecycleService, never()).confirmBookingSlot(any());
     }
 
     private OwnerBookingFilter filter(UUID requestedVenueId, UUID requestedCourtId) {

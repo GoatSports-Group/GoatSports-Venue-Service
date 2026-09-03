@@ -4,6 +4,7 @@ import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
@@ -39,6 +40,7 @@ public class BookingServiceImpl implements BookingService {
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
     private final TimeSlotLifecycleService timeSlotLifecycleService;
+    private final BookingQrPort bookingQrPort;
     private final Clock clock;
     private final Duration paymentHoldDuration;
 
@@ -49,6 +51,7 @@ public class BookingServiceImpl implements BookingService {
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
+            BookingQrPort bookingQrPort,
             Clock clock,
             Duration paymentHoldDuration
     ) {
@@ -58,6 +61,7 @@ public class BookingServiceImpl implements BookingService {
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
         this.timeSlotLifecycleService = timeSlotLifecycleService;
+        this.bookingQrPort = bookingQrPort;
         this.clock = clock;
         this.paymentHoldDuration = paymentHoldDuration;
     }
@@ -131,7 +135,11 @@ public class BookingServiceImpl implements BookingService {
 
         slot.setStatus(iuh.fit.venueservice.domain.enums.TimeSlotStatus.LOCKED);
         timeSlotRepository.save(slot);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+        saved.setQrCode(bookingQrPort.issue(
+                saved.getBookingId(), LocalDateTime.of(saved.getPlayDate(), saved.getEndTime())
+        ));
+        return bookingRepository.save(saved);
     }
 
     @Override
