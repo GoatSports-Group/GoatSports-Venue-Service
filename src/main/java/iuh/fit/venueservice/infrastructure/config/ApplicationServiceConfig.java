@@ -2,16 +2,7 @@ package iuh.fit.venueservice.infrastructure.config;
 
 import iuh.fit.venueservice.application.port.*;
 import iuh.fit.venueservice.application.port.persistence.*;
-import iuh.fit.venueservice.application.service.impl.OwnerApplicationDocumentServiceImpl;
-import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
-import iuh.fit.venueservice.application.service.impl.OwnerBookingServiceImpl;
-import iuh.fit.venueservice.application.service.impl.OwnerCheckInServiceImpl;
-import iuh.fit.venueservice.application.service.impl.BookingPaymentEventServiceImpl;
-import iuh.fit.venueservice.application.service.impl.OwnerScheduleServiceImpl;
-import iuh.fit.venueservice.application.service.impl.OwnerRevenueServiceImpl;
-import iuh.fit.venueservice.application.service.impl.ReviewServiceImpl;
-import iuh.fit.venueservice.application.service.impl.VenueCourtServiceImpl;
-import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
+import iuh.fit.venueservice.application.service.impl.*;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -75,17 +66,17 @@ public class ApplicationServiceConfig {
     }
 
     @Bean
-    public iuh.fit.venueservice.application.service.impl.VenueSearchServiceImpl venueSearchService(
+    public VenueSearchServiceImpl venueSearchService(
             VenueRepository venueRepository,
             VenueCourtRepository venueCourtRepository
     ) {
-        return new iuh.fit.venueservice.application.service.impl.VenueSearchServiceImpl(
+        return new VenueSearchServiceImpl(
                 venueRepository, venueCourtRepository
         );
     }
 
     @Bean
-    public iuh.fit.venueservice.application.service.impl.BookingServiceImpl bookingService(
+    public BookingServiceImpl bookingService(
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
             BookingCancellationRepository bookingCancellationRepository,
@@ -93,9 +84,9 @@ public class ApplicationServiceConfig {
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
-            @Value("${booking.payment-hold-duration:PT15M}") Duration paymentHoldDuration
+            @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration
     ) {
-        return new iuh.fit.venueservice.application.service.impl.BookingServiceImpl(
+        return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository,
                 venueCourtRepository, venueRepository, timeSlotLifecycleService, clock, paymentHoldDuration
         );
@@ -171,12 +162,14 @@ public class ApplicationServiceConfig {
             PaymentCollectionPort paymentCollectionPort,
             BookingQrPort bookingQrPort,
             Clock clock,
-            @Value("${booking.payment-hold-duration:PT15M}") Duration paymentHoldDuration
+            @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration,
+            @Value("${booking.online-check-in-early-window}") Duration onlineEarlyCheckInWindow
     ) {
         return new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, bookingQrPort, clock, paymentHoldDuration
+                paymentCollectionPort, bookingQrPort, clock, paymentHoldDuration,
+                onlineEarlyCheckInWindow
         );
     }
 

@@ -27,6 +27,7 @@ import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.domain.enums.CheckInMethod;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 
 import java.math.BigDecimal;
@@ -56,6 +57,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     private final BookingQrPort bookingQrPort;
     private final Clock clock;
     private final Duration paymentHoldDuration;
+    private final Duration onlineEarlyCheckInWindow;
 
     public OwnerCheckInServiceImpl(
             BookingRepository bookingRepository,
@@ -67,7 +69,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
             PaymentCollectionPort paymentCollectionPort,
             BookingQrPort bookingQrPort,
             Clock clock,
-            Duration paymentHoldDuration
+            Duration paymentHoldDuration,
+            Duration onlineEarlyCheckInWindow
     ) {
         this.bookingRepository = bookingRepository;
         this.checkInRecordRepository = checkInRecordRepository;
@@ -79,6 +82,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         this.bookingQrPort = bookingQrPort;
         this.clock = clock;
         this.paymentHoldDuration = paymentHoldDuration;
+        this.onlineEarlyCheckInWindow = onlineEarlyCheckInWindow;
     }
 
     @Override
@@ -109,6 +113,9 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         PaymentSnapshot remainingPayment = succeededRemainingPayment(payments, booking.getRemainingAmount());
         BigDecimal remaining = money(booking.getRemainingAmount());
         if (remaining.signum() > 0 && remainingPayment == null) {
+            if (command.method() == CheckInMethod.MANUAL) {
+                throw new ServiceException("Booking walk-in phải thanh toán thành công trước khi check-in.");
+            }
             if (command.paymentMode() == PaymentCollectionMode.ONLINE) {
                 throw new ServiceException("Khoản tiền còn lại chưa được payment-service xác nhận thành công.");
             }
@@ -254,8 +261,16 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime start = LocalDateTime.of(booking.getPlayDate(), booking.getStartTime());
         LocalDateTime end = LocalDateTime.of(booking.getPlayDate(), booking.getEndTime());
-        if (now.isBefore(start) || now.isAfter(end)) {
-            throw new ServiceException("Chưa đến hoặc đã quá khung giờ sử dụng.");
+        boolean walkIn = booking.getSource() == BookingSource.WALK_IN;
+        LocalDateTime earliestCheckIn = walkIn ? start : start.minus(onlineEarlyCheckInWindow);
+        if (now.isBefore(earliestCheckIn)) {
+            throw new ServiceException(walkIn
+                    ? "Chưa đến khung giờ sử dụng."
+                    : "Booking online chỉ được check-in sớm tối đa "
+                    + onlineEarlyCheckInWindow.toMinutes() + " phút.");
+        }
+        if (!now.isBefore(end)) {
+            throw new ServiceException("Đã quá khung giờ sử dụng.");
         }
     }
 

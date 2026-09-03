@@ -78,7 +78,8 @@ class OwnerCheckInServiceImplTest {
         service = new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, bookingQrPort, clock, Duration.ofMinutes(15)
+                paymentCollectionPort, bookingQrPort, clock, Duration.ofMinutes(15),
+                Duration.ofMinutes(30)
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();
@@ -117,16 +118,55 @@ class OwnerCheckInServiceImplTest {
 
     @Test
     void rejectsOutsideUsageWindowAndRepeatedCheckIn() {
-        Booking early = booking(BookingStatus.CONFIRMED, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        Booking early = booking(BookingStatus.CONFIRMED, LocalTime.of(9, 1), LocalTime.of(10, 0));
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(early)));
         assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
                 ownerId, bookingId, null, null
-        ))).isInstanceOf(ServiceException.class).hasMessageContaining("Chưa đến");
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("30 phút");
 
         early.setStatus(BookingStatus.CHECKED_IN);
         assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
                 ownerId, bookingId, null, null
         ))).isInstanceOf(ServiceException.class).hasMessageContaining("trước đó");
+    }
+
+    @Test
+    void allowsOnlineCheckInThirtyMinutesBeforeStart() throws Exception {
+        Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(deposit()));
+
+        var result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+
+        assertThat(result.bookingRecord().booking().getBookingId()).isEqualTo(bookingId);
+    }
+
+    @Test
+    void doesNotApplyOnlineEarlyWindowToWalkIn() {
+        Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        booking.setSource(BookingSource.WALK_IN);
+        booking.setPlayerId(null);
+        when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
+
+        assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
+                ownerId, bookingId, null, null
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("Chưa đến");
+    }
+
+    @Test
+    void rejectsManualWalkInCheckInUntilPaymentSucceeds() {
+        Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(8, 0), LocalTime.of(9, 0));
+        booking.setSource(BookingSource.WALK_IN);
+        booking.setPlayerId(null);
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
+                .thenReturn(Optional.of(record(booking)));
+        when(checkInRecordRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.confirm(new ConfirmOwnerCheckInCommand(
+                ownerId, bookingId, CheckInMethod.MANUAL, PaymentCollectionMode.NONE, null, null
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("thanh toán thành công");
+        verify(checkInRecordRepository, never()).save(any());
     }
 
     @Test
@@ -214,7 +254,7 @@ class OwnerCheckInServiceImplTest {
                 .startTime(LocalTime.of(8, 30)).endTime(LocalTime.of(8, 31))
                 .status(TimeSlotStatus.AVAILABLE).pricePerHour(200_000.0).build();
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
-                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).name("Sân A").build()
+                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).name("Sân A").active(true).build()
         ));
         when(venueRepository.findById(venueId)).thenReturn(Optional.of(
                 Venue.builder().venueId(venueId).ownerId(ownerId).name("Goat Arena").build()
