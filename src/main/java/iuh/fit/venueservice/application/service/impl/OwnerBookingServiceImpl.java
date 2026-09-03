@@ -110,6 +110,9 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         }
 
         List<PaymentSnapshot> payments = paymentQueryPort.findByBookingIds(Set.of(command.bookingId()));
+        if (!isFullyPaid(booking, payments)) {
+            throw new ServiceException("Booking vẫn còn công nợ nên chưa thể chuyển sang hoàn thành.");
+        }
         booking.setStatus(BookingStatus.COMPLETED);
         Booking saved = bookingRepository.save(booking);
         return toView(new OwnerBookingRecord(
@@ -282,15 +285,26 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     private OwnerBookingView toView(OwnerBookingRecord record, List<PaymentSnapshot> payments) {
         return new OwnerBookingView(
                 record.booking(), record.venueId(), record.venueName(), record.courtName(),
-                payments, allowedTransitions(record.booking())
+                payments, allowedTransitions(record.booking(), payments)
         );
     }
 
-    private List<BookingStatus> allowedTransitions(Booking booking) {
+    private List<BookingStatus> allowedTransitions(Booking booking, List<PaymentSnapshot> payments) {
         if (booking.getStatus() == BookingStatus.CHECKED_IN
-                && !LocalDateTime.of(booking.getPlayDate(), booking.getEndTime()).isAfter(LocalDateTime.now())) {
+                && !LocalDateTime.of(booking.getPlayDate(), booking.getEndTime()).isAfter(LocalDateTime.now(clock))
+                && isFullyPaid(booking, payments)) {
             return List.of(BookingStatus.COMPLETED);
         }
         return List.of();
+    }
+
+    private boolean isFullyPaid(Booking booking, List<PaymentSnapshot> payments) {
+        if (booking.getRemainingAmount() == null || booking.getRemainingAmount() <= 0) return true;
+        if (booking.getRemainingPaymentId() != null) return true;
+        return payments.stream()
+                .filter(payment -> "BOOKING_REMAINING".equals(payment.purpose()))
+                .filter(payment -> "SUCCEEDED".equals(payment.status()))
+                .anyMatch(payment -> payment.amount() != null
+                        && Math.abs(payment.amount() - booking.getRemainingAmount()) < 0.01);
     }
 }

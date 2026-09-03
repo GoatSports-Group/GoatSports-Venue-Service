@@ -126,8 +126,9 @@ class OwnerBookingServiceImplTest {
     }
 
     @Test
-    void completesCheckedInBookingWithoutChangingPaymentState() throws Exception {
+    void completesFullyPaidCheckedInBookingWithoutChangingPaymentState() throws Exception {
         Booking booking = booking(BookingStatus.CHECKED_IN, LocalDate.now().minusDays(1));
+        booking.setRemainingPaymentId(UUID.randomUUID());
         PaymentSnapshot payment = payment("BOOKING_DEPOSIT", "SUCCEEDED");
         when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
                 .thenReturn(Optional.of(record(booking)));
@@ -141,6 +142,22 @@ class OwnerBookingServiceImplTest {
         assertThat(result.booking().getStatus()).isEqualTo(BookingStatus.COMPLETED);
         assertThat(result.payments()).containsExactly(payment);
         verify(bookingRepository).save(booking);
+    }
+
+    @Test
+    void rejectsCompletingCheckedInBookingWithOutstandingBalance() {
+        Booking booking = booking(BookingStatus.CHECKED_IN, LocalDate.now().minusDays(1));
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
+                .thenReturn(Optional.of(record(booking)));
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(
+                payment("BOOKING_DEPOSIT", "SUCCEEDED")
+        ));
+
+        assertThatThrownBy(() -> service.updateStatus(new UpdateOwnerBookingStatusCommand(
+                bookingId, BookingStatus.COMPLETED, ownerId
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("công nợ");
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
+        verify(bookingRepository, never()).save(any());
     }
 
     @Test
