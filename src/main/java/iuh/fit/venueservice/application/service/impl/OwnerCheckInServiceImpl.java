@@ -149,6 +149,9 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         validateWalkIn(command);
         VenueCourt court = venueCourtRepository.findById(command.venueCourtId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân thi đấu."));
+        if (!Boolean.TRUE.equals(court.getActive()) || court.getDeletedAt() != null) {
+            throw new ServiceException("Sân đang tạm ngừng hoạt động.");
+        }
         Venue venue = getOwnedVenue(court.getVenueId(), command.ownerId());
         TimeSlot slot = timeSlotRepository.findByIdForUpdate(command.timeSlotId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy khung giờ."));

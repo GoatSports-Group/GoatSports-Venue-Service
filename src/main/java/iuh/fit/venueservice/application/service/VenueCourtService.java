@@ -19,6 +19,8 @@ public interface VenueCourtService {
 
     VenueCourt updateActive(UUID venueCourtId, Boolean active, UUID currentUserId) throws ServiceException;
 
+    void softDelete(UUID venueCourtId, UUID currentUserId) throws ServiceException;
+
     List<VenueCourt> getVenueCourts(UUID venueId) throws ServiceException;
 
     VenueCourt getVenueCourt(UUID venueCourtId) throws ServiceException;

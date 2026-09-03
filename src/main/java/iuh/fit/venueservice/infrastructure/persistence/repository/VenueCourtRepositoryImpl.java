@@ -44,8 +44,13 @@ public class VenueCourtRepositoryImpl implements VenueCourtRepository {
     }
 
     @Override
+    public Optional<VenueCourt> findByIdAndDeletedAtIsNull(UUID id) {
+        return jpaRepository.findByVenueCourtIdAndDeletedAtIsNull(id).map(venueCourtEntityMapper::toDomain);
+    }
+
+    @Override
     public java.util.List<VenueCourt> findByVenueId(UUID venueId) {
-        return jpaRepository.findByVenue_VenueId(venueId).stream()
+        return jpaRepository.findByVenue_VenueIdAndDeletedAtIsNull(venueId).stream()
                 .map(venueCourtEntityMapper::toDomain)
                 .collect(java.util.stream.Collectors.toList());
     }

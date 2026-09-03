@@ -80,7 +80,7 @@ public class BookingServiceImpl implements BookingService {
         VenueCourt court = venueCourtRepository.findById(command.venueCourtId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân con."));
 
-        if (!Boolean.TRUE.equals(court.getActive())) {
+        if (!Boolean.TRUE.equals(court.getActive()) || court.getDeletedAt() != null) {
             throw new ServiceException("Sân đang tạm ngừng hoạt động.");
         }
 

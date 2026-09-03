@@ -7,8 +7,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Repository
 public interface JpaVenueCourtRepository extends JpaRepository<VenueCourtEntity, UUID>, JpaSpecificationExecutor<VenueCourtEntity> {
-    List<VenueCourtEntity> findByVenue_VenueId(UUID venueId);
+    List<VenueCourtEntity> findByVenue_VenueIdAndDeletedAtIsNull(UUID venueId);
+
+    Optional<VenueCourtEntity> findByVenueCourtIdAndDeletedAtIsNull(UUID venueCourtId);
 }

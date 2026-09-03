@@ -12,5 +12,7 @@ public interface VenueCourtRepository {
 
     Optional<VenueCourt> findById(UUID id);
 
+    Optional<VenueCourt> findByIdAndDeletedAtIsNull(UUID id);
+
     List<VenueCourt> findByVenueId(UUID venueId);
 }

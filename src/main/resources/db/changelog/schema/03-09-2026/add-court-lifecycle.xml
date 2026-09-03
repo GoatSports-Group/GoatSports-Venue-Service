@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260903-add-soft-delete-audit-fields" author="codex">
+        <addColumn tableName="addresses">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="owner_application_documents">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="owner_applications">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="venue_courts">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="venues">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="cancellation_policies">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="court_pricing_rules">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="time_slots">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="bookings">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="booking_cancellations">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="check_in_records">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="reviews">
+            <column name="deleted_at" type="timestamp"/>
+            <column name="deleted_by" type="VARCHAR(255)"/>
+        </addColumn>
+        <createIndex tableName="venue_courts" indexName="idx_venue_courts_venue_deleted">
+            <column name="venue_id"/>
+            <column name="deleted_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

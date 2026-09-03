@@ -94,6 +94,16 @@ public class VenueCourtServiceImpl implements VenueCourtService {
     }
 
     @Override
+    public void softDelete(UUID venueCourtId, UUID currentUserId) throws ServiceException {
+        OwnedCourt owned = getOwnedCourt(venueCourtId, currentUserId);
+        VenueCourt court = owned.court();
+        court.setActive(false);
+        court.setDeletedAt(LocalDateTime.now(clock));
+        court.setDeletedBy(currentUserId.toString());
+        venueCourtRepository.save(court, owned.venue());
+    }
+
+    @Override
     public List<VenueCourt> getVenueCourts(UUID venueId) throws ServiceException {
         getVenue(venueId);
         return enrichAvailability(venueCourtRepository.findByVenueId(venueId));
@@ -101,13 +111,13 @@ public class VenueCourtServiceImpl implements VenueCourtService {
 
     @Override
     public VenueCourt getVenueCourt(UUID venueCourtId) throws ServiceException {
-        VenueCourt court = venueCourtRepository.findById(venueCourtId)
+        VenueCourt court = venueCourtRepository.findByIdAndDeletedAtIsNull(venueCourtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân thi đấu."));
         return enrichAvailability(court);
     }
 
     private OwnedCourt getOwnedCourt(UUID venueCourtId, UUID currentUserId) throws ServiceException {
-        VenueCourt court = venueCourtRepository.findById(venueCourtId)
+        VenueCourt court = venueCourtRepository.findByIdAndDeletedAtIsNull(venueCourtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân thi đấu."));
         Venue venue = getOwnedVenue(court.getVenueId(), currentUserId);
         return new OwnedCourt(court, venue);

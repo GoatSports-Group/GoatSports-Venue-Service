@@ -18,4 +18,6 @@ public abstract class BaseEntity {
     private String createdBy;
     private LocalDateTime updatedAt;
     private String updatedBy;
+    private LocalDateTime deletedAt;
+    private String deletedBy;
 }

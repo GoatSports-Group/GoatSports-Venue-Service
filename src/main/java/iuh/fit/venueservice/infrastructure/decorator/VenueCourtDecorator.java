@@ -52,6 +52,12 @@ public class VenueCourtDecorator implements VenueCourtService {
     }
 
     @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public void softDelete(UUID venueCourtId, UUID currentUserId) throws ServiceException {
+        venueCourtServiceImpl.softDelete(venueCourtId, currentUserId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<VenueCourt> getVenueCourts(UUID venueId) throws ServiceException {
         return venueCourtServiceImpl.getVenueCourts(venueId);

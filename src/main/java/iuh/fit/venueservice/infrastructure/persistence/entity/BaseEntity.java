@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.persistence.entity;
 
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Column;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -24,4 +25,8 @@ public class BaseEntity {
     private LocalDateTime updatedAt;
     @LastModifiedBy
     private String updatedBy;
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+    @Column(name = "deleted_by")
+    private String deletedBy;
 }
