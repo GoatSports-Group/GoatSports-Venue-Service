@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
+import iuh.fit.venueservice.infrastructure.persistence.entity.TimeSlotEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.TimeSlotEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaTimeSlotRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueCourtRepository;
@@ -26,8 +27,7 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
 
     @Override
     public TimeSlot save(TimeSlot timeSlot) {
-        var entity = mapper.toEntity(timeSlot);
-        entity.setVenueCourt(jpaVenueCourtRepository.getReferenceById(timeSlot.getVenueCourtId()));
+        TimeSlotEntity entity = entityForSave(timeSlot);
         var saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }
@@ -85,16 +85,28 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
 
     @Override
     public List<TimeSlot> saveAll(List<TimeSlot> timeSlots) {
-        var entities = timeSlots.stream().map(timeSlot -> {
-            var entity = mapper.toEntity(timeSlot);
-            entity.setVenueCourt(jpaVenueCourtRepository.getReferenceById(timeSlot.getVenueCourtId()));
-            return entity;
-        }).collect(Collectors.toList());
+        var entities = timeSlots.stream().map(this::entityForSave).collect(Collectors.toList());
         return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public void deleteById(UUID timeSlotId) {
         jpaRepository.deleteById(timeSlotId);
+    }
+
+    private TimeSlotEntity entityForSave(TimeSlot timeSlot) {
+        if (timeSlot.getTimeSlotId() == null) {
+            TimeSlotEntity created = mapper.toEntity(timeSlot);
+            created.setVenueCourt(jpaVenueCourtRepository.getReferenceById(timeSlot.getVenueCourtId()));
+            return created;
+        }
+
+        TimeSlotEntity entity = jpaRepository.findById(timeSlot.getTimeSlotId()).orElseGet(() -> {
+            TimeSlotEntity created = mapper.toEntity(timeSlot);
+            created.setVenueCourt(jpaVenueCourtRepository.getReferenceById(timeSlot.getVenueCourtId()));
+            return created;
+        });
+        mapper.updateEntity(timeSlot, entity);
+        return entity;
     }
 }
