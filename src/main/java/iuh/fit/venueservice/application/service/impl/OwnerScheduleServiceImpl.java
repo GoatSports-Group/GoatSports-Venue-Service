@@ -21,7 +21,9 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class OwnerScheduleServiceImpl implements OwnerScheduleService {
@@ -58,6 +60,7 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
             throws ServiceException {
         OwnedCourt owned = getOwnedCourt(command.venueCourtId(), command.currentUserId());
         validatePricingRule(command, owned.venue());
+        validateRuleStartMoment(command, null);
         assertNoPricingOverlap(command, pricingRuleRepository.findByCourtId(command.venueCourtId()));
         return pricingRuleRepository.save(toPricingRule(command));
     }
@@ -72,6 +75,7 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
             throw new ServiceException("Không thể chuyển quy tắc giá sang sân thi đấu khác.");
         }
         validatePricingRule(command, owned.venue());
+        validateRuleStartMoment(command, existing);
         assertNoPricingOverlap(command, pricingRuleRepository.findByCourtId(existing.getCourtId()));
         existing.setDayOfWeek(command.dayOfWeek());
         existing.setStartTime(command.startTime());
@@ -111,10 +115,11 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         validateDuration(command.slotDurationMinutes());
         assertOpeningHours(owned.venue());
 
-        List<CourtPricingRule> rules = pricingRuleRepository.findByCourtId(command.venueCourtId());
-        if (rules.isEmpty()) {
+        List<CourtPricingRule> courtRules = pricingRuleRepository.findByCourtId(command.venueCourtId());
+        if (courtRules.isEmpty()) {
             throw new ServiceException("Hãy tạo ít nhất một quy tắc giá trước khi sinh lịch.");
         }
+        List<CourtPricingRule> rules = getSelectedApplicableRules(command, courtRules);
 
         List<TimeSlot> existing = timeSlotRepository.findByVenueCourtIdAndDateBetween(
                 command.venueCourtId(), command.fromDate(), command.toDate()
@@ -213,6 +218,44 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
                 && !date.isAfter(rule.getEffectiveTo());
     }
 
+    private List<CourtPricingRule> getSelectedApplicableRules(
+            GenerateTimeSlotsCommand command, List<CourtPricingRule> courtRules
+    ) throws ServiceException {
+        if (command.pricingRuleIds() == null || command.pricingRuleIds().isEmpty()
+                || command.pricingRuleIds().stream().anyMatch(java.util.Objects::isNull)) {
+            throw new ServiceException("Hãy chọn ít nhất một quy tắc giá để sinh lịch.");
+        }
+        Set<UUID> selectedIds = new HashSet<>(command.pricingRuleIds());
+        if (selectedIds.size() != command.pricingRuleIds().size()) {
+            throw new ServiceException("Danh sách quy tắc giá được chọn không hợp lệ.");
+        }
+
+        List<CourtPricingRule> selectedRules = courtRules.stream()
+                .filter(rule -> selectedIds.contains(rule.getPricingRuleId()))
+                .toList();
+        if (selectedRules.size() != selectedIds.size()) {
+            throw new ServiceException("Có quy tắc giá được chọn không thuộc sân hiện tại.");
+        }
+        if (selectedRules.stream().anyMatch(rule -> !appliesWithinRange(
+                rule, command.fromDate(), command.toDate()
+        ))) {
+            throw new ServiceException("Có quy tắc giá được chọn không áp dụng trong khoảng ngày này.");
+        }
+        return selectedRules;
+    }
+
+    private boolean appliesWithinRange(CourtPricingRule rule, LocalDate fromDate, LocalDate toDate) {
+        LocalDate overlapStart = rule.getEffectiveFrom().isAfter(fromDate)
+                ? rule.getEffectiveFrom() : fromDate;
+        LocalDate overlapEnd = rule.getEffectiveTo().isBefore(toDate)
+                ? rule.getEffectiveTo() : toDate;
+        if (overlapStart.isAfter(overlapEnd)) return false;
+        int daysUntilRule = Math.floorMod(
+                rule.getDayOfWeek().getValue() - overlapStart.getDayOfWeek().getValue(), 7
+        );
+        return !overlapStart.plusDays(daysUntilRule).isAfter(overlapEnd);
+    }
+
     private CourtPricingRule toPricingRule(UpsertCourtPricingRuleCommand command) {
         return CourtPricingRule.builder()
                 .courtId(command.venueCourtId())
@@ -253,6 +296,27 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         assertOpeningHours(venue);
         if (command.startTime().isBefore(venue.getOpenTime()) || command.endTime().isAfter(venue.getCloseTime())) {
             throw new ServiceException("Khung giờ giá phải nằm trong giờ hoạt động của cơ sở.");
+        }
+    }
+
+    private void validateRuleStartMoment(
+            UpsertCourtPricingRuleCommand command, CourtPricingRule existing
+    ) throws ServiceException {
+        boolean unchangedHistoricalStart = existing != null
+                && existing.getDayOfWeek() == command.dayOfWeek()
+                && existing.getStartTime().equals(command.startTime())
+                && existing.getEffectiveFrom().equals(command.effectiveFrom());
+        if (unchangedHistoricalStart) return;
+
+        LocalDate today = LocalDate.now();
+        if (command.effectiveFrom().isBefore(today)) {
+            throw new ServiceException("Quy tắc giá phải bắt đầu từ thời điểm hiện tại trở đi.");
+        }
+        LocalTime currentMinute = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
+        if (command.effectiveFrom().equals(today)
+                && command.dayOfWeek() == today.getDayOfWeek()
+                && command.startTime().isBefore(currentMinute)) {
+            throw new ServiceException("Không thể tạo quy tắc giá cho khung giờ đã qua.");
         }
     }
 

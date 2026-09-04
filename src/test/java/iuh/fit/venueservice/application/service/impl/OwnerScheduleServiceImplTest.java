@@ -112,6 +112,20 @@ class OwnerScheduleServiceImplTest {
     }
 
     @Test
+    void rejectsCreatingPricingRuleInThePast() {
+        UpsertCourtPricingRuleCommand command = new UpsertCourtPricingRuleCommand(
+                null, courtId, DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(10, 0),
+                180_000.0, 180_000.0,
+                LocalDate.now().minusDays(1), LocalDate.now().plusDays(7), ownerId
+        );
+
+        assertThatThrownBy(() -> service.createPricingRule(command))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("thời điểm hiện tại");
+        verify(pricingRuleRepository, never()).save(any());
+    }
+
+    @Test
     void generatesAvailableSlotsWithPricingSnapshotAndSkipsExactDuplicates() throws Exception {
         LocalDate monday = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
         CourtPricingRule rule = rule(UUID.randomUUID(), LocalTime.of(8, 0), LocalTime.of(10, 0));
@@ -127,7 +141,9 @@ class OwnerScheduleServiceImplTest {
         when(timeSlotRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         List<TimeSlot> result = service.generateTimeSlots(
-                new GenerateTimeSlotsCommand(courtId, monday, monday, 60, ownerId)
+                new GenerateTimeSlotsCommand(
+                        courtId, monday, monday, List.of(rule.getPricingRuleId()), 60, ownerId
+                )
         );
 
         assertThat(result).hasSize(2);
@@ -152,7 +168,9 @@ class OwnerScheduleServiceImplTest {
         when(timeSlotRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         List<TimeSlot> result = service.generateTimeSlots(
-                new GenerateTimeSlotsCommand(courtId, monday, monday, 60, ownerId)
+                new GenerateTimeSlotsCommand(
+                        courtId, monday, monday, List.of(rule.getPricingRuleId()), 60, ownerId
+                )
         );
 
         assertThat(result).hasSize(2);
@@ -160,6 +178,30 @@ class OwnerScheduleServiceImplTest {
             assertThat(slot.getStartTime()).isEqualTo(LocalTime.of(9, 0));
             assertThat(slot.getEndTime()).isEqualTo(LocalTime.of(10, 0));
             assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.AVAILABLE);
+        });
+    }
+
+    @Test
+    void generatesSlotsOnlyFromSelectedPricingRules() throws Exception {
+        LocalDate monday = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+        CourtPricingRule morningRule = rule(UUID.randomUUID(), LocalTime.of(8, 0), LocalTime.of(9, 0));
+        CourtPricingRule eveningRule = rule(UUID.randomUUID(), LocalTime.of(18, 0), LocalTime.of(19, 0));
+        morningRule.setEffectiveFrom(monday);
+        morningRule.setEffectiveTo(monday);
+        eveningRule.setEffectiveFrom(monday);
+        eveningRule.setEffectiveTo(monday);
+        when(pricingRuleRepository.findByCourtId(courtId)).thenReturn(List.of(morningRule, eveningRule));
+        when(timeSlotRepository.findByVenueCourtIdAndDateBetween(courtId, monday, monday))
+                .thenReturn(new ArrayList<>());
+        when(timeSlotRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<TimeSlot> result = service.generateTimeSlots(new GenerateTimeSlotsCommand(
+                courtId, monday, monday, List.of(eveningRule.getPricingRuleId()), 60, ownerId
+        ));
+
+        assertThat(result).singleElement().satisfies(slot -> {
+            assertThat(slot.getStartTime()).isEqualTo(LocalTime.of(18, 0));
+            assertThat(slot.getEndTime()).isEqualTo(LocalTime.of(19, 0));
         });
     }
 

@@ -103,7 +103,7 @@ public class OwnerScheduleController {
     ) throws ServiceException {
         GenerateTimeSlotsCommand command = new GenerateTimeSlotsCommand(
                 venueCourtId, request.getFromDate(), request.getToDate(),
-                request.getSlotDurationMinutes(), currentUserId()
+                request.getPricingRuleIds(), request.getSlotDurationMinutes(), currentUserId()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(scheduleService.generateTimeSlots(command)
                 .stream().map(this::toTimeSlotResponse).toList());
