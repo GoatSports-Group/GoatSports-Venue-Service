@@ -126,6 +126,20 @@ class OwnerScheduleServiceImplTest {
     }
 
     @Test
+    void rejectsPricingRuleWhenSelectedWeekdayIsOutsideEffectiveRange() {
+        LocalDate friday = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.FRIDAY));
+        UpsertCourtPricingRuleCommand command = new UpsertCourtPricingRuleCommand(
+                null, courtId, DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(10, 0),
+                180_000.0, 180_000.0, friday, friday.plusDays(2), ownerId
+        );
+
+        assertThatThrownBy(() -> service.createPricingRule(command))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("thứ đã chọn");
+        verify(pricingRuleRepository, never()).save(any());
+    }
+
+    @Test
     void generatesAvailableSlotsWithPricingSnapshotAndSkipsExactDuplicates() throws Exception {
         LocalDate monday = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
         CourtPricingRule rule = rule(UUID.randomUUID(), LocalTime.of(8, 0), LocalTime.of(10, 0));

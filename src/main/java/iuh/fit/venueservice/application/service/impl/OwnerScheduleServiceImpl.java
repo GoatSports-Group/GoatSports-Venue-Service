@@ -293,6 +293,12 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         if (command.effectiveFrom().isAfter(command.effectiveTo())) {
             throw new ServiceException("Ngày bắt đầu hiệu lực phải trước hoặc bằng ngày kết thúc.");
         }
+        int daysUntilRule = Math.floorMod(
+                command.dayOfWeek().getValue() - command.effectiveFrom().getDayOfWeek().getValue(), 7
+        );
+        if (command.effectiveFrom().plusDays(daysUntilRule).isAfter(command.effectiveTo())) {
+            throw new ServiceException("Khoảng hiệu lực không chứa ngày tương ứng với thứ đã chọn.");
+        }
         assertOpeningHours(venue);
         if (command.startTime().isBefore(venue.getOpenTime()) || command.endTime().isAfter(venue.getCloseTime())) {
             throw new ServiceException("Khung giờ giá phải nằm trong giờ hoạt động của cơ sở.");
