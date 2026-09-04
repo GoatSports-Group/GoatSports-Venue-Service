@@ -239,6 +239,14 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         if (command.pricePerHour() <= 0 || command.basePricePerHour() <= 0) {
             throw new ServiceException("Giá theo giờ phải lớn hơn 0.");
         }
+        if (venue.getMinPrice() == null || venue.getMaxPrice() == null
+                || venue.getMinPrice() > venue.getMaxPrice()) {
+            throw new ServiceException("Cơ sở chưa thiết lập khoảng giá hợp lệ.");
+        }
+        if (command.pricePerHour() < venue.getMinPrice()
+                || command.pricePerHour() > venue.getMaxPrice()) {
+            throw new ServiceException("Giá theo giờ phải nằm trong khoảng giá min-max của cơ sở.");
+        }
         if (command.effectiveFrom().isAfter(command.effectiveTo())) {
             throw new ServiceException("Ngày bắt đầu hiệu lực phải trước hoặc bằng ngày kết thúc.");
         }

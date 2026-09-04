@@ -57,6 +57,7 @@ class OwnerScheduleServiceImplTest {
         UUID venueId = UUID.randomUUID();
         venue = Venue.builder()
                 .venueId(venueId).ownerId(ownerId)
+                .minPrice(100_000.0).maxPrice(300_000.0)
                 .openTime(LocalTime.of(6, 0)).closeTime(LocalTime.of(22, 0)).build();
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
                 VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()
@@ -94,6 +95,20 @@ class OwnerScheduleServiceImplTest {
 
         assertThatThrownBy(() -> service.getPricingRules(courtId, ownerId))
                 .isInstanceOf(OwnershipException.class);
+    }
+
+    @Test
+    void rejectsRulePriceOutsideVenueRange() {
+        UpsertCourtPricingRuleCommand command = new UpsertCourtPricingRuleCommand(
+                null, courtId, DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(10, 0),
+                350_000.0, 350_000.0,
+                LocalDate.now(), LocalDate.now().plusMonths(3), ownerId
+        );
+
+        assertThatThrownBy(() -> service.createPricingRule(command))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("khoảng giá min-max");
+        verify(pricingRuleRepository, never()).save(any());
     }
 
     @Test
