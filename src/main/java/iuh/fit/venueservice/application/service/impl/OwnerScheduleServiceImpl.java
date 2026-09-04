@@ -329,16 +329,22 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
     private void assertNoPricingOverlap(
             UpsertCourtPricingRuleCommand candidate, List<CourtPricingRule> existing
     ) throws ServiceException {
-        boolean overlap = existing.stream()
+        CourtPricingRule conflict = existing.stream()
                 .filter(rule -> candidate.pricingRuleId() == null
                         || !candidate.pricingRuleId().equals(rule.getPricingRuleId()))
-                .anyMatch(rule -> rule.getDayOfWeek() == candidate.dayOfWeek()
+                .filter(rule -> rule.getDayOfWeek() == candidate.dayOfWeek()
                         && datesOverlap(candidate.effectiveFrom(), candidate.effectiveTo(),
                         rule.getEffectiveFrom(), rule.getEffectiveTo())
                         && overlaps(candidate.startTime(), candidate.endTime(),
-                        rule.getStartTime(), rule.getEndTime()));
-        if (overlap) {
-            throw new ServiceException("Quy tắc giá bị chồng lấn thời gian hoặc ngày hiệu lực.");
+                        rule.getStartTime(), rule.getEndTime()))
+                .findFirst()
+                .orElse(null);
+        if (conflict != null) {
+            throw new ServiceException(String.format(
+                    "Quy tắc giá bị chồng lấn với quy tắc hiện có %s-%s, hiệu lực %s-%s.",
+                    conflict.getStartTime(), conflict.getEndTime(),
+                    conflict.getEffectiveFrom(), conflict.getEffectiveTo()
+            ));
         }
     }
 

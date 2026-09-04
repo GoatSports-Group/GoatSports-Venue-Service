@@ -90,6 +90,47 @@ class OwnerScheduleServiceImplTest {
     }
 
     @Test
+    void rejectsContainedTimeAndEffectiveWindowForSameWeekday() {
+        LocalDate monday = LocalDate.now().with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        CourtPricingRule existing = rule(UUID.randomUUID(), LocalTime.of(7, 0), LocalTime.of(21, 0));
+        existing.setEffectiveFrom(monday);
+        existing.setEffectiveTo(monday.plusDays(6));
+        when(pricingRuleRepository.findByCourtId(courtId)).thenReturn(List.of(existing));
+
+        UpsertCourtPricingRuleCommand candidate = new UpsertCourtPricingRuleCommand(
+                null, courtId, DayOfWeek.MONDAY, LocalTime.of(7, 0), LocalTime.of(9, 0),
+                200_000.0, 200_000.0, monday, monday.plusDays(1), ownerId
+        );
+
+        assertThatThrownBy(() -> service.createPricingRule(candidate))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("07:00-21:00")
+                .hasMessageContaining(monday.toString());
+        verify(pricingRuleRepository, never()).save(any());
+    }
+
+    @Test
+    void allowsSameWeekdayAndTimeWhenEffectiveWindowsDoNotOverlap() throws Exception {
+        LocalDate firstMonday = LocalDate.now().with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        LocalDate secondMonday = firstMonday.plusWeeks(1);
+        CourtPricingRule existing = rule(UUID.randomUUID(), LocalTime.of(7, 0), LocalTime.of(9, 0));
+        existing.setEffectiveFrom(firstMonday);
+        existing.setEffectiveTo(firstMonday.plusDays(6));
+        when(pricingRuleRepository.findByCourtId(courtId)).thenReturn(List.of(existing));
+        when(pricingRuleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UpsertCourtPricingRuleCommand candidate = new UpsertCourtPricingRuleCommand(
+                null, courtId, DayOfWeek.MONDAY, LocalTime.of(7, 0), LocalTime.of(9, 0),
+                200_000.0, 200_000.0, secondMonday, secondMonday.plusDays(6), ownerId
+        );
+
+        CourtPricingRule result = service.createPricingRule(candidate);
+
+        assertThat(result.getEffectiveFrom()).isEqualTo(secondMonday);
+        verify(pricingRuleRepository).save(any(CourtPricingRule.class));
+    }
+
+    @Test
     void rejectsCrossOwnerAccess() {
         venue.setOwnerId(UUID.randomUUID());
 
