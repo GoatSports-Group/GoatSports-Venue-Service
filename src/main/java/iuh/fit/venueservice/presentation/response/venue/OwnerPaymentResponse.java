@@ -12,6 +12,9 @@ public record OwnerPaymentResponse(
         Double amount,
         String currency,
         String status,
+        String provider,
+        String method,
+        String providerTransactionId,
         LocalDateTime paidAt,
         LocalDateTime expiresAt,
         LocalDateTime createdAt

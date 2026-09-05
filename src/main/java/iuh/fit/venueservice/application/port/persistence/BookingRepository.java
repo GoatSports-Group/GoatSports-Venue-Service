@@ -32,6 +32,8 @@ public interface BookingRepository {
 
     List<Booking> findExpiredPaymentHoldsForUpdate(LocalDateTime cutoff);
 
+    List<Booking> findCompletionCandidatesForUpdate(LocalDateTime cutoff, int limit);
+
     PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter);
 
     Optional<OwnerBookingRecord> findOwnedBookingById(UUID bookingId, UUID ownerId);

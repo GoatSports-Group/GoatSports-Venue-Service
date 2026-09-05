@@ -93,6 +93,18 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    @Transactional
+    public List<Booking> findCompletionCandidatesForUpdate(LocalDateTime cutoff, int limit) {
+        return jpaRepository.findCompletionCandidatesForUpdate(
+                        cutoff.toLocalDate(),
+                        cutoff.toLocalTime(),
+                        PageRequest.of(0, limit)
+                ).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter) {
         Specification<iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity> spec =

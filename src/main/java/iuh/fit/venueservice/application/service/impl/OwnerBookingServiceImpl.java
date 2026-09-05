@@ -34,6 +34,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static iuh.fit.venueservice.application.service.BookingPaymentStatusPolicy.isFullyPaid;
+
 public class OwnerBookingServiceImpl implements OwnerBookingService {
     private static final int MAX_PAGE_SIZE = 20;
     private static final int MAX_DATE_RANGE_DAYS = 366;
@@ -298,13 +300,4 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         return List.of();
     }
 
-    private boolean isFullyPaid(Booking booking, List<PaymentSnapshot> payments) {
-        if (booking.getRemainingAmount() == null || booking.getRemainingAmount() <= 0) return true;
-        if (booking.getRemainingPaymentId() != null) return true;
-        return payments.stream()
-                .filter(payment -> "BOOKING_REMAINING".equals(payment.purpose()))
-                .filter(payment -> "SUCCEEDED".equals(payment.status()))
-                .anyMatch(payment -> payment.amount() != null
-                        && Math.abs(payment.amount() - booking.getRemainingAmount()) < 0.01);
-    }
 }

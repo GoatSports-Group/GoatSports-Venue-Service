@@ -27,6 +27,8 @@ public class OwnerBookingResponseMapper {
                 .payments(view.payments().stream().map(payment -> OwnerPaymentResponse.builder()
                         .paymentId(payment.paymentId()).purpose(payment.purpose())
                         .amount(payment.amount()).currency(payment.currency()).status(payment.status())
+                        .provider(payment.provider()).method(payment.method())
+                        .providerTransactionId(payment.providerTransactionId())
                         .paidAt(payment.paidAt()).expiresAt(payment.expiresAt())
                         .createdAt(payment.createdAt()).build()).toList())
                 .allowedTransitions(view.allowedTransitions().stream().map(Enum::name).toList())

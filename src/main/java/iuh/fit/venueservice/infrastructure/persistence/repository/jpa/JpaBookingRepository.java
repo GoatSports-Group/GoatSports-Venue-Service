@@ -54,6 +54,20 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             """)
     List<BookingEntity> findExpiredPaymentHoldsForUpdate(@Param("cutoff") LocalDateTime cutoff);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select booking from BookingEntity booking
+            where booking.status = iuh.fit.venueservice.domain.enums.BookingStatus.CHECKED_IN
+              and (booking.playDate < :cutoffDate
+                   or (booking.playDate = :cutoffDate and booking.endTime <= :cutoffTime))
+            order by booking.playDate, booking.endTime, booking.bookingId
+            """)
+    List<BookingEntity> findCompletionCandidatesForUpdate(
+            @Param("cutoffDate") LocalDate cutoffDate,
+            @Param("cutoffTime") java.time.LocalTime cutoffTime,
+            Pageable pageable
+    );
+
     @Query("""
             select booking from BookingEntity booking
             join fetch booking.venueCourt court
