@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260905-enforce-walk-in-booking-lifecycle" author="codex">
+        <sql>
+            UPDATE bookings
+            SET status = 'CONFIRMED',
+                hold_expires_at = NULL
+            WHERE source = 'WALK_IN'
+              AND status = 'PENDING_PAYMENT';
+
+            UPDATE bookings
+            SET hold_expires_at = NULL
+            WHERE source = 'WALK_IN'
+              AND status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED')
+              AND hold_expires_at IS NOT NULL;
+
+            UPDATE time_slots slot
+            SET status = 'BOOKED'
+            WHERE slot.status = 'LOCKED'
+              AND EXISTS (
+                SELECT 1
+                FROM bookings booking
+                WHERE booking.venue_court_id = slot.venue_court_id
+                  AND booking.play_date = slot.date
+                  AND booking.start_time = slot.start_time
+                  AND booking.end_time = slot.end_time
+                  AND booking.source = 'WALK_IN'
+                  AND booking.status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED')
+              );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -113,7 +113,9 @@ public class BookingServiceImpl implements BookingService {
         }
 
         double totalPrice = durationHours * slot.getPricePerHour();
-        double depositAmount = totalPrice * 0.3;
+        BookingSource source = command.source() == null ? BookingSource.DIRECT : command.source();
+        boolean isWalkIn = source == BookingSource.WALK_IN;
+        double depositAmount = isWalkIn ? 0.0 : totalPrice * 0.3;
 
         Booking booking = Booking.builder()
                 .playerId(command.playerId())
@@ -121,8 +123,8 @@ public class BookingServiceImpl implements BookingService {
                 .playDate(command.playDate())
                 .startTime(command.startTime())
                 .endTime(command.endTime())
-                .status(BookingStatus.PENDING_PAYMENT)
-                .source(command.source() == null ? BookingSource.DIRECT : command.source())
+                .status(isWalkIn ? BookingStatus.CONFIRMED : BookingStatus.PENDING_PAYMENT)
+                .source(source)
                 .totalPrice(totalPrice)
                 .depositAmount(depositAmount)
                 .remainingAmount(totalPrice - depositAmount)
@@ -130,10 +132,12 @@ public class BookingServiceImpl implements BookingService {
                 .walkInCustomerName(command.walkInCustomerName())
                 .walkInCustomerPhone(command.walkInCustomerPhone())
                 .matchmakingSessionId(command.matchmakingSessionId())
-                .holdExpiresAt(now.plus(paymentHoldDuration))
+                .holdExpiresAt(isWalkIn ? null : now.plus(paymentHoldDuration))
                 .build();
 
-        slot.setStatus(iuh.fit.venueservice.domain.enums.TimeSlotStatus.LOCKED);
+        slot.setStatus(isWalkIn
+                ? iuh.fit.venueservice.domain.enums.TimeSlotStatus.BOOKED
+                : iuh.fit.venueservice.domain.enums.TimeSlotStatus.LOCKED);
         timeSlotRepository.save(slot);
         Booking saved = bookingRepository.save(booking);
         saved.setQrCode(bookingQrPort.issue(

@@ -48,6 +48,7 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
     @Query("""
             select booking from BookingEntity booking
             where booking.status = iuh.fit.venueservice.domain.enums.BookingStatus.PENDING_PAYMENT
+              and booking.source <> iuh.fit.venueservice.domain.enums.BookingSource.WALK_IN
               and booking.holdExpiresAt is not null
               and booking.holdExpiresAt <= :cutoff
             order by booking.holdExpiresAt asc

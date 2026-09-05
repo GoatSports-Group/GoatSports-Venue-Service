@@ -92,4 +92,53 @@ class BookingServiceImplTest {
         assertThat(result.getHoldExpiresAt()).isEqualTo(LocalDate.now(clock).atTime(8, 15));
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.LOCKED);
     }
+
+    @Test
+    void createWalkInConfirmsImmediatelyWithoutPaymentHold() throws Exception {
+        UUID courtId = UUID.randomUUID();
+        Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDate playDate = LocalDate.now(clock).plusDays(1);
+        LocalTime startTime = LocalTime.of(18, 0);
+        LocalTime endTime = LocalTime.of(19, 0);
+
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).active(true).build()
+        ));
+        TimeSlot slot = TimeSlot.builder()
+                .venueCourtId(courtId)
+                .date(playDate)
+                .startTime(startTime)
+                .endTime(endTime)
+                .pricePerHour(200_000.0)
+                .status(TimeSlotStatus.AVAILABLE)
+                .build();
+        when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, startTime, endTime))
+                .thenReturn(Optional.of(slot));
+        when(timeSlotRepository.save(slot)).thenReturn(slot);
+        UUID bookingId = UUID.randomUUID();
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
+            Booking booking = invocation.getArgument(0);
+            if (booking.getBookingId() == null) booking.setBookingId(bookingId);
+            return booking;
+        });
+        when(bookingQrPort.issue(bookingId, playDate.atTime(endTime))).thenReturn("GSQR.v1.walk-in");
+
+        BookingServiceImpl service = new BookingServiceImpl(
+                bookingRepository, timeSlotRepository, bookingCancellationRepository,
+                venueCourtRepository, venueRepository,
+                new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort,
+                clock, Duration.ofMinutes(15)
+        );
+
+        Booking result = service.createBooking(new CreateBookingCommand(
+                null, courtId, playDate, startTime, endTime,
+                BookingSource.WALK_IN, "Khách tại quầy", "0901234567", null
+        ));
+
+        assertThat(result.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(result.getDepositAmount()).isZero();
+        assertThat(result.getRemainingAmount()).isEqualTo(200_000.0);
+        assertThat(result.getHoldExpiresAt()).isNull();
+        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.BOOKED);
+    }
 }

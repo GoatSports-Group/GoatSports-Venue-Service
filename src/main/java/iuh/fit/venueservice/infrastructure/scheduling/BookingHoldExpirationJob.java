@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.scheduling;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
+import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +34,8 @@ public class BookingHoldExpirationJob {
         LocalDateTime now = LocalDateTime.now(clock);
         var expired = bookingRepository.findExpiredPaymentHoldsForUpdate(now);
         for (var booking : expired) {
-            if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
+            if (booking.getSource() == BookingSource.WALK_IN
+                    || booking.getStatus() != BookingStatus.PENDING_PAYMENT
                     || booking.getHoldExpiresAt() == null
                     || booking.getHoldExpiresAt().isAfter(now)) {
                 continue;
