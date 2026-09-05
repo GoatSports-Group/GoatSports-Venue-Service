@@ -9,6 +9,8 @@ public record OwnerCheckInView(
         OwnerBookingRecord bookingRecord,
         List<PaymentSnapshot> payments,
         CheckInRecord checkInRecord,
-        BigDecimal outstandingAmount
+        BigDecimal outstandingAmount,
+        boolean checkInEligible,
+        String checkInMessage
 ) {
 }

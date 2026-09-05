@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 public record OwnerCheckInResponse(
         OwnerBookingResponse booking,
         OwnerCheckInRecordResponse checkIn,
-        BigDecimal outstandingAmount
+        BigDecimal outstandingAmount,
+        boolean checkInEligible,
+        String checkInMessage
 ) {
 }

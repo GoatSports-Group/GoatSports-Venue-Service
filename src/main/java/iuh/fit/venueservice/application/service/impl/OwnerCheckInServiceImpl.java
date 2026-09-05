@@ -91,7 +91,6 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         validateLookup(command);
         UUID bookingId = resolveBookingId(command);
         OwnerBookingRecord record = getOwnedBooking(bookingId, command.ownerId(), false);
-        validateCheckInEligibility(record.booking());
         List<PaymentSnapshot> payments = loadPayments(bookingId);
         return view(record, payments, null);
     }
@@ -100,14 +99,14 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     public OwnerCheckInView confirm(ConfirmOwnerCheckInCommand command) throws ServiceException {
         if (command == null || command.ownerId() == null || command.bookingId() == null
                 || command.method() == null || command.paymentMode() == null) {
-            throw new ServiceException("Booking, phương thức check-in và cách thu tiền là bắt buộc.");
+            throw new ServiceException("Đơn đặt sân, phương thức nhận sân và cách thu tiền là bắt buộc.");
         }
         OwnerBookingRecord record = getOwnedBooking(command.bookingId(), command.ownerId(), true);
         Booking booking = record.booking();
         validateCheckInEligibility(booking);
         validateCheckInEvidence(command, booking);
         if (checkInRecordRepository.findByBookingId(booking.getBookingId()).isPresent()) {
-            throw new ServiceException("Mã vé này đã được check-in trước đó.");
+            throw new ServiceException("Mã vé này đã được dùng để nhận sân trước đó.");
         }
 
         List<PaymentSnapshot> payments = loadPayments(booking.getBookingId());
@@ -116,7 +115,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         BigDecimal collectedAtCheckIn = BigDecimal.ZERO;
         if (remaining.signum() > 0 && remainingPayment == null) {
             if (command.paymentMode() == PaymentCollectionMode.ONLINE) {
-                throw new ServiceException("Khoản tiền còn lại chưa được payment-service xác nhận thành công.");
+                throw new ServiceException("Khoản tiền còn lại chưa được dịch vụ thanh toán xác nhận thành công.");
             }
             if (command.paymentMode() == PaymentCollectionMode.CASH) {
                 UUID payerId = booking.getPlayerId() == null ? command.ownerId() : booking.getPlayerId();
@@ -124,7 +123,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                         booking.getBookingId(), payerId, command.ownerId(), booking.getRemainingAmount()
                 );
                 if (!"SUCCEEDED".equals(remainingPayment.status())) {
-                    throw new ServiceException("Payment-service chưa xác nhận thu tiền mặt thành công.");
+                    throw new ServiceException("Dịch vụ thanh toán chưa xác nhận thu tiền mặt thành công.");
                 }
                 collectedAtCheckIn = remaining;
                 payments = loadPayments(booking.getBookingId());
@@ -169,7 +168,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         }
         LocalDateTime end = LocalDateTime.of(slot.getDate(), slot.getEndTime());
         if (end.isBefore(LocalDateTime.now(clock))) {
-            throw new ServiceException("Không thể xếp lịch walk-in cho khung giờ đã qua.");
+            throw new ServiceException("Không thể xếp lịch cho khách tại quầy vào khung giờ đã qua.");
         }
         long minutes = Duration.between(slot.getStartTime(), slot.getEndTime()).toMinutes();
         if (minutes <= 0 || slot.getPricePerHour() == null || slot.getPricePerHour() <= 0) {
@@ -223,7 +222,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         int identifiers = (command.bookingId() == null ? 0 : 1)
                 + hasText(command.qrCode()) + hasText(command.bookingCode());
         if (identifiers != 1) {
-            throw new ServiceException("Cần cung cấp đúng một mã QR, booking code hoặc booking ID.");
+            throw new ServiceException("Cần cung cấp đúng một mã QR, mã đặt sân hoặc mã định danh đơn.");
         }
     }
 
@@ -232,54 +231,62 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         if (hasText(command.qrCode()) == 1) {
             UUID bookingId = bookingQrPort.verify(command.qrCode().trim());
             Booking booking = bookingRepository.findById(bookingId)
-                    .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân để check-in."));
+                    .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân để nhận sân."));
             if (booking.getQrCode() == null || !booking.getQrCode().equals(command.qrCode().trim())) {
-                throw new ServiceException("Mã QR không còn hiệu lực cho booking này.");
+                throw new ServiceException("Mã QR không còn hiệu lực cho đơn đặt sân này.");
             }
             return bookingId;
         }
         return bookingRepository.findByBookingCode(command.bookingCode().trim().toUpperCase())
                 .map(Booking::getBookingId)
-                .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân để check-in."));
+                .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân để nhận sân."));
     }
 
     private void validateCheckInEligibility(Booking booking) throws ServiceException {
+        String reason = checkInIneligibilityReason(booking);
+        if (reason != null) {
+            throw new ServiceException(reason);
+        }
+    }
+
+    private String checkInIneligibilityReason(Booking booking) {
         if (booking.getStatus() == BookingStatus.CHECKED_IN || booking.getStatus() == BookingStatus.COMPLETED) {
-            throw new ServiceException("Mã vé này đã được check-in trước đó.");
+            return "Mã vé này đã được dùng để nhận sân trước đó.";
         }
         if (booking.getStatus() == BookingStatus.CANCELLED
                 || booking.getStatus() == BookingStatus.REFUND_PENDING
                 || booking.getStatus() == BookingStatus.REFUNDED
                 || booking.getStatus() == BookingStatus.EXPIRED) {
-            throw new ServiceException("Đơn đặt sân đã bị hủy hoặc hết hạn, không thể check-in.");
+            return "Đơn đặt sân đã bị hủy hoặc hết hạn, không thể nhận sân.";
         }
         if (booking.getStatus() != BookingStatus.CONFIRMED
                 && booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
-            throw new ServiceException("Chỉ đơn còn hiệu lực mới được check-in.");
-        }
-        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
-                && booking.getSource() != BookingSource.WALK_IN) {
-            throw new ServiceException("Booking online chưa hoàn tất tiền cọc nên chưa thể check-in.");
+            return "Chỉ đơn còn hiệu lực mới được nhận sân.";
         }
         LocalDateTime now = LocalDateTime.now(clock);
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
                 && booking.getHoldExpiresAt() != null
                 && !now.isBefore(booking.getHoldExpiresAt())) {
-            throw new ServiceException("Đơn đặt sân đã hết thời gian giữ chỗ, không thể check-in.");
+            return "Đơn đặt sân đã hết thời gian giữ chỗ, không thể nhận sân.";
+        }
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT
+                && booking.getSource() != BookingSource.WALK_IN) {
+            return "Đơn đặt sân trực tuyến chưa hoàn tất tiền cọc nên chưa thể nhận sân.";
         }
         LocalDateTime start = LocalDateTime.of(booking.getPlayDate(), booking.getStartTime());
         LocalDateTime end = LocalDateTime.of(booking.getPlayDate(), booking.getEndTime());
         boolean walkIn = booking.getSource() == BookingSource.WALK_IN;
         LocalDateTime earliestCheckIn = walkIn ? start : start.minus(onlineEarlyCheckInWindow);
         if (now.isBefore(earliestCheckIn)) {
-            throw new ServiceException(walkIn
+            return walkIn
                     ? "Chưa đến khung giờ sử dụng."
-                    : "Booking online chỉ được check-in sớm tối đa "
-                    + onlineEarlyCheckInWindow.toMinutes() + " phút.");
+                    : "Đơn đặt sân trực tuyến chỉ được nhận sân sớm tối đa "
+                    + onlineEarlyCheckInWindow.toMinutes() + " phút.";
         }
         if (!now.isBefore(end)) {
-            throw new ServiceException("Đã quá khung giờ sử dụng.");
+            return "Đã quá khung giờ sử dụng.";
         }
+        return null;
     }
 
     private void validateCheckInEvidence(ConfirmOwnerCheckInCommand command, Booking booking)
@@ -290,19 +297,19 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                         || booking.getQrCode() == null
                         || !booking.getQrCode().equals(command.qrCode().trim())
                         || !booking.getBookingId().equals(bookingQrPort.verify(command.qrCode().trim()))) {
-                    throw new ServiceException("Mã QR không hợp lệ cho booking cần check-in.");
+                    throw new ServiceException("Mã QR không hợp lệ cho đơn cần nhận sân.");
                 }
             }
             case BOOKING_CODE -> {
                 if (hasText(command.bookingCode()) == 0
                         || booking.getBookingCode() == null
                         || !booking.getBookingCode().equalsIgnoreCase(command.bookingCode().trim())) {
-                    throw new ServiceException("Booking code không hợp lệ cho booking cần check-in.");
+                    throw new ServiceException("Mã đặt sân không hợp lệ cho đơn cần nhận sân.");
                 }
             }
             case MANUAL -> {
                 if (booking.getSource() != BookingSource.WALK_IN) {
-                    throw new ServiceException("Check-in thủ công chỉ áp dụng cho booking walk-in.");
+                    throw new ServiceException("Xác nhận thủ công chỉ áp dụng cho khách tại quầy.");
                 }
             }
         }
@@ -315,7 +322,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 : bookingRepository.findOwnedBookingById(bookingId, ownerId);
         return owned.orElseThrow(() -> bookingRepository.findById(bookingId).isPresent()
                 ? new OwnershipException("Đơn đặt không thuộc cụm sân này.")
-                : new ServiceException("Không tìm thấy đơn đặt sân để check-in."));
+                : new ServiceException("Không tìm thấy đơn đặt sân để nhận sân."));
     }
 
     private List<PaymentSnapshot> loadPayments(UUID bookingId) {
@@ -336,7 +343,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     ) {
         BigDecimal due = succeededRemainingPayment(payments, record.booking().getRemainingAmount()) == null
                 ? money(record.booking().getRemainingAmount()) : BigDecimal.ZERO;
-        return new OwnerCheckInView(record, payments, checkIn, due);
+        String checkInMessage = checkInIneligibilityReason(record.booking());
+        return new OwnerCheckInView(record, payments, checkIn, due, checkInMessage == null, checkInMessage);
     }
 
     private Venue getOwnedVenue(UUID venueId, UUID ownerId) throws ServiceException {
@@ -373,11 +381,11 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     private void validateWalkIn(CreateWalkInBookingCommand command) throws ServiceException {
         if (command == null || command.ownerId() == null || command.venueCourtId() == null
                 || command.timeSlotId() == null || !hasLength(command.customerName(), 2, 120)) {
-            throw new ServiceException("Sân, khung giờ và tên khách walk-in là bắt buộc.");
+            throw new ServiceException("Sân, khung giờ và tên khách tại quầy là bắt buộc.");
         }
         String phone = normalizePhone(command.customerPhone());
         if (!phone.matches("\\+?[0-9]{8,15}")) {
-            throw new ServiceException("Số điện thoại walk-in không hợp lệ.");
+            throw new ServiceException("Số điện thoại khách tại quầy không hợp lệ.");
         }
     }
 

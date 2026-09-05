@@ -119,17 +119,21 @@ class OwnerCheckInServiceImplTest {
     }
 
     @Test
-    void rejectsOutsideUsageWindowAndRepeatedCheckIn() {
+    void returnsBookingWithEligibilityReasonOutsideUsageWindowAndAfterCheckIn() throws Exception {
         Booking early = booking(BookingStatus.CONFIRMED, LocalTime.of(9, 1), LocalTime.of(10, 0));
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(early)));
-        assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
-                ownerId, bookingId, null, null
-        ))).isInstanceOf(ServiceException.class).hasMessageContaining("30 phút");
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
+
+        var earlyResult = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+
+        assertThat(earlyResult.checkInEligible()).isFalse();
+        assertThat(earlyResult.checkInMessage()).contains("30 phút");
 
         early.setStatus(BookingStatus.CHECKED_IN);
-        assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
-                ownerId, bookingId, null, null
-        ))).isInstanceOf(ServiceException.class).hasMessageContaining("trước đó");
+        var checkedInResult = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+
+        assertThat(checkedInResult.checkInEligible()).isFalse();
+        assertThat(checkedInResult.checkInMessage()).contains("trước đó");
     }
 
     @Test
@@ -144,28 +148,30 @@ class OwnerCheckInServiceImplTest {
     }
 
     @Test
-    void rejectsOnlineCheckInUntilDepositConfirmsTheReservation() {
+    void returnsOnlineBookingWhileDepositIsStillPending() throws Exception {
         Booking booking = booking(BookingStatus.PENDING_PAYMENT, LocalTime.of(8, 0), LocalTime.of(9, 0));
         booking.setHoldExpiresAt(LocalDateTime.of(2026, 8, 30, 8, 45));
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
-                ownerId, bookingId, null, null
-        ))).isInstanceOf(ServiceException.class).hasMessageContaining("tiền cọc");
+        var result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
 
-        verify(paymentQueryPort, never()).findByBookingIds(any());
+        assertThat(result.checkInEligible()).isFalse();
+        assertThat(result.checkInMessage()).contains("tiền cọc");
     }
 
     @Test
-    void doesNotApplyOnlineEarlyWindowToWalkIn() {
+    void returnsWalkInBookingBeforeItsUsageWindow() throws Exception {
         Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(9, 0), LocalTime.of(10, 0));
         booking.setSource(BookingSource.WALK_IN);
         booking.setPlayerId(null);
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.lookup(new OwnerCheckInLookupCommand(
-                ownerId, bookingId, null, null
-        ))).isInstanceOf(ServiceException.class).hasMessageContaining("Chưa đến");
+        var result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+
+        assertThat(result.checkInEligible()).isFalse();
+        assertThat(result.checkInMessage()).contains("Chưa đến");
     }
 
     @Test
@@ -203,7 +209,7 @@ class OwnerCheckInServiceImplTest {
         assertThatThrownBy(() -> service.confirm(new ConfirmOwnerCheckInCommand(
                 ownerId, bookingId, CheckInMethod.BOOKING_CODE, PaymentCollectionMode.ONLINE,
                 null, "GS123456"
-        ))).isInstanceOf(ServiceException.class).hasMessageContaining("chưa được payment-service");
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("chưa được dịch vụ thanh toán");
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
         verify(checkInRecordRepository, never()).save(any());
     }

@@ -111,7 +111,12 @@ public class OwnerCheckInController {
                 .checkedInAt(view.checkInRecord().getCheckedInAt())
                 .build();
         return OwnerCheckInResponse.builder()
-                .booking(booking).checkIn(checkIn).outstandingAmount(view.outstandingAmount()).build();
+                .booking(booking)
+                .checkIn(checkIn)
+                .outstandingAmount(view.outstandingAmount())
+                .checkInEligible(view.checkInEligible())
+                .checkInMessage(view.checkInMessage())
+                .build();
     }
 
     private UUID currentUserId() throws ServiceException {
