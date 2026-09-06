@@ -59,7 +59,7 @@ public class VenueSearchServiceImpl implements VenueSearchService {
                     venue.getCloseTime(),
                     venue.getMinPrice(),
                     venue.getMaxPrice(),
-                    venue.getAverageRating() != null ? venue.getAverageRating() : 5.0,
+                    venue.getAverageRating() != null ? venue.getAverageRating() : 0.0,
                     venue.getTotalReviews() != null ? venue.getTotalReviews() : 0,
                     venue.getPhone(),
                     venue.getAddress() != null ? venue.getAddress().getAddress() : null,

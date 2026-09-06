@@ -1,5 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -72,5 +74,30 @@ class VenuePublicAccessTest {
 
         assertThatThrownBy(() -> service.getVenueCourt(courtId))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void searchDoesNotInventRatingForVenueWithoutReviews() {
+        UUID venueId = UUID.randomUUID();
+        SearchVenueCommand command = new SearchVenueCommand(
+                null, null, null, null,
+                null, null, null, null, null, null,
+                0, 12
+        );
+        Venue venue = Venue.builder()
+                .venueId(venueId)
+                .active(true)
+                .averageRating(null)
+                .totalReviews(null)
+                .build();
+        when(venueRepository.search(command))
+                .thenReturn(new PageResult<>(List.of(venue), 1, 0, 12, 1));
+        when(venueCourtRepository.findByVenueId(venueId)).thenReturn(List.of());
+
+        var result = service.searchVenues(command);
+
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().averageRating()).isZero();
+        assertThat(result.items().getFirst().totalReviews()).isZero();
     }
 }

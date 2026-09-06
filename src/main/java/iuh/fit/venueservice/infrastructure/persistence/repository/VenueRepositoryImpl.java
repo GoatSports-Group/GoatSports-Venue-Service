@@ -18,6 +18,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,6 +63,13 @@ public class VenueRepositoryImpl implements VenueRepository {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isTrue(root.get("active")));
 
+            if (command.sportType() != null) {
+                var court = root.join("venueCourts", JoinType.INNER);
+                predicates.add(cb.isTrue(court.get("active")));
+                predicates.add(cb.equal(court.get("sportType"), command.sportType()));
+                query.distinct(true);
+            }
+
             if (command.keyword() != null && !command.keyword().trim().isEmpty()) {
                 String kw = "%" + command.keyword().trim().toLowerCase() + "%";
                 Predicate nameMatch = cb.like(cb.lower(root.get("name")), kw);
@@ -80,11 +88,11 @@ public class VenueRepositoryImpl implements VenueRepository {
             }
 
             if (command.minPrice() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("minPrice"), command.minPrice()));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("maxPrice"), command.minPrice()));
             }
 
             if (command.maxPrice() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("maxPrice"), command.maxPrice()));
+                predicates.add(cb.lessThanOrEqualTo(root.get("minPrice"), command.maxPrice()));
             }
 
             if (command.minRating() != null) {
@@ -97,6 +105,29 @@ public class VenueRepositoryImpl implements VenueRepository {
         int page = Math.max(0, command.page());
         int size = command.size() > 0 ? Math.min(command.size(), 100) : 10;
         Pageable pageable = PageRequest.of(page, size);
+
+        if (hasRadiusFilter(command)) {
+            List<VenueEntity> nearbyVenues = jpaRepository.findAll(spec).stream()
+                    .filter(entity -> hasCoordinates(entity)
+                            && calculateDistance(
+                                    command.latitude(), command.longitude(),
+                                    entity.getAddress().getLatitude(), entity.getAddress().getLongitude()
+                            ) <= command.radiusKm())
+                    .sorted(Comparator.comparingDouble(entity -> calculateDistance(
+                            command.latitude(), command.longitude(),
+                            entity.getAddress().getLatitude(), entity.getAddress().getLongitude()
+                    )))
+                    .toList();
+
+            int fromIndex = Math.min(page * size, nearbyVenues.size());
+            int toIndex = Math.min(fromIndex + size, nearbyVenues.size());
+            List<Venue> items = nearbyVenues.subList(fromIndex, toIndex).stream()
+                    .map(venueEntityMapper::toDomain)
+                    .toList();
+            int totalPages = nearbyVenues.isEmpty() ? 0 : (int) Math.ceil((double) nearbyVenues.size() / size);
+
+            return new PageResult<>(items, nearbyVenues.size(), page, size, totalPages);
+        }
 
         Page<VenueEntity> pagedResult = jpaRepository.findAll(spec, pageable);
 
@@ -111,6 +142,29 @@ public class VenueRepositoryImpl implements VenueRepository {
                 pagedResult.getSize(),
                 pagedResult.getTotalPages()
         );
+    }
+
+    private boolean hasRadiusFilter(SearchVenueCommand command) {
+        return command.latitude() != null
+                && command.longitude() != null
+                && command.radiusKm() != null
+                && command.radiusKm() > 0;
+    }
+
+    private boolean hasCoordinates(VenueEntity venue) {
+        return venue.getAddress() != null
+                && venue.getAddress().getLatitude() != null
+                && venue.getAddress().getLongitude() != null;
+    }
+
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int earthRadiusKm = 6371;
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     @Override
