@@ -1,6 +1,8 @@
 package iuh.fit.venueservice.application.service;
 
 import iuh.fit.venueservice.application.dto.request.venue.*;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.PlayerBookingView;
 import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.domain.entity.Booking;
@@ -18,7 +20,13 @@ public interface BookingService {
 
     Booking getBookingById(UUID bookingId) throws ServiceException;
 
+    PlayerBookingView getPlayerBooking(UUID bookingId, UUID playerId) throws ServiceException;
+
     List<Booking> getBookingHistory(UUID userId, String status, int page, int size);
+
+    PageResult<PlayerBookingView> getPlayerBookingHistory(
+            UUID playerId, String status, int page, int size
+    ) throws ServiceException;
 
     BookingCancellation requestCancellation(CancelBookingCommand command) throws ServiceException;
 

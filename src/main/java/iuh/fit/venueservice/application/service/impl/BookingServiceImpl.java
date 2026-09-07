@@ -2,11 +2,18 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.PlayerBookingView;
+import iuh.fit.venueservice.application.dto.response.venue.PlayerReviewView;
+import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
 import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
+import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.ReviewRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -15,6 +22,7 @@ import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.CancellationPolicy;
+import iuh.fit.venueservice.domain.entity.Review;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
@@ -33,14 +41,17 @@ import java.util.UUID;
 public class BookingServiceImpl implements BookingService {
     private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int MAX_PLAYER_PAGE_SIZE = 50;
 
     private final BookingRepository bookingRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final BookingCancellationRepository bookingCancellationRepository;
+    private final ReviewRepository reviewRepository;
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
     private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final BookingQrPort bookingQrPort;
+    private final PaymentRefundPort paymentRefundPort;
     private final Clock clock;
     private final Duration paymentHoldDuration;
 
@@ -48,20 +59,24 @@ public class BookingServiceImpl implements BookingService {
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
             BookingCancellationRepository bookingCancellationRepository,
+            ReviewRepository reviewRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
             BookingQrPort bookingQrPort,
+            PaymentRefundPort paymentRefundPort,
             Clock clock,
             Duration paymentHoldDuration
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.bookingCancellationRepository = bookingCancellationRepository;
+        this.reviewRepository = reviewRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.bookingQrPort = bookingQrPort;
+        this.paymentRefundPort = paymentRefundPort;
         this.clock = clock;
         this.paymentHoldDuration = paymentHoldDuration;
     }
@@ -140,16 +155,28 @@ public class BookingServiceImpl implements BookingService {
                 : iuh.fit.venueservice.domain.enums.TimeSlotStatus.LOCKED);
         timeSlotRepository.save(slot);
         Booking saved = bookingRepository.save(booking);
-        saved.setQrCode(bookingQrPort.issue(
-                saved.getBookingId(), LocalDateTime.of(saved.getPlayDate(), saved.getEndTime())
-        ));
-        return bookingRepository.save(saved);
+        if (isWalkIn) {
+            saved.setQrCode(bookingQrPort.issue(
+                    saved.getBookingId(), LocalDateTime.of(saved.getPlayDate(), saved.getEndTime())
+            ));
+            return bookingRepository.save(saved);
+        }
+        return saved;
     }
 
     @Override
     public Booking getBookingById(UUID bookingId) throws ServiceException {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ServiceException("Không tìm thấy thông tin đặt sân với ID: " + bookingId));
+    }
+
+    @Override
+    public PlayerBookingView getPlayerBooking(UUID bookingId, UUID playerId) throws ServiceException {
+        Booking booking = getBookingById(bookingId);
+        if (booking.getPlayerId() == null || !booking.getPlayerId().equals(playerId)) {
+            throw new OwnershipException("Booking không thuộc tài khoản của bạn.");
+        }
+        return toPlayerView(booking);
     }
 
     @Override
@@ -161,7 +188,30 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    public PageResult<PlayerBookingView> getPlayerBookingHistory(
+            UUID playerId, String status, int page, int size
+    ) throws ServiceException {
+        if (playerId == null) throw new ServiceException("Không xác định được người chơi.");
+        if (page < 0 || size < 1 || size > MAX_PLAYER_PAGE_SIZE) {
+            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 50.");
+        }
+        BookingStatus parsedStatus = parseStatus(status);
+        PageResult<Booking> result = bookingRepository.findPlayerPage(playerId, parsedStatus, page, size);
+        return new PageResult<>(
+                result.items().stream().map(this::toPlayerView).toList(),
+                result.total(), result.page(), result.pageSize(), result.totalPages()
+        );
+    }
+
+    @Override
     public BookingCancellation requestCancellation(CancelBookingCommand command) throws ServiceException {
+        if (command == null || command.bookingId() == null || command.requestedByUserId() == null
+                || command.reason() == null || command.reason().isBlank()) {
+            throw new ServiceException("Booking, người yêu cầu và lý do hủy là bắt buộc.");
+        }
+        if (command.reason().trim().length() > 1000) {
+            throw new ServiceException("Lý do hủy không được vượt quá 1000 ký tự.");
+        }
         Booking booking = bookingRepository.findById(command.bookingId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân."));
 
@@ -172,6 +222,9 @@ public class BookingServiceImpl implements BookingService {
                 && booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
             throw new ServiceException("Trạng thái đơn hiện tại không cho phép yêu cầu hủy.");
         }
+        if (bookingCancellationRepository.findByBookingId(booking.getBookingId()).isPresent()) {
+            throw new ServiceException("Booking này đã có yêu cầu hủy.");
+        }
 
         VenueCourt court = venueCourtRepository.findById(booking.getVenueCourtId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân con của đơn đặt."));
@@ -179,13 +232,15 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ServiceException("Không tìm thấy cụm sân của đơn đặt."));
 
         double refundPercentage = calculateRefundPercentage(venue.getCancellationPolicy(), booking);
-        double refundableDeposit = booking.getDepositAmount() == null ? 0.0 : booking.getDepositAmount();
+        double refundableDeposit = booking.getDepositPaymentId() == null || booking.getDepositAmount() == null
+                ? 0.0
+                : booking.getDepositAmount();
 
         BookingCancellation cancellation = BookingCancellation.builder()
                 .bookingId(booking.getBookingId())
-                .reason(command.reason())
+                .reason(command.reason().trim())
                 .refundPercentage(refundPercentage)
-                .refundAmount(refundableDeposit * refundPercentage / 100.0)
+                .refundAmount((double) Math.round(refundableDeposit * refundPercentage / 100.0))
                 .status(CancellationStatus.PENDING)
                 .build();
 
@@ -199,6 +254,24 @@ public class BookingServiceImpl implements BookingService {
         BookingCancellation cancellation = bookingCancellationRepository.findById(cancellationId)
                 .orElseThrow(() -> new ServiceException("Không tìm thấy yêu cầu hủy sân."));
 
+        if (cancellation.getStatus() != CancellationStatus.PENDING) {
+            if ((approved && cancellation.getStatus() != CancellationStatus.REJECTED)
+                    || (!approved && cancellation.getStatus() == CancellationStatus.REJECTED)) {
+                return cancellation;
+            }
+            throw new ServiceException("Yêu cầu hủy đã được xử lý với quyết định khác.");
+        }
+
+        Booking booking = bookingRepository.findByIdForUpdate(cancellation.getBookingId())
+                .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân."));
+        VenueCourt court = venueCourtRepository.findById(booking.getVenueCourtId())
+                .orElseThrow(() -> new ServiceException("Không tìm thấy sân của booking."));
+        Venue venue = venueRepository.findById(court.getVenueId())
+                .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của booking."));
+        if (venue.getOwnerId() == null || !venue.getOwnerId().equals(processedByUserId)) {
+            throw new OwnershipException("Bạn không có quyền xử lý yêu cầu hủy của booking này.");
+        }
+
         cancellation.setProcessedBy(processedByUserId);
         cancellation.setDecisionReason(processNote);
         cancellation.setProcessedAt(LocalDateTime.now(clock));
@@ -208,11 +281,19 @@ public class BookingServiceImpl implements BookingService {
             return bookingCancellationRepository.save(cancellation);
         }
 
-        Booking booking = bookingRepository.findByIdForUpdate(cancellation.getBookingId())
-                .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân."));
         if (cancellation.getRefundAmount() != null && cancellation.getRefundAmount() > 0) {
-            cancellation.setStatus(CancellationStatus.REFUND_PROCESSING);
-            booking.setStatus(BookingStatus.REFUND_PENDING);
+            if (booking.getDepositPaymentId() == null) {
+                throw new ServiceException("Booking chưa có giao dịch tiền cọc để hoàn tiền.");
+            }
+            RefundSnapshot refund = paymentRefundPort.createRefund(
+                    booking.getDepositPaymentId(),
+                    processedByUserId,
+                    "booking-cancellation:" + cancellation.getCancellationId(),
+                    refundReason(booking, cancellation),
+                    cancellation.getRefundAmount()
+            );
+            cancellation.setRefundId(refund.refundId());
+            applyRefundStatus(refund.status(), cancellation, booking);
         } else {
             cancellation.setStatus(CancellationStatus.APPROVED);
             booking.setStatus(BookingStatus.CANCELLED);
@@ -241,5 +322,59 @@ public class BookingServiceImpl implements BookingService {
             return policy.getPartialRefundPercentage() == null ? 0.0 : policy.getPartialRefundPercentage();
         }
         return 0.0;
+    }
+
+    private BookingStatus parseStatus(String status) throws ServiceException {
+        if (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)) return null;
+        try {
+            return BookingStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new ServiceException("Trạng thái booking không hợp lệ.");
+        }
+    }
+
+    private PlayerBookingView toPlayerView(Booking booking) {
+        VenueCourt court = venueCourtRepository.findById(booking.getVenueCourtId())
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy sân của booking."));
+        Venue venue = venueRepository.findById(court.getVenueId())
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy cơ sở của booking."));
+        BookingCancellation cancellation = bookingCancellationRepository
+                .findByBookingId(booking.getBookingId()).orElse(null);
+        PlayerReviewView review = reviewRepository.findByBookingId(booking.getBookingId())
+                .map(this::toPlayerReviewView)
+                .orElse(null);
+        return new PlayerBookingView(
+                booking, venue.getVenueId(), venue.getName(), court.getName(),
+                venue.getCancellationPolicy(), cancellation, review
+        );
+    }
+
+    private PlayerReviewView toPlayerReviewView(Review review) {
+        return new PlayerReviewView(
+                review.getReviewId(), review.getVenueId(), review.getBookingId(),
+                review.getRating(), review.getContent(), review.getStatus(), review.getCreatedAt()
+        );
+    }
+
+    private String refundReason(Booking booking, BookingCancellation cancellation) {
+        String reason = "Hủy booking " + booking.getBookingCode() + ": " + cancellation.getReason();
+        return reason.length() <= 500 ? reason : reason.substring(0, 500);
+    }
+
+    private void applyRefundStatus(
+            String refundStatus, BookingCancellation cancellation, Booking booking
+    ) {
+        if ("SUCCEEDED".equals(refundStatus)) {
+            cancellation.setStatus(CancellationStatus.REFUNDED);
+            booking.setStatus(BookingStatus.REFUNDED);
+            return;
+        }
+        if ("FAILED".equals(refundStatus) || "MANUAL_REVIEW".equals(refundStatus)) {
+            cancellation.setStatus(CancellationStatus.REFUND_FAILED);
+            booking.setStatus(BookingStatus.REFUND_PENDING);
+            return;
+        }
+        cancellation.setStatus(CancellationStatus.REFUND_PROCESSING);
+        booking.setStatus(BookingStatus.REFUND_PENDING);
     }
 }

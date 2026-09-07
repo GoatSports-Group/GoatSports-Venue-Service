@@ -80,6 +80,19 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResult<Booking> findPlayerPage(UUID playerId, BookingStatus status, int page, int size) {
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var result = status == null
+                ? jpaRepository.findByPlayerId(playerId, pageable)
+                : jpaRepository.findByPlayerIdAndStatus(playerId, status, pageable);
+        return new PageResult<>(
+                result.getContent().stream().map(mapper::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalPages()
+        );
+    }
+
+    @Override
     public long countByPlayerId(UUID playerId) {
         return jpaRepository.findByPlayerIdOrderByCreatedAtDesc(playerId, PageRequest.of(0, 1)).getTotalElements();
     }

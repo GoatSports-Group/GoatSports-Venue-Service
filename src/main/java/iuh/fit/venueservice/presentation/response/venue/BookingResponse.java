@@ -20,6 +20,9 @@ public class BookingResponse {
     private UUID bookingId;
     private UUID playerId;
     private UUID venueCourtId;
+    private UUID venueId;
+    private String venueName;
+    private String courtName;
     private LocalDate playDate;
     private LocalTime startTime;
     private LocalTime endTime;
@@ -37,4 +40,7 @@ public class BookingResponse {
     private UUID matchmakingSessionId;
     private LocalDateTime holdExpiresAt;
     private LocalDateTime createdAt;
+    private CancellationPolicyResponse cancellationPolicy;
+    private BookingCancellationResponse cancellation;
+    private PlayerReviewResponse review;
 }

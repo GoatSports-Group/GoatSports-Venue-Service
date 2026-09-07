@@ -2,6 +2,8 @@ package iuh.fit.venueservice.infrastructure.decorator;
 
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.PlayerBookingView;
 import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingService;
@@ -44,8 +46,22 @@ public class BookingDecorator implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public PlayerBookingView getPlayerBooking(UUID bookingId, UUID playerId) throws ServiceException {
+        return delegate.getPlayerBooking(bookingId, playerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Booking> getBookingHistory(UUID userId, String status, int page, int size) {
         return delegate.getBookingHistory(userId, status, page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<PlayerBookingView> getPlayerBookingHistory(
+            UUID playerId, String status, int page, int size
+    ) throws ServiceException {
+        return delegate.getPlayerBookingHistory(playerId, status, page, size);
     }
 
     @Override

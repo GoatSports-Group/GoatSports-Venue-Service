@@ -80,16 +80,18 @@ public class ApplicationServiceConfig {
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
             BookingCancellationRepository bookingCancellationRepository,
+            ReviewRepository reviewRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
             BookingQrPort bookingQrPort,
+            PaymentRefundPort paymentRefundPort,
             Clock clock,
             @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration
     ) {
         return new BookingServiceImpl(
-                bookingRepository, timeSlotRepository, bookingCancellationRepository,
-                venueCourtRepository, venueRepository, timeSlotLifecycleService, bookingQrPort,
+                bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
+                venueCourtRepository, venueRepository, timeSlotLifecycleService, bookingQrPort, paymentRefundPort,
                 clock, paymentHoldDuration
         );
     }

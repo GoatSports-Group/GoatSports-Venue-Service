@@ -3,10 +3,13 @@ package iuh.fit.venueservice.infrastructure.external.client;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentReferenceQueryRequest;
 import iuh.fit.venueservice.application.dto.request.payment.CollectBookingCashRequest;
 import iuh.fit.venueservice.application.dto.request.payment.CreateBookingCheckoutRequest;
+import iuh.fit.venueservice.application.dto.request.payment.CreateRefundRequest;
 import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.dto.response.venue.BookingCheckoutSnapshot;
+import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -38,6 +41,14 @@ public interface PaymentClient {
     BaseResponse<BookingCheckoutSnapshot> createBookingCheckout(
             @RequestHeader("X-User-Id") UUID payerId,
             @RequestBody CreateBookingCheckoutRequest request
+    );
+
+    @PostMapping("/{paymentId}/refunds")
+    BaseResponse<RefundSnapshot> createRefund(
+            @PathVariable UUID paymentId,
+            @RequestHeader("X-User-Id") UUID requestedBy,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestBody CreateRefundRequest request
     );
 
 }

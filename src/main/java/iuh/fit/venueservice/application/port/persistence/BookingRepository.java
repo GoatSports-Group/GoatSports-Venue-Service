@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.domain.entity.Booking;
+import iuh.fit.venueservice.domain.enums.BookingStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,6 +28,8 @@ public interface BookingRepository {
     List<Booking> findByPlayerId(UUID playerId, int page, int size);
 
     List<Booking> findByPlayerIdAndStatus(UUID playerId, String status, int page, int size);
+
+    PageResult<Booking> findPlayerPage(UUID playerId, BookingStatus status, int page, int size);
 
     long countByPlayerId(UUID playerId);
 

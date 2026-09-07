@@ -2,6 +2,9 @@ package iuh.fit.venueservice.presentation.controller;
 
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
+import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.PlayerBookingView;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.BookingService;
@@ -21,9 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/bookings")
@@ -60,26 +61,26 @@ public class BookingController {
 
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(@PathVariable UUID id) throws ServiceException {
-        Booking booking = bookingService.getBookingById(id);
-        return ResponseEntity.ok(bookingConverter.toResponse(booking));
+        return ResponseEntity.ok(bookingConverter.toPlayerResponse(
+                bookingService.getPlayerBooking(id, currentUserId("xem chi tiết booking"))
+        ));
     }
 
     @GetMapping("/my-history")
-    public ResponseEntity<List<BookingResponse>> getMyBookingHistory(
+    public ResponseEntity<BaseListResponse> getMyBookingHistory(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) throws ServiceException {
-        String userIdStr = currentUserProvider.getCurrentUserId()
-                .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để xem lịch sử đặt sân."));
-        UUID userId = BaseUtil.uuid(userIdStr);
-
-        List<Booking> bookings = bookingService.getBookingHistory(userId, status, page, size);
-        List<BookingResponse> responses = bookings.stream()
-                .map(bookingConverter::toResponse)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(responses);
+        PageResult<PlayerBookingView> result = bookingService.getPlayerBookingHistory(
+                currentUserId("xem lịch sử đặt sân"), status, page, size
+        );
+        return ResponseEntity.ok(new BaseListResponse(
+                new BaseListResponse.Meta(
+                        result.page(), result.pageSize(), result.totalPages(), result.total()
+                ),
+                result.items().stream().map(bookingConverter::toPlayerResponse).toList()
+        ));
     }
 
     @PostMapping("/{id}/cancel")
@@ -95,6 +96,11 @@ public class BookingController {
         BookingCancellation cancellation = bookingService.requestCancellation(command);
 
         return ResponseEntity.ok(bookingConverter.toCancellationResponse(cancellation));
+    }
+
+    private UUID currentUserId(String action) throws ServiceException {
+        return BaseUtil.uuid(currentUserProvider.getCurrentUserId()
+                .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để " + action + ".")));
     }
 
     @PostMapping("/cancellations/{id}/process")

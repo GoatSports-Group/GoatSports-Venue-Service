@@ -24,6 +24,10 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
 
     Page<BookingEntity> findByPlayerIdAndStatusOrderByCreatedAtDesc(UUID playerId, BookingStatus status, Pageable pageable);
 
+    Page<BookingEntity> findByPlayerId(UUID playerId, Pageable pageable);
+
+    Page<BookingEntity> findByPlayerIdAndStatus(UUID playerId, BookingStatus status, Pageable pageable);
+
     Optional<BookingEntity> findByBookingCode(String bookingCode);
 
     Optional<BookingEntity> findByQrCode(String qrCode);
