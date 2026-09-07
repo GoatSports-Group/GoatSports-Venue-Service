@@ -49,10 +49,10 @@ public class BookingController {
                 request.getPlayDate(),
                 request.getStartTime(),
                 request.getEndTime(),
-                BookingSource.DIRECT,
+                request.getMatchmakingSessionId() == null ? BookingSource.DIRECT : BookingSource.AI_MATCHMAKING,
                 null,
                 null,
-                null
+                request.getMatchmakingSessionId()
         );
 
         Booking booking = bookingService.createBooking(command);

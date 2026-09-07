@@ -19,4 +19,5 @@ public class CreateBookingRequest {
     private LocalTime startTime;
     @NotNull(message = "Giờ kết thúc không được để trống.")
     private LocalTime endTime;
+    private UUID matchmakingSessionId;
 }
