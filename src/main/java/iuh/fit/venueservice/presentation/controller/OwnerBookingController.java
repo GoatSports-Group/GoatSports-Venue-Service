@@ -10,12 +10,17 @@ import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingPaymentRe
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerBookingService;
+import iuh.fit.venueservice.application.service.BookingService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.presentation.request.venue.UpdateOwnerBookingStatusRequest;
 import iuh.fit.venueservice.presentation.request.venue.CreateOwnerBookingPaymentRequest;
+import iuh.fit.venueservice.presentation.request.venue.ProcessCancellationRequest;
+import iuh.fit.venueservice.presentation.request.venue.CompleteManualRefundRequest;
 import iuh.fit.venueservice.presentation.response.venue.OwnerBookingResponse;
+import iuh.fit.venueservice.presentation.response.venue.BookingCancellationResponse;
 import iuh.fit.venueservice.presentation.converter.OwnerBookingResponseMapper;
+import iuh.fit.venueservice.presentation.converter.BookingConverter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -37,8 +42,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OwnerBookingController {
     private final OwnerBookingService ownerBookingService;
+    private final BookingService bookingService;
     private final CurrentUserProvider currentUserProvider;
     private final OwnerBookingResponseMapper responseMapper;
+    private final BookingConverter bookingConverter;
 
     @GetMapping
     @PreAuthorize("hasAuthority('GET_OWN_BOOKINGS')")
@@ -92,6 +99,32 @@ public class OwnerBookingController {
         return ResponseEntity.ok(ownerBookingService.createPayment(new CreateOwnerBookingPaymentCommand(
                 bookingId, currentUserId(), request.getMethod()
         )));
+    }
+
+    @PostMapping("/cancellations/{cancellationId}/process")
+    @PreAuthorize("hasAuthority('UPDATE_OWN_BOOKING_STATUS')")
+    public ResponseEntity<BookingCancellationResponse> processCancellation(
+            @PathVariable UUID cancellationId,
+            @Valid @RequestBody ProcessCancellationRequest request
+    ) throws ServiceException {
+        return ResponseEntity.ok(bookingConverter.toCancellationResponse(
+                bookingService.processCancellation(
+                        cancellationId, request.getApproved(), currentUserId(), request.getProcessNote()
+                )
+        ));
+    }
+
+    @PostMapping("/cancellations/{cancellationId}/manual-refund-completion")
+    @PreAuthorize("hasAuthority('UPDATE_OWN_BOOKING_STATUS')")
+    public ResponseEntity<BookingCancellationResponse> completeManualRefund(
+            @PathVariable UUID cancellationId,
+            @Valid @RequestBody CompleteManualRefundRequest request
+    ) throws ServiceException {
+        return ResponseEntity.ok(bookingConverter.toCancellationResponse(
+                bookingService.completeManualRefund(
+                        cancellationId, currentUserId(), request.getProviderRefundId()
+                )
+        ));
     }
 
     private UUID currentUserId() throws ServiceException {

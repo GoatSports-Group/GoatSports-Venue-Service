@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.domain.entity;
 
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
+import iuh.fit.venueservice.domain.enums.CancellationReviewMode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,11 +19,13 @@ import java.util.UUID;
 public class BookingCancellation extends BaseEntity {
     private UUID cancellationId;
     private UUID bookingId;
+    private UUID requestedByUserId;
     private UUID refundId;
     private String reason;
     private Double refundPercentage;
     private Double refundAmount;
     private CancellationStatus status;
+    private CancellationReviewMode reviewMode;
     private UUID processedBy;
     private String decisionReason;
     private LocalDateTime processedAt;

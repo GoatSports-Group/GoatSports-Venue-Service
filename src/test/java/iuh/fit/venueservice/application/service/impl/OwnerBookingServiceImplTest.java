@@ -12,6 +12,7 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
@@ -45,6 +46,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class OwnerBookingServiceImplTest {
     @Mock private BookingRepository bookingRepository;
+    @Mock private BookingCancellationRepository bookingCancellationRepository;
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
     @Mock private PaymentQueryPort paymentQueryPort;
@@ -60,7 +62,7 @@ class OwnerBookingServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new OwnerBookingServiceImpl(
-                bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
+                bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, timeSlotLifecycleService, Clock.systemDefaultZone(),
                 Duration.ofMinutes(15)
         );

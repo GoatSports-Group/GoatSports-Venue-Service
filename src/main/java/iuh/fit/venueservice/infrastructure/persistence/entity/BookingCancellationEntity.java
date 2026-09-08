@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.persistence.entity;
 
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
+import iuh.fit.venueservice.domain.enums.CancellationReviewMode;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +21,9 @@ public class BookingCancellationEntity extends BaseEntity {
     @Column(columnDefinition = "UUID")
     private UUID cancellationId;
 
+    @Column(nullable = false, columnDefinition = "UUID")
+    private UUID requestedByUserId;
+
     @Column(columnDefinition = "UUID")
     private UUID refundId;
 
@@ -32,6 +36,10 @@ public class BookingCancellationEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private CancellationStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private CancellationReviewMode reviewMode;
 
     @Column(columnDefinition = "UUID")
     private UUID processedBy;

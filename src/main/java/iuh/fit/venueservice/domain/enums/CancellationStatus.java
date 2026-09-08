@@ -5,6 +5,7 @@ public enum CancellationStatus {
     APPROVED,
     REJECTED,
     REFUND_PROCESSING,
+    REFUND_MANUAL_REVIEW,
     REFUNDED,
     REFUND_FAILED
 }

@@ -79,6 +79,14 @@ public class BookingDecorator implements BookingService {
     }
 
     @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public BookingCancellation completeManualRefund(
+            UUID cancellationId, UUID ownerId, String providerRefundId
+    ) throws ServiceException {
+        return delegate.completeManualRefund(cancellationId, ownerId, providerRefundId);
+    }
+
+    @Override
     public String generateBookingCode() {
         return delegate.generateBookingCode();
     }

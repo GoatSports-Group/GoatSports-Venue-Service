@@ -11,7 +11,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,6 +43,11 @@ public class BookingCancellationRepositoryImpl implements BookingCancellationRep
     }
 
     @Override
+    public Optional<BookingCancellation> findByIdForUpdate(UUID id) {
+        return jpaRepository.findByIdForUpdate(id).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<BookingCancellation> findByBookingId(UUID bookingId) {
         return jpaRepository.findByBooking_BookingId(bookingId).map(mapper::toDomain);
     }
@@ -50,5 +57,13 @@ public class BookingCancellationRepositoryImpl implements BookingCancellationRep
         return jpaRepository.findByStatusOrderByCreatedAtDesc(
                         CancellationStatus.valueOf(status), PageRequest.of(page, size))
                 .stream().map(mapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<UUID, BookingCancellation> findByBookingIds(Set<UUID> bookingIds) {
+        if (bookingIds == null || bookingIds.isEmpty()) return Map.of();
+        return jpaRepository.findByBooking_BookingIdIn(bookingIds).stream()
+                .map(mapper::toDomain)
+                .collect(Collectors.toMap(BookingCancellation::getBookingId, cancellation -> cancellation));
     }
 }

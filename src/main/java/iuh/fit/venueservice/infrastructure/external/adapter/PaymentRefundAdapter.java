@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.external.adapter;
 
 import iuh.fit.venueservice.application.dto.request.payment.CreateRefundRequest;
+import iuh.fit.venueservice.application.dto.request.payment.CompleteManualRefundRequest;
 import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.infrastructure.external.client.PaymentClient;
@@ -30,6 +31,17 @@ public class PaymentRefundAdapter implements PaymentRefundPort {
         );
         if (response == null || response.getData() == null) {
             throw new IllegalStateException("Payment Service không trả về kết quả hoàn tiền.");
+        }
+        return response.getData();
+    }
+
+    @Override
+    public RefundSnapshot completeManualRefund(UUID refundId, UUID completedBy, String providerRefundId) {
+        var response = paymentClient.completeManualRefund(
+                refundId, completedBy, new CompleteManualRefundRequest(providerRefundId)
+        );
+        if (response == null || response.getData() == null) {
+            throw new IllegalStateException("Payment Service không trả về kết quả xác nhận hoàn tiền.");
         }
         return response.getData();
     }

@@ -87,12 +87,13 @@ public class ApplicationServiceConfig {
             BookingQrPort bookingQrPort,
             PaymentRefundPort paymentRefundPort,
             Clock clock,
-            @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration
+            @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration,
+            @Value("${booking.cancellation-auto-approval-window:PT1H}") Duration cancellationAutoApprovalWindow
     ) {
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository, timeSlotLifecycleService, bookingQrPort, paymentRefundPort,
-                clock, paymentHoldDuration
+                clock, paymentHoldDuration, cancellationAutoApprovalWindow
         );
     }
 
@@ -119,6 +120,7 @@ public class ApplicationServiceConfig {
     @Bean
     public OwnerBookingServiceImpl ownerBookingService(
             BookingRepository bookingRepository,
+            BookingCancellationRepository bookingCancellationRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             PaymentQueryPort paymentQueryPort,
@@ -128,7 +130,7 @@ public class ApplicationServiceConfig {
             @Value("${booking.payment-checkout-duration:PT15M}") Duration paymentCheckoutDuration
     ) {
         return new OwnerBookingServiceImpl(
-                bookingRepository, venueCourtRepository, venueRepository, paymentQueryPort,
+                bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, timeSlotLifecycleService, clock, paymentCheckoutDuration
         );
     }

@@ -12,4 +12,6 @@ public interface PaymentRefundPort {
             String reason,
             Double amount
     );
+
+    RefundSnapshot completeManualRefund(UUID refundId, UUID completedBy, String providerRefundId);
 }

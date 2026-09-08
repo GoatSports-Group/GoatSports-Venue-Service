@@ -32,5 +32,9 @@ public interface BookingService {
 
     BookingCancellation processCancellation(UUID cancellationId, boolean approved, UUID processedByUserId, String processNote) throws ServiceException;
 
+    BookingCancellation completeManualRefund(
+            UUID cancellationId, UUID ownerId, String providerRefundId
+    ) throws ServiceException;
+
     String generateBookingCode();
 }

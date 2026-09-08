@@ -3,7 +3,9 @@ package iuh.fit.venueservice.application.port.persistence;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface BookingCancellationRepository {
@@ -11,7 +13,11 @@ public interface BookingCancellationRepository {
 
     Optional<BookingCancellation> findById(UUID id);
 
+    Optional<BookingCancellation> findByIdForUpdate(UUID id);
+
     Optional<BookingCancellation> findByBookingId(UUID bookingId);
 
     List<BookingCancellation> findByStatus(String status, int page, int size);
+
+    Map<UUID, BookingCancellation> findByBookingIds(Set<UUID> bookingIds);
 }

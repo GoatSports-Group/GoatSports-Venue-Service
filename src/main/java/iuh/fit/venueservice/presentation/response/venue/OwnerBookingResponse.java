@@ -33,6 +33,7 @@ public record OwnerBookingResponse(
         UUID matchmakingSessionId,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        BookingCancellationResponse cancellation,
         List<OwnerPaymentResponse> payments,
         List<String> allowedTransitions
 ) {

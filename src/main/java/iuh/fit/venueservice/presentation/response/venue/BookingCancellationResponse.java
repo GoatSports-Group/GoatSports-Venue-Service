@@ -17,11 +17,13 @@ import java.util.UUID;
 public class BookingCancellationResponse {
     private UUID cancellationId;
     private UUID bookingId;
+    private UUID requestedByUserId;
     private UUID refundId;
     private String reason;
     private Double refundPercentage;
     private Double refundAmount;
     private String status;
+    private String reviewMode;
     private UUID processedBy;
     private String decisionReason;
     private LocalDateTime processedAt;

@@ -99,7 +99,7 @@ public class OwnerCheckInController {
         var record = view.bookingRecord();
         var booking = bookingMapper.toResponse(new OwnerBookingView(
                 record.booking(), record.venueId(), record.venueName(), record.courtName(),
-                view.payments(), List.of()
+                null, view.payments(), List.of()
         ));
         OwnerCheckInRecordResponse checkIn = view.checkInRecord() == null ? null
                 : OwnerCheckInRecordResponse.builder()

@@ -8,6 +8,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class OwnerBookingResponseMapper {
+    private final BookingConverter bookingConverter;
+
+    public OwnerBookingResponseMapper(BookingConverter bookingConverter) {
+        this.bookingConverter = bookingConverter;
+    }
+
     public OwnerBookingResponse toResponse(OwnerBookingView view) {
         Booking booking = view.booking();
         return OwnerBookingResponse.builder()
@@ -24,6 +30,9 @@ public class OwnerBookingResponseMapper {
                 .walkInCustomerPhone(booking.getWalkInCustomerPhone())
                 .matchmakingSessionId(booking.getMatchmakingSessionId())
                 .createdAt(booking.getCreatedAt()).updatedAt(booking.getUpdatedAt())
+                .cancellation(view.cancellation() == null
+                        ? null
+                        : bookingConverter.toCancellationResponse(view.cancellation()))
                 .payments(view.payments().stream().map(payment -> OwnerPaymentResponse.builder()
                         .paymentId(payment.paymentId()).purpose(payment.purpose())
                         .amount(payment.amount()).currency(payment.currency()).status(payment.status())

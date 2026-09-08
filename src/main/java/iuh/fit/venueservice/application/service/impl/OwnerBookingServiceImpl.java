@@ -15,6 +15,7 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.OwnerBookingService;
@@ -41,6 +42,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     private static final int MAX_DATE_RANGE_DAYS = 366;
 
     private final BookingRepository bookingRepository;
+    private final BookingCancellationRepository bookingCancellationRepository;
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
     private final PaymentQueryPort paymentQueryPort;
@@ -51,6 +53,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
 
     public OwnerBookingServiceImpl(
             BookingRepository bookingRepository,
+            BookingCancellationRepository bookingCancellationRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             PaymentQueryPort paymentQueryPort,
@@ -60,6 +63,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
             Duration paymentCheckoutDuration
     ) {
         this.bookingRepository = bookingRepository;
+        this.bookingCancellationRepository = bookingCancellationRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
         this.paymentQueryPort = paymentQueryPort;
@@ -74,13 +78,16 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         validateFilter(filter);
         validateRequestedScope(filter);
         PageResult<OwnerBookingRecord> page = bookingRepository.findOwnedBookings(filter);
-        Map<UUID, List<PaymentSnapshot>> payments = loadPayments(
-                page.items().stream().map(item -> item.booking().getBookingId()).collect(Collectors.toSet())
-        );
+        Set<UUID> bookingIds = page.items().stream()
+                .map(item -> item.booking().getBookingId()).collect(Collectors.toSet());
+        Map<UUID, List<PaymentSnapshot>> payments = loadPayments(bookingIds);
+        var cancellations = bookingCancellationRepository.findByBookingIds(bookingIds);
         List<OwnerBookingView> items = page.items().stream()
-                .map(item -> toView(item, payments.getOrDefault(
-                        item.booking().getBookingId(), Collections.emptyList()
-                )))
+                .map(item -> toView(
+                        item,
+                        cancellations.get(item.booking().getBookingId()),
+                        payments.getOrDefault(item.booking().getBookingId(), Collections.emptyList())
+                ))
                 .toList();
         return new PageResult<>(items, page.total(), page.page(), page.pageSize(), page.totalPages());
     }
@@ -89,7 +96,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     public OwnerBookingView getBooking(UUID bookingId, UUID ownerId) throws ServiceException {
         OwnerBookingRecord record = getOwnedBooking(bookingId, ownerId);
         List<PaymentSnapshot> payments = paymentQueryPort.findByBookingIds(Set.of(bookingId));
-        return toView(record, payments);
+        return toView(record, bookingCancellationRepository.findByBookingId(bookingId).orElse(null), payments);
     }
 
     @Override
@@ -119,7 +126,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         Booking saved = bookingRepository.save(booking);
         return toView(new OwnerBookingRecord(
                 saved, record.venueId(), record.venueName(), record.courtName()
-        ), payments);
+        ), bookingCancellationRepository.findByBookingId(saved.getBookingId()).orElse(null), payments);
     }
 
     @Override
@@ -284,10 +291,14 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
                 .collect(Collectors.groupingBy(PaymentSnapshot::referenceId));
     }
 
-    private OwnerBookingView toView(OwnerBookingRecord record, List<PaymentSnapshot> payments) {
+    private OwnerBookingView toView(
+            OwnerBookingRecord record,
+            iuh.fit.venueservice.domain.entity.BookingCancellation cancellation,
+            List<PaymentSnapshot> payments
+    ) {
         return new OwnerBookingView(
                 record.booking(), record.venueId(), record.venueName(), record.courtName(),
-                payments, allowedTransitions(record.booking(), payments)
+                cancellation, payments, allowedTransitions(record.booking(), payments)
         );
     }
 

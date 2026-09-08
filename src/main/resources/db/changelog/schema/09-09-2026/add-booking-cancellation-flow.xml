@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260909-add-booking-cancellation-review-mode" author="codex">
+        <addColumn tableName="booking_cancellations">
+            <column name="requested_by_user_id" type="UUID"/>
+            <column name="review_mode" type="VARCHAR(30)" defaultValue="OWNER_REVIEW"/>
+        </addColumn>
+        <sql>
+            UPDATE booking_cancellations cancellation
+            SET requested_by_user_id = booking.player_id
+            FROM bookings booking
+            WHERE booking.booking_id = cancellation.booking_id
+              AND cancellation.requested_by_user_id IS NULL;
+        </sql>
+        <addNotNullConstraint tableName="booking_cancellations"
+                              columnName="requested_by_user_id"
+                              columnDataType="UUID"/>
+        <addNotNullConstraint tableName="booking_cancellations"
+                              columnName="review_mode"
+                              columnDataType="VARCHAR(30)"/>
+        <createIndex tableName="booking_cancellations" indexName="idx_booking_cancellations_status_created">
+            <column name="status"/>
+            <column name="created_at" descending="true"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

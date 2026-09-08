@@ -22,6 +22,7 @@ import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
+import iuh.fit.venueservice.domain.enums.CancellationReviewMode;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,7 +89,7 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15)
+                clock, Duration.ofMinutes(15), Duration.ofHours(1)
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -139,7 +140,7 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15)
+                clock, Duration.ofMinutes(15), Duration.ofHours(1)
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -183,7 +184,7 @@ class BookingServiceImplTest {
                 .depositAmount(200_000.0)
                 .depositPaymentId(UUID.randomUUID())
                 .build();
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(bookingCancellationRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
                 VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()
@@ -205,6 +206,66 @@ class BookingServiceImplTest {
         assertThat(result.getRefundPercentage()).isEqualTo(50.0);
         assertThat(result.getRefundAmount()).isEqualTo(100_000.0);
         assertThat(result.getStatus()).isEqualTo(CancellationStatus.PENDING);
+    }
+
+    @Test
+    void cancellationWithinOneHourIsAutomaticallyApprovedAndRefundIsCreated() throws Exception {
+        UUID playerId = UUID.randomUUID();
+        UUID bookingId = UUID.randomUUID();
+        UUID paymentId = UUID.randomUUID();
+        UUID courtId = UUID.randomUUID();
+        UUID venueId = UUID.randomUUID();
+        UUID cancellationId = UUID.randomUUID();
+        UUID refundId = UUID.randomUUID();
+        LocalDate playDate = LocalDate.of(2026, 9, 3);
+        LocalTime startTime = LocalTime.of(18, 0);
+        LocalTime endTime = LocalTime.of(19, 0);
+        Booking booking = Booking.builder()
+                .bookingId(bookingId).playerId(playerId).venueCourtId(courtId)
+                .playDate(playDate).startTime(startTime).endTime(endTime)
+                .createdAt(LocalDateTime.of(2026, 9, 2, 7, 30))
+                .status(BookingStatus.CONFIRMED).bookingCode("GS-AUTO")
+                .depositAmount(200_000.0).depositPaymentId(paymentId)
+                .build();
+        TimeSlot slot = TimeSlot.builder()
+                .venueCourtId(courtId).date(playDate).startTime(startTime).endTime(endTime)
+                .status(TimeSlotStatus.BOOKED).build();
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingCancellationRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()
+        ));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).build()
+        ));
+        when(bookingCancellationRepository.save(any(BookingCancellation.class))).thenAnswer(invocation -> {
+            BookingCancellation cancellation = invocation.getArgument(0);
+            if (cancellation.getCancellationId() == null) cancellation.setCancellationId(cancellationId);
+            return cancellation;
+        });
+        when(paymentRefundPort.createRefund(any(), any(), any(), any(), any()))
+                .thenReturn(new RefundSnapshot(
+                        refundId, paymentId, playerId, "Hủy booking", 200_000.0,
+                        null, "MANUAL_REVIEW", "Chờ chuyển hoàn", null, null, null
+                ));
+        when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, startTime, endTime))
+                .thenReturn(Optional.of(slot));
+        when(timeSlotRepository.save(slot)).thenReturn(slot);
+        when(bookingRepository.save(booking)).thenReturn(booking);
+
+        BookingCancellation result = serviceAt(Instant.parse("2026-09-02T01:00:00Z"))
+                .requestCancellation(new CancelBookingCommand(bookingId, playerId, "Đặt nhầm lịch"));
+
+        assertThat(result.getReviewMode()).isEqualTo(CancellationReviewMode.AUTOMATIC);
+        assertThat(result.getRefundPercentage()).isEqualTo(100.0);
+        assertThat(result.getRefundAmount()).isEqualTo(200_000.0);
+        assertThat(result.getStatus()).isEqualTo(CancellationStatus.REFUND_MANUAL_REVIEW);
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUND_PENDING);
+        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.AVAILABLE);
+        verify(paymentRefundPort).createRefund(
+                paymentId, playerId, "booking-cancellation:" + cancellationId,
+                "Hủy booking GS-AUTO: Đặt nhầm lịch", 200_000.0
+        );
     }
 
     @Test
@@ -233,7 +294,7 @@ class BookingServiceImplTest {
                 .depositPaymentId(paymentId)
                 .status(BookingStatus.CONFIRMED)
                 .build();
-        when(bookingCancellationRepository.findById(cancellationId)).thenReturn(Optional.of(cancellation));
+        when(bookingCancellationRepository.findByIdForUpdate(cancellationId)).thenReturn(Optional.of(cancellation));
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
                 VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()
@@ -268,7 +329,7 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15)
+                clock, Duration.ofMinutes(15), Duration.ofHours(1)
         );
     }
 }

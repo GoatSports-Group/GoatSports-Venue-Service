@@ -15,4 +15,5 @@
     <include file="/db/changelog/schema/03-09-2026/add-venue-facility-layout.xml"/>
     <include file="/db/changelog/schema/03-09-2026/add-court-lifecycle.xml"/>
     <include file="/db/changelog/schema/05-09-2026/enforce-walk-in-booking-lifecycle.xml"/>
+    <include file="/db/changelog/schema/09-09-2026/add-booking-cancellation-flow.xml"/>
 </databaseChangeLog>

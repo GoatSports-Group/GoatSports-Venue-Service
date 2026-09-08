@@ -4,6 +4,7 @@ import iuh.fit.venueservice.application.dto.request.payment.PaymentReferenceQuer
 import iuh.fit.venueservice.application.dto.request.payment.CollectBookingCashRequest;
 import iuh.fit.venueservice.application.dto.request.payment.CreateBookingCheckoutRequest;
 import iuh.fit.venueservice.application.dto.request.payment.CreateRefundRequest;
+import iuh.fit.venueservice.application.dto.request.payment.CompleteManualRefundRequest;
 import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.dto.response.venue.BookingCheckoutSnapshot;
@@ -49,6 +50,13 @@ public interface PaymentClient {
             @RequestHeader("X-User-Id") UUID requestedBy,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestBody CreateRefundRequest request
+    );
+
+    @PostMapping("/refunds/{refundId}/manual-completion")
+    BaseResponse<RefundSnapshot> completeManualRefund(
+            @PathVariable UUID refundId,
+            @RequestHeader("X-User-Id") UUID completedBy,
+            @RequestBody CompleteManualRefundRequest request
     );
 
 }
