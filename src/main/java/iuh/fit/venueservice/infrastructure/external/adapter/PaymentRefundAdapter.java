@@ -21,13 +21,14 @@ public class PaymentRefundAdapter implements PaymentRefundPort {
             UUID requestedBy,
             String idempotencyKey,
             String reason,
-            Double amount
+            Double amount,
+            Boolean autoDisburse
     ) {
         var response = paymentClient.createRefund(
                 paymentId,
                 requestedBy,
                 idempotencyKey,
-                new CreateRefundRequest(reason, amount)
+                new CreateRefundRequest(reason, amount, autoDisburse)
         );
         if (response == null || response.getData() == null) {
             throw new IllegalStateException("Payment Service không trả về kết quả hoàn tiền.");

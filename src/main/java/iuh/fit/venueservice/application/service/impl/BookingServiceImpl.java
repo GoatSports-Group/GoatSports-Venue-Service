@@ -366,7 +366,8 @@ public class BookingServiceImpl implements BookingService {
                     refundRequestedBy,
                     "booking-cancellation:" + cancellation.getCancellationId(),
                     refundReason(booking, cancellation),
-                    cancellation.getRefundAmount()
+                    cancellation.getRefundAmount(),
+                    processedBy != null
             );
             cancellation.setRefundId(refund.refundId());
             applyRefundStatus(refund.status(), cancellation, booking);
@@ -455,6 +456,16 @@ public class BookingServiceImpl implements BookingService {
             cancellation.setStatus("MANUAL_REVIEW".equals(refundStatus)
                     ? CancellationStatus.REFUND_MANUAL_REVIEW
                     : CancellationStatus.REFUND_FAILED);
+            booking.setStatus(BookingStatus.REFUND_PENDING);
+            return;
+        }
+        if ("AWAITING_CLAIM".equals(refundStatus)) {
+            cancellation.setStatus(CancellationStatus.REFUND_AWAITING_CLAIM);
+            booking.setStatus(BookingStatus.REFUND_PENDING);
+            return;
+        }
+        if ("AWAITING_BANK_ACCOUNT".equals(refundStatus)) {
+            cancellation.setStatus(CancellationStatus.REFUND_AWAITING_BANK_ACCOUNT);
             booking.setStatus(BookingStatus.REFUND_PENDING);
             return;
         }

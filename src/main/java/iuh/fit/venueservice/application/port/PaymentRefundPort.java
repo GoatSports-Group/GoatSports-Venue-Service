@@ -10,7 +10,8 @@ public interface PaymentRefundPort {
             UUID requestedBy,
             String idempotencyKey,
             String reason,
-            Double amount
+            Double amount,
+            Boolean autoDisburse
     );
 
     RefundSnapshot completeManualRefund(UUID refundId, UUID completedBy, String providerRefundId);

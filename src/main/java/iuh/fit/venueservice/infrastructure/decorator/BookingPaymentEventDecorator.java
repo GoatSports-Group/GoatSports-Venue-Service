@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.decorator;
 
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import iuh.fit.venueservice.application.service.impl.BookingPaymentEventServiceImpl;
@@ -19,5 +20,11 @@ public class BookingPaymentEventDecorator implements BookingPaymentEventService 
     @Transactional(rollbackFor = ServiceException.class)
     public boolean applySucceededPayment(PaymentSucceededCommand command) throws ServiceException {
         return delegate.applySucceededPayment(command);
+    }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public boolean applyRefundResult(RefundResultCommand command) throws ServiceException {
+        return delegate.applyRefundResult(command);
     }
 }

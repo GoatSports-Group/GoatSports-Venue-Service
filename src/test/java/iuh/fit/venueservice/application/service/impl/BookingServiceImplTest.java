@@ -243,10 +243,10 @@ class BookingServiceImplTest {
             if (cancellation.getCancellationId() == null) cancellation.setCancellationId(cancellationId);
             return cancellation;
         });
-        when(paymentRefundPort.createRefund(any(), any(), any(), any(), any()))
+        when(paymentRefundPort.createRefund(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new RefundSnapshot(
                         refundId, paymentId, playerId, "Hủy booking", 200_000.0,
-                        null, "MANUAL_REVIEW", "Chờ chuyển hoàn", null, null, null
+                        null, "AWAITING_CLAIM", null, null, null, null
                 ));
         when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, startTime, endTime))
                 .thenReturn(Optional.of(slot));
@@ -259,12 +259,12 @@ class BookingServiceImplTest {
         assertThat(result.getReviewMode()).isEqualTo(CancellationReviewMode.AUTOMATIC);
         assertThat(result.getRefundPercentage()).isEqualTo(100.0);
         assertThat(result.getRefundAmount()).isEqualTo(200_000.0);
-        assertThat(result.getStatus()).isEqualTo(CancellationStatus.REFUND_MANUAL_REVIEW);
+        assertThat(result.getStatus()).isEqualTo(CancellationStatus.REFUND_AWAITING_CLAIM);
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUND_PENDING);
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.AVAILABLE);
         verify(paymentRefundPort).createRefund(
                 paymentId, playerId, "booking-cancellation:" + cancellationId,
-                "Hủy booking GS-AUTO: Đặt nhầm lịch", 200_000.0
+                "Hủy booking GS-AUTO: Đặt nhầm lịch", 200_000.0, false
         );
     }
 
@@ -302,7 +302,7 @@ class BookingServiceImplTest {
         when(venueRepository.findById(venueId)).thenReturn(Optional.of(
                 Venue.builder().venueId(venueId).ownerId(ownerId).build()
         ));
-        when(paymentRefundPort.createRefund(any(), any(), any(), any(), any()))
+        when(paymentRefundPort.createRefund(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new RefundSnapshot(
                         refundId, paymentId, ownerId, "Đổi lịch", 100_000.0,
                         null, "SUCCEEDED", null,
@@ -319,7 +319,7 @@ class BookingServiceImplTest {
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
         verify(paymentRefundPort).createRefund(
                 paymentId, ownerId, "booking-cancellation:" + cancellationId,
-                "Hủy booking GS-001: Đổi lịch", 100_000.0
+                "Hủy booking GS-001: Đổi lịch", 100_000.0, true
         );
     }
 

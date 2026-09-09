@@ -186,11 +186,12 @@ public class ApplicationServiceConfig {
             BookingQrPort bookingQrPort,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
-            TimeSlotLifecycleService timeSlotLifecycleService
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            BookingCancellationRepository bookingCancellationRepository
     ) {
         return new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService
+                timeSlotLifecycleService, bookingCancellationRepository
         );
     }
 }

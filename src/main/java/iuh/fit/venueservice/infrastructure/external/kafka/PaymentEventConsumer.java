@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.external.kafka;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +33,15 @@ public class PaymentEventConsumer {
     public void consume(String message) {
         try {
             JsonNode envelope = objectMapper.readTree(message);
-            if (!"payment.succeeded.v1".equals(envelope.path("eventType").asText())) return;
+            String eventType = envelope.path("eventType").asText();
             JsonNode payload = envelope.path("payload");
+            if (eventType.startsWith("refund.")) {
+                bookingPaymentEventService.applyRefundResult(new RefundResultCommand(
+                        uuid(payload, "refundId"), uuid(payload, "paymentId"), payload.path("status").asText()
+                ));
+                return;
+            }
+            if (!"payment.succeeded.v1".equals(eventType)) return;
             bookingPaymentEventService.applySucceededPayment(new PaymentSucceededCommand(
                     uuid(payload, "paymentId"), uuid(payload, "payerId"),
                     payload.path("purpose").asText(), payload.path("referenceType").asText(),

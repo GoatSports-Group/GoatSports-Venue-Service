@@ -53,6 +53,11 @@ public class BookingCancellationRepositoryImpl implements BookingCancellationRep
     }
 
     @Override
+    public Optional<BookingCancellation> findByRefundIdForUpdate(UUID refundId) {
+        return jpaRepository.findByRefundIdForUpdate(refundId).map(mapper::toDomain);
+    }
+
+    @Override
     public List<BookingCancellation> findByStatus(String status, int page, int size) {
         return jpaRepository.findByStatusOrderByCreatedAtDesc(
                         CancellationStatus.valueOf(status), PageRequest.of(page, size))

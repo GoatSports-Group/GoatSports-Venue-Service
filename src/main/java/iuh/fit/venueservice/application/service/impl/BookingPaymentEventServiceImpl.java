@@ -1,9 +1,11 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
@@ -11,6 +13,7 @@ import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.BookingSource;
+import iuh.fit.venueservice.domain.enums.CancellationStatus;
 
 import java.time.LocalDateTime;
 
@@ -20,19 +23,50 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
     private final TimeSlotLifecycleService timeSlotLifecycleService;
+    private final BookingCancellationRepository bookingCancellationRepository;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
             BookingQrPort bookingQrPort,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
-            TimeSlotLifecycleService timeSlotLifecycleService
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            BookingCancellationRepository bookingCancellationRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
         this.timeSlotLifecycleService = timeSlotLifecycleService;
+        this.bookingCancellationRepository = bookingCancellationRepository;
+    }
+
+    @Override
+    public boolean applyRefundResult(RefundResultCommand command) throws ServiceException {
+        if (command == null || command.refundId() == null || command.paymentId() == null) {
+            throw new ServiceException("Refund event thiếu định danh bắt buộc.");
+        }
+        var cancellation = bookingCancellationRepository.findByRefundIdForUpdate(command.refundId()).orElse(null);
+        if (cancellation == null) return false;
+        Booking booking = bookingRepository.findByIdForUpdate(cancellation.getBookingId())
+                .orElseThrow(() -> new ServiceException("Không tìm thấy booking của refund."));
+        if (!command.paymentId().equals(booking.getDepositPaymentId())) {
+            throw new ServiceException("Payment của refund event không khớp booking.");
+        }
+        CancellationStatus status = switch (command.status()) {
+            case "SUCCEEDED" -> CancellationStatus.REFUNDED;
+            case "FAILED" -> CancellationStatus.REFUND_FAILED;
+            case "AWAITING_BANK_ACCOUNT" -> CancellationStatus.REFUND_AWAITING_BANK_ACCOUNT;
+            case "AWAITING_CLAIM" -> CancellationStatus.REFUND_AWAITING_CLAIM;
+            case "MANUAL_REVIEW" -> CancellationStatus.REFUND_MANUAL_REVIEW;
+            default -> CancellationStatus.REFUND_PROCESSING;
+        };
+        cancellation.setStatus(status);
+        booking.setStatus(status == CancellationStatus.REFUNDED
+                ? BookingStatus.REFUNDED : BookingStatus.REFUND_PENDING);
+        bookingCancellationRepository.save(cancellation);
+        bookingRepository.save(booking);
+        return true;
     }
 
     @Override

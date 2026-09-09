@@ -17,6 +17,8 @@ public interface BookingCancellationRepository {
 
     Optional<BookingCancellation> findByBookingId(UUID bookingId);
 
+    Optional<BookingCancellation> findByRefundIdForUpdate(UUID refundId);
+
     List<BookingCancellation> findByStatus(String status, int page, int size);
 
     Map<UUID, BookingCancellation> findByBookingIds(Set<UUID> bookingIds);

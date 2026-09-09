@@ -24,6 +24,10 @@ public interface JpaBookingCancellationRepository extends JpaRepository<BookingC
 
     Optional<BookingCancellationEntity> findByBooking_BookingId(UUID bookingId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select cancellation from BookingCancellationEntity cancellation where cancellation.refundId = :refundId")
+    Optional<BookingCancellationEntity> findByRefundIdForUpdate(UUID refundId);
+
     Page<BookingCancellationEntity> findByStatusOrderByCreatedAtDesc(CancellationStatus status, Pageable pageable);
 
     List<BookingCancellationEntity> findByBooking_BookingIdIn(Set<UUID> bookingIds);

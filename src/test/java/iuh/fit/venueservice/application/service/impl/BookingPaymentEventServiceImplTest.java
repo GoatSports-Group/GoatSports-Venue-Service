@@ -36,6 +36,7 @@ class BookingPaymentEventServiceImplTest {
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
     @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
+    @Mock private iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository bookingCancellationRepository;
 
     @Test
     void confirmsBookingAndIssuesSignedQrExactlyOnceForValidDeposit() throws Exception {
@@ -50,7 +51,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService
+                timeSlotLifecycleService, bookingCancellationRepository
         );
         var event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
 
@@ -72,7 +73,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService
+                timeSlotLifecycleService, bookingCancellationRepository
         );
 
         assertThatThrownBy(() -> service.applySucceededPayment(event(
@@ -107,7 +108,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService
+                timeSlotLifecycleService, bookingCancellationRepository
         );
 
         assertThat(service.applySucceededPayment(event(
