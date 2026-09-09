@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
@@ -39,6 +40,34 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         this.venueRepository = venueRepository;
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.bookingCancellationRepository = bookingCancellationRepository;
+    }
+
+    @Override
+    public boolean applyTerminalPayment(PaymentTerminalCommand command) throws ServiceException {
+        if (command == null
+                || !"BOOKING".equals(command.referenceType())
+                || !"BOOKING_DEPOSIT".equals(command.purpose())
+                || !isTerminalPaymentStatus(command.status())) {
+            return false;
+        }
+        if (command.paymentId() == null || command.referenceId() == null || command.payerId() == null) {
+            throw new ServiceException("Payment terminal event thiếu định danh bắt buộc.");
+        }
+
+        Booking booking = bookingRepository.findByIdForUpdate(command.referenceId()).orElse(null);
+        if (booking == null || booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            return false;
+        }
+        if (!isExpectedPayer(booking, command.payerId())) {
+            throw new ServiceException("Payer của payment terminal event không khớp booking.");
+        }
+
+        booking.setStatus("CANCELLED".equals(command.status())
+                ? BookingStatus.CANCELLED
+                : BookingStatus.EXPIRED);
+        timeSlotLifecycleService.releaseBookingSlot(booking);
+        bookingRepository.save(booking);
+        return true;
     }
 
     @Override
@@ -153,6 +182,10 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         var venue = venueRepository.findById(court.getVenueId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của booking walk-in."));
         return payerId.equals(venue.getOwnerId());
+    }
+
+    private boolean isTerminalPaymentStatus(String status) {
+        return "FAILED".equals(status) || "CANCELLED".equals(status) || "EXPIRED".equals(status);
     }
 
     private void validateAmount(Double actual, Double expected) throws ServiceException {

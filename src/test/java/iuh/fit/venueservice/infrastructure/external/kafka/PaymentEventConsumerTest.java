@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.external.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import org.junit.jupiter.api.Test;
@@ -57,11 +58,46 @@ class PaymentEventConsumerTest {
     void ignoresOtherEventTypes() throws Exception {
         var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 
-        consumer.consume("{\"eventType\":\"payment.failed.v1\",\"payload\":{}}");
+        consumer.consume("{\"eventType\":\"payment.processing.v1\",\"payload\":{}}");
 
         verify(bookingPaymentEventService, never()).applySucceededPayment(
                 org.mockito.ArgumentMatchers.any()
         );
+        verify(bookingPaymentEventService, never()).applyTerminalPayment(
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void mapsExpiredPaymentToTheVenueUseCase() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        UUID payerId = UUID.randomUUID();
+        UUID bookingId = UUID.randomUUID();
+        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+
+        consumer.consume("""
+                {
+                  "eventType": "payment.expired.v1",
+                  "payload": {
+                    "paymentId": "%s",
+                    "payerId": "%s",
+                    "purpose": "BOOKING_DEPOSIT",
+                    "referenceType": "BOOKING",
+                    "referenceId": "%s",
+                    "status": "EXPIRED",
+                    "failureCode": "PAYMENT_EXPIRED",
+                    "failureReason": "Đã hết thời gian giữ chỗ thanh toán"
+                  }
+                }
+                """.formatted(paymentId, payerId, bookingId));
+
+        ArgumentCaptor<PaymentTerminalCommand> command =
+                ArgumentCaptor.forClass(PaymentTerminalCommand.class);
+        verify(bookingPaymentEventService).applyTerminalPayment(command.capture());
+        assertThat(command.getValue()).isEqualTo(new PaymentTerminalCommand(
+                paymentId, payerId, "BOOKING_DEPOSIT", "BOOKING", bookingId,
+                "EXPIRED", "PAYMENT_EXPIRED", "Đã hết thời gian giữ chỗ thanh toán"
+        ));
     }
 
     @Test

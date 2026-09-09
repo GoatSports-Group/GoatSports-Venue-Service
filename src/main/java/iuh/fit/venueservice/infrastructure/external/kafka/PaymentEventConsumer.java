@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.external.kafka;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
@@ -44,13 +45,25 @@ public class PaymentEventConsumer {
                 ));
                 return;
             }
-            if (!"payment.succeeded.v1".equals(eventType)) return;
-            bookingPaymentEventService.applySucceededPayment(new PaymentSucceededCommand(
-                    uuid(payload, "paymentId"), uuid(payload, "payerId"),
-                    payload.path("purpose").asText(), payload.path("referenceType").asText(),
-                    uuid(payload, "referenceId"), payload.path("amount").asDouble(),
-                    payload.path("currency").asText(), payload.path("status").asText()
-            ));
+            if ("payment.succeeded.v1".equals(eventType)) {
+                bookingPaymentEventService.applySucceededPayment(new PaymentSucceededCommand(
+                        uuid(payload, "paymentId"), uuid(payload, "payerId"),
+                        payload.path("purpose").asText(), payload.path("referenceType").asText(),
+                        uuid(payload, "referenceId"), payload.path("amount").asDouble(),
+                        payload.path("currency").asText(), payload.path("status").asText()
+                ));
+                return;
+            }
+            if ("payment.failed.v1".equals(eventType)
+                    || "payment.cancelled.v1".equals(eventType)
+                    || "payment.expired.v1".equals(eventType)) {
+                bookingPaymentEventService.applyTerminalPayment(new PaymentTerminalCommand(
+                        uuid(payload, "paymentId"), uuid(payload, "payerId"),
+                        payload.path("purpose").asText(), payload.path("referenceType").asText(),
+                        uuid(payload, "referenceId"), payload.path("status").asText(),
+                        nullableText(payload, "failureCode"), nullableText(payload, "failureReason")
+                ));
+            }
         } catch (ServiceException exception) {
             throw new IllegalStateException(exception.getMessage(), exception);
         } catch (Exception exception) {

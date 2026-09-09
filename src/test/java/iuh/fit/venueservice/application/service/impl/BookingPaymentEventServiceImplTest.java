@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
@@ -157,6 +158,28 @@ class BookingPaymentEventServiceImplTest {
         assertThat(cancellation.getStatus()).isEqualTo(CancellationStatus.REFUND_FAILED);
         assertThat(cancellation.getRefundFailureReason()).isEqualTo("Không tìm thấy tài khoản nhận chi");
         verify(bookingCancellationRepository).save(cancellation);
+    }
+
+    @Test
+    void expiresUnpaidBookingAndReleasesSlotForTerminalPayment() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        UUID payerId = UUID.randomUUID();
+        Booking booking = booking(bookingId, payerId);
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.save(booking)).thenReturn(booking);
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService, bookingCancellationRepository
+        );
+
+        assertThat(service.applyTerminalPayment(new PaymentTerminalCommand(
+                UUID.randomUUID(), payerId, "BOOKING_DEPOSIT", "BOOKING", bookingId,
+                "EXPIRED", "PAYMENT_EXPIRED", "Đã hết thời gian giữ chỗ thanh toán"
+        ))).isTrue();
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.EXPIRED);
+        verify(timeSlotLifecycleService).releaseBookingSlot(booking);
+        verify(bookingRepository).save(booking);
     }
 
     private Booking booking(UUID bookingId, UUID payerId) {
