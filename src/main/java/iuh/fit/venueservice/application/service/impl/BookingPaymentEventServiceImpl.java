@@ -62,6 +62,12 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             default -> CancellationStatus.REFUND_PROCESSING;
         };
         cancellation.setStatus(status);
+        cancellation.setRefundFailureReason(
+                status == CancellationStatus.REFUND_FAILED
+                        || status == CancellationStatus.REFUND_AWAITING_BANK_ACCOUNT
+                        ? command.failureReason()
+                        : null
+        );
         booking.setStatus(status == CancellationStatus.REFUNDED
                 ? BookingStatus.REFUNDED : BookingStatus.REFUND_PENDING);
         bookingCancellationRepository.save(cancellation);

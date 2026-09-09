@@ -5,6 +5,7 @@ import java.util.UUID;
 public record RefundResultCommand(
         UUID refundId,
         UUID paymentId,
-        String status
+        String status,
+        String failureReason
 ) {
 }

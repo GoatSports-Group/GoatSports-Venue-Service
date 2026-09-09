@@ -47,6 +47,9 @@ public class BookingCancellationEntity extends BaseEntity {
     @Column(length = 1000)
     private String decisionReason;
 
+    @Column(name = "refund_failure_reason", length = 1000)
+    private String refundFailureReason;
+
     private LocalDateTime processedAt;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)

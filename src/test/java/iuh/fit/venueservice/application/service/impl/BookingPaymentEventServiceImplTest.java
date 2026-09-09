@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
@@ -8,10 +9,12 @@ import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
+import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.domain.enums.CancellationStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -117,6 +120,43 @@ class BookingPaymentEventServiceImplTest {
         assertThat(booking.getRemainingPaymentId()).isEqualTo(paymentId);
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
         verify(timeSlotLifecycleService).confirmBookingSlot(booking);
+    }
+
+    @Test
+    void persistsRefundFailureReasonFromPaymentEvent() throws Exception {
+        UUID refundId = UUID.randomUUID();
+        UUID paymentId = UUID.randomUUID();
+        UUID bookingId = UUID.randomUUID();
+        BookingCancellation cancellation = BookingCancellation.builder()
+                .refundId(refundId)
+                .bookingId(bookingId)
+                .status(CancellationStatus.REFUND_PROCESSING)
+                .build();
+        Booking booking = Booking.builder()
+                .bookingId(bookingId)
+                .depositPaymentId(paymentId)
+                .status(BookingStatus.REFUND_PENDING)
+                .build();
+        when(bookingCancellationRepository.findByRefundIdForUpdate(refundId))
+                .thenReturn(Optional.of(cancellation));
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingCancellationRepository.save(cancellation)).thenReturn(cancellation);
+        when(bookingRepository.save(booking)).thenReturn(booking);
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService, bookingCancellationRepository
+        );
+
+        assertThat(service.applyRefundResult(new RefundResultCommand(
+                refundId,
+                paymentId,
+                "FAILED",
+                "Không tìm thấy tài khoản nhận chi"
+        ))).isTrue();
+
+        assertThat(cancellation.getStatus()).isEqualTo(CancellationStatus.REFUND_FAILED);
+        assertThat(cancellation.getRefundFailureReason()).isEqualTo("Không tìm thấy tài khoản nhận chi");
+        verify(bookingCancellationRepository).save(cancellation);
     }
 
     private Booking booking(UUID bookingId, UUID payerId) {

@@ -37,7 +37,10 @@ public class PaymentEventConsumer {
             JsonNode payload = envelope.path("payload");
             if (eventType.startsWith("refund.")) {
                 bookingPaymentEventService.applyRefundResult(new RefundResultCommand(
-                        uuid(payload, "refundId"), uuid(payload, "paymentId"), payload.path("status").asText()
+                        uuid(payload, "refundId"),
+                        uuid(payload, "paymentId"),
+                        payload.path("status").asText(),
+                        nullableText(payload, "failureReason")
                 ));
                 return;
             }
@@ -57,5 +60,12 @@ public class PaymentEventConsumer {
 
     private java.util.UUID uuid(JsonNode node, String field) {
         return java.util.UUID.fromString(node.path(field).asText());
+    }
+
+    private String nullableText(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        return value.isMissingNode() || value.isNull() || value.asText().isBlank()
+                ? null
+                : value.asText();
     }
 }

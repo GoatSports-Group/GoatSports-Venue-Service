@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.external.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
+import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,6 +62,34 @@ class PaymentEventConsumerTest {
         verify(bookingPaymentEventService, never()).applySucceededPayment(
                 org.mockito.ArgumentMatchers.any()
         );
+    }
+
+    @Test
+    void mapsRefundFailureReasonToTheVenueUseCase() throws Exception {
+        UUID refundId = UUID.randomUUID();
+        UUID paymentId = UUID.randomUUID();
+        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+
+        consumer.consume("""
+                {
+                  "eventType": "refund.failed.v1",
+                  "payload": {
+                    "refundId": "%s",
+                    "paymentId": "%s",
+                    "status": "FAILED",
+                    "failureReason": "Không tìm thấy tài khoản nhận chi"
+                  }
+                }
+                """.formatted(refundId, paymentId));
+
+        ArgumentCaptor<RefundResultCommand> command = ArgumentCaptor.forClass(RefundResultCommand.class);
+        verify(bookingPaymentEventService).applyRefundResult(command.capture());
+        assertThat(command.getValue()).isEqualTo(new RefundResultCommand(
+                refundId,
+                paymentId,
+                "FAILED",
+                "Không tìm thấy tài khoản nhận chi"
+        ));
     }
 
     @Test

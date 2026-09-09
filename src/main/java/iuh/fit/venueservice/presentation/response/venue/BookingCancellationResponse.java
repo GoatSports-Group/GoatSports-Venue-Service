@@ -26,6 +26,7 @@ public class BookingCancellationResponse {
     private String reviewMode;
     private UUID processedBy;
     private String decisionReason;
+    private String refundFailureReason;
     private LocalDateTime processedAt;
     private LocalDateTime createdAt;
 }

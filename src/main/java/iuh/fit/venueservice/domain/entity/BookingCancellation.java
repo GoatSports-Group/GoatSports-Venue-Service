@@ -28,5 +28,6 @@ public class BookingCancellation extends BaseEntity {
     private CancellationReviewMode reviewMode;
     private UUID processedBy;
     private String decisionReason;
+    private String refundFailureReason;
     private LocalDateTime processedAt;
 }
