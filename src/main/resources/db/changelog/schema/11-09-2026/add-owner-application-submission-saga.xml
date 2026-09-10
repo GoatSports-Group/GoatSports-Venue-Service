@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260911-create-owner-application-submission-saga" author="codex">
+        <validCheckSum>ANY</validCheckSum>
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="owner_applications" columnName="received_at"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="owner_applications">
+            <column name="received_at" type="TIMESTAMP"/>
+            <column name="viewed_at" type="TIMESTAMP"/>
+        </addColumn>
+        <sql>UPDATE owner_applications SET received_at = created_at WHERE received_at IS NULL;</sql>
+    </changeSet>
+
+    <changeSet id="20260911-drop-owner-application-submission-documents" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="owner_application_submission_documents"/>
+        </preConditions>
+        <dropTable tableName="owner_application_submission_documents" cascadeConstraints="true"/>
+    </changeSet>
+
+    <changeSet id="20260911-drop-owner-application-submissions" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="owner_application_submissions"/>
+        </preConditions>
+        <dropTable tableName="owner_application_submissions" cascadeConstraints="true"/>
+    </changeSet>
+</databaseChangeLog>

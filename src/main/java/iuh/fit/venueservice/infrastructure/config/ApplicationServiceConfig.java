@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.config;
 
 import iuh.fit.venueservice.application.port.*;
 import iuh.fit.venueservice.application.port.persistence.*;
+import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.service.impl.*;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import org.springframework.context.annotation.Bean;
@@ -23,10 +24,11 @@ public class ApplicationServiceConfig {
     @Bean
     public OwnerApplicationServiceImpl ownerApplicationService(
             OwnerApplicationRepository ownerApplicationRepository,
+            OwnerApplicationDocumentRepository ownerApplicationDocumentRepository,
             VenueRepository venueRepository
     ) {
         return new OwnerApplicationServiceImpl(
-                ownerApplicationRepository, venueRepository
+                ownerApplicationRepository, ownerApplicationDocumentRepository, venueRepository
         );
     }
 
@@ -40,6 +42,19 @@ public class ApplicationServiceConfig {
         return new OwnerApplicationDocumentServiceImpl(
                 storagePort,
                 ownerApplicationRepository, ownerApplicationDocumentRepository
+        );
+    }
+
+    @Bean
+    public OwnerApplicationRegistrationServiceImpl ownerApplicationRegistrationService(
+            OwnerApplicationService ownerApplicationService,
+            OwnerApplicationRepository ownerApplicationRepository,
+            StoragePort storagePort
+    ) {
+        return new OwnerApplicationRegistrationServiceImpl(
+                ownerApplicationService,
+                ownerApplicationRepository,
+                storagePort
         );
     }
 

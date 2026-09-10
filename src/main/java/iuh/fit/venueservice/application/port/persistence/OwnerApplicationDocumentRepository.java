@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface OwnerApplicationDocumentRepository {
     OwnerApplicationDocument save(OwnerApplicationDocument document, UUID ownerApplicationId) throws ServiceException;
+
+    OwnerApplicationDocument updateFileUrl(UUID documentId, String fileUrl) throws ServiceException;
 }

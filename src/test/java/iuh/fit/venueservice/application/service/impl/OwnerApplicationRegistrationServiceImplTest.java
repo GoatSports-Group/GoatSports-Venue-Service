@@ -1,0 +1,102 @@
+package iuh.fit.venueservice.application.service.impl;
+
+import iuh.fit.venueservice.application.dto.request.application.OwnerApplicationUploadedDocumentCommand;
+import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
+import iuh.fit.venueservice.application.port.StoragePort;
+import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
+import iuh.fit.venueservice.application.service.OwnerApplicationService;
+import iuh.fit.venueservice.domain.entity.OwnerApplication;
+import iuh.fit.venueservice.domain.enums.BusinessType;
+import iuh.fit.venueservice.domain.enums.OwnerApplicationDocumentSlot;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class OwnerApplicationRegistrationServiceImplTest {
+    @Mock
+    private OwnerApplicationService ownerApplicationService;
+    @Mock
+    private OwnerApplicationRepository ownerApplicationRepository;
+    @Mock
+    private StoragePort storagePort;
+
+    @Test
+    void submitConfirmsFilesAndCreatesApplication() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID applicationId = UUID.randomUUID();
+        SubmitOwnerApplicationCommand command = command(applicationId, userId);
+        OwnerApplication application = OwnerApplication.builder()
+                .ownerApplicationId(applicationId)
+                .userId(userId)
+                .build();
+        when(storagePort.confirmFile(anyList())).thenReturn(command.documents().stream()
+                .map(document -> document.objectKey().substring("temp/".length()))
+                .toList());
+        when(ownerApplicationService.submitOwnerApplication(command)).thenReturn(application);
+
+        OwnerApplicationRegistrationServiceImpl service = service();
+
+        OwnerApplication result = service.submit(command);
+
+        assertThat(result).isSameAs(application);
+        verify(storagePort).confirmFile(anyList());
+        verify(ownerApplicationService).submitOwnerApplication(command);
+    }
+
+    private OwnerApplicationRegistrationServiceImpl service() {
+        return new OwnerApplicationRegistrationServiceImpl(
+                ownerApplicationService,
+                ownerApplicationRepository,
+                storagePort
+        );
+    }
+
+    private SubmitOwnerApplicationCommand command(UUID applicationId, UUID userId) {
+        return new SubmitOwnerApplicationCommand(
+                applicationId,
+                userId,
+                "Nguyễn Văn A",
+                "0909000000",
+                "owner@goatsports.test",
+                "079123456789",
+                "Goat Arena",
+                BusinessType.INDIVIDUAL,
+                "0312345678",
+                "1 Goat Street",
+                "Hồ Chí Minh",
+                "Quận 1",
+                "Phường Bến Nghé",
+                "Hồ Chí Minh",
+                10.7769,
+                106.7009,
+                List.of(
+                        document(userId, OwnerApplicationDocumentSlot.IDENTITY_FRONT, "identities/front.jpg"),
+                        document(userId, OwnerApplicationDocumentSlot.IDENTITY_BACK, "identities/back.jpg"),
+                        document(userId, OwnerApplicationDocumentSlot.BUSINESS_LICENSE, "licenses/license.jpg"),
+                        document(userId, OwnerApplicationDocumentSlot.VENUE_PHOTO, "venues/venue.jpg")
+                )
+        );
+    }
+
+    private OwnerApplicationUploadedDocumentCommand document(
+            UUID userId,
+            OwnerApplicationDocumentSlot slot,
+            String path
+    ) {
+        int separator = path.indexOf('/');
+        return new OwnerApplicationUploadedDocumentCommand(
+                slot,
+                "temp/" + path.substring(0, separator) + "/" + userId + path.substring(separator)
+        );
+    }
+}

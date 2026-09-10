@@ -21,7 +21,6 @@ import java.util.UUID;
 @ToString(exclude = { "ownerApplicationDocuments", "venue", "address" })
 public class OwnerApplicationEntity extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(columnDefinition = "UUID")
     private UUID ownerApplicationId;
     private UUID userId;
@@ -38,6 +37,8 @@ public class OwnerApplicationEntity extends BaseEntity {
     private String rejectReason;
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
+    private LocalDateTime receivedAt;
+    private LocalDateTime viewedAt;
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
     @JoinColumn(name = "address_id", nullable = false, unique = true)

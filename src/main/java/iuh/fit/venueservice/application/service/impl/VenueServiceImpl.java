@@ -217,7 +217,7 @@ public class VenueServiceImpl implements VenueService {
             replacements.put(tempKeys.get(index), permanentKeys.get(index));
         }
 
-        storagePort.moveFile(new MoveFileRequest(requests, 0L));
+        storagePort.moveFile(new MoveFileRequest(requests, "venue-upload:" + UUID.randomUUID()));
         return imageKeys.stream()
                 .map(key -> replacements.getOrDefault(key, key))
                 .toList();

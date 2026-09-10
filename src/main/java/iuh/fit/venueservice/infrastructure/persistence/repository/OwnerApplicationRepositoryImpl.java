@@ -13,6 +13,7 @@ import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressEntityMappe
 import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,6 +35,17 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     private final OwnerApplicationEntityMapper ownerApplicationEntityMapper;
     private final AddressEntityMapper addressEntityMapper;
     private final JpaVenueRepository jpaVenueRepository;
+    private final EntityManager entityManager;
+
+    @Override
+    public OwnerApplication create(OwnerApplication ownerApplication) {
+        OwnerApplicationEntity entity = ownerApplicationEntityMapper.createEntity(
+                ownerApplication,
+                addressEntityMapper
+        );
+        entityManager.persist(entity);
+        return ownerApplicationEntityMapper.toDomain(entity);
+    }
 
     @Override
     public OwnerApplication save(OwnerApplication ownerApplication) throws ServiceException {
@@ -60,7 +72,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
 
     @Override
     public Optional<OwnerApplication> findById(UUID id) {
-        return jpaRepository.findById(id).map(ownerApplicationEntityMapper::toDomain);
+        return jpaRepository.findDetailedById(id).map(ownerApplicationEntityMapper::toDomain);
     }
 
     @Override
@@ -97,6 +109,14 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     @Override
     public boolean existsByUserIdAndStatusIn(UUID userId, List<OwnerApplicationStatus> statuses) {
         return jpaRepository.existsByUserIdAndStatusIn(userId, statuses);
+    }
+
+    @Override
+    public List<OwnerApplication> findWithTemporaryDocuments(int limit) {
+        Pageable pageable = PageRequest.of(0, Math.max(1, limit), Sort.by(Sort.Direction.ASC, "createdAt"));
+        return jpaRepository.findWithDocumentFileUrlPrefix("temp/", pageable).stream()
+                .map(ownerApplicationEntityMapper::toDomain)
+                .toList();
     }
 
     @Override

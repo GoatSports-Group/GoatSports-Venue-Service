@@ -6,9 +6,13 @@ import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
+import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
+import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
+import iuh.fit.venueservice.presentation.request.application.RejectOwnerApplicationRequest;
 import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -17,6 +21,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin/owner-applications")
@@ -26,6 +31,7 @@ public class OwnerApplicationAdminController {
     private final OwnerApplicationService ownerApplicationService;
     private final OwnerApplicationMapper ownerApplicationMapper;
     private final OwnerApplicationConverter ownerApplicationConverter;
+    private final CurrentUserProvider currentUserProvider;
 
     @GetMapping
     @PreAuthorize("hasAuthority('GET_OWNER_APPLICATIONS')")
@@ -61,6 +67,42 @@ public class OwnerApplicationAdminController {
                 ownerApplicationService.getOwnerApplicationDetail(id)
         );
         return ResponseEntity.status(HttpStatus.OK).body(ownerApplicationConverter.toResponse(result));
+    }
+
+    @PutMapping("/{id}/viewed")
+    @PreAuthorize("hasAuthority('MARK_OWNER_APPLICATION_VIEWED')")
+    public ResponseEntity<OwnerApplicationResponse> markViewed(@PathVariable UUID id) throws ServiceException {
+        return ResponseEntity.ok(ownerApplicationConverter.toResponse(
+                ownerApplicationMapper.toOwnerApplicationResponseCommand(ownerApplicationService.markViewed(id))
+        ));
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAuthority('APPROVE_OWNER_APPLICATION')")
+    public ResponseEntity<OwnerApplicationResponse> approve(@PathVariable UUID id) throws ServiceException {
+        return ResponseEntity.ok(ownerApplicationConverter.toResponse(
+                ownerApplicationMapper.toOwnerApplicationResponseCommand(
+                        ownerApplicationService.approveOwnerApplication(id, currentUserId())
+                )
+        ));
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('REJECT_OWNER_APPLICATION')")
+    public ResponseEntity<OwnerApplicationResponse> reject(
+            @PathVariable UUID id,
+            @Valid @RequestBody RejectOwnerApplicationRequest request
+    ) throws ServiceException {
+        return ResponseEntity.ok(ownerApplicationConverter.toResponse(
+                ownerApplicationMapper.toOwnerApplicationResponseCommand(
+                        ownerApplicationService.rejectOwnerApplication(id, currentUserId(), request.getRejectReason())
+                )
+        ));
+    }
+
+    private UUID currentUserId() throws ServiceException {
+        return BaseUtil.uuid(currentUserProvider.getCurrentUserId()
+                .orElseThrow(() -> new ServiceException("Không xác định được người duyệt.")));
     }
 
 }

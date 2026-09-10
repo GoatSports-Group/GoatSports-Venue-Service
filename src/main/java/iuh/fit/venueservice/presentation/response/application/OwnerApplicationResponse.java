@@ -27,6 +27,8 @@ public class OwnerApplicationResponse {
     private LocalDateTime createdAt;
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
+    private LocalDateTime receivedAt;
+    private LocalDateTime viewedAt;
 
     private AddressResponse address;
     private Set<DocumentResponse> documents;

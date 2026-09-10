@@ -11,9 +11,13 @@ import java.util.UUID;
 public interface OwnerApplicationService {
     OwnerApplication submitOwnerApplication(SubmitOwnerApplicationCommand command) throws ServiceException;
 
+    void markDocumentsMoved(UUID applicationId) throws ServiceException;
+
     OwnerApplication rejectOwnerApplication(UUID applicationId, UUID reviewerId, String rejectReason) throws ServiceException;
 
     OwnerApplication approveOwnerApplication(UUID applicationId, UUID reviewerId) throws ServiceException;
+
+    OwnerApplication markViewed(UUID applicationId) throws ServiceException;
 
     OwnerApplication getOwnerApplicationDetail(String id) throws ServiceException;
 

@@ -37,4 +37,14 @@ public class OwnerApplicationDocumentRepositoryImpl implements OwnerApplicationD
 
         return ownerApplicationDocumentEntityMapper.toDomain(saved);
     }
+
+    @Override
+    public OwnerApplicationDocument updateFileUrl(UUID documentId, String fileUrl) throws ServiceException {
+        OwnerApplicationDocumentEntity entity = jpaOwnerApplicationDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ServiceException("Tài liệu của đơn đăng ký không tồn tại."));
+        entity.setFileUrl(fileUrl);
+        return ownerApplicationDocumentEntityMapper.toDomain(
+                jpaOwnerApplicationDocumentRepository.save(entity)
+        );
+    }
 }

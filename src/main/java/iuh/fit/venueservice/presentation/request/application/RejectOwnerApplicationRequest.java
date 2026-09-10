@@ -1,15 +1,16 @@
 package iuh.fit.venueservice.presentation.request.application;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReviewOwnerApplicationRequest {
-    @NotBlank(message = "Người duyệt không được để trống")
-    private String reviewerId;
+public class RejectOwnerApplicationRequest {
     @NotBlank(message = "Lý do từ chối không được để trống")
     private String rejectReason;
 }

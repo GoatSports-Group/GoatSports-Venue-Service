@@ -1,16 +1,26 @@
 package iuh.fit.venueservice.presentation.controller;
 
+import iuh.fit.shared.annotation.AuditLog;
 import iuh.fit.venueservice.application.dto.PageFilter;
+import iuh.fit.venueservice.application.dto.request.application.*;
 import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
+import iuh.fit.venueservice.application.dto.response.application.PreparedOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
+import iuh.fit.venueservice.application.service.OwnerApplicationRegistrationService;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.util.BaseUtil;
+import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
+import iuh.fit.venueservice.presentation.request.application.CleanupOwnerApplicationUploadRequest;
+import iuh.fit.venueservice.presentation.request.application.PrepareOwnerApplicationUploadRequest;
+import iuh.fit.venueservice.presentation.request.application.SubmitOwnerApplicationRequest;
 import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
+import iuh.fit.venueservice.presentation.response.application.PreparedOwnerApplicationUploadResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -30,6 +40,7 @@ public class OwnerApplicationController {
     private final CurrentUserProvider currentUserProvider;
     private final OwnerApplicationMapper ownerApplicationMapper;
     private final OwnerApplicationConverter ownerApplicationConverter;
+    private final OwnerApplicationRegistrationService registrationService;
 
     @GetMapping("/me")
     public ResponseEntity<BaseListResponse> getMyOwnerApplications(
@@ -58,5 +69,92 @@ public class OwnerApplicationController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.status(HttpStatus.OK).body(new BaseListResponse(meta, responses));
+    }
+
+    @PostMapping("/uploads")
+    public ResponseEntity<PreparedOwnerApplicationUploadResponse> prepareUpload(
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody PrepareOwnerApplicationUploadRequest request
+    ) throws ServiceException {
+        PreparedOwnerApplicationUploadCommand result = registrationService.prepareUpload(
+                new PrepareOwnerApplicationUploadCommand(
+                        currentUserId(),
+                        idempotencyKey,
+                        request.getDocuments().stream()
+                                .map(document -> new OwnerApplicationUploadDocumentCommand(
+                                        document.getSlot(),
+                                        document.getFileName(),
+                                        document.getContentType()
+                                ))
+                                .toList()
+                )
+        );
+        return ResponseEntity.ok(toResponse(result));
+    }
+
+    @PostMapping
+    @AuditLog(action = "SUBMIT_APPLICATION", description = "Gửi đơn đăng ký chủ sân")
+    public ResponseEntity<OwnerApplicationResponse> submit(
+            @Valid @RequestBody SubmitOwnerApplicationRequest request
+    ) throws ServiceException {
+        OwnerApplication application = registrationService.submit(new SubmitOwnerApplicationCommand(
+                request.getOwnerApplicationId(),
+                currentUserId(),
+                request.getFullName(),
+                request.getPhone(),
+                request.getEmail(),
+                request.getIdentityNumber(),
+                request.getBusinessName(),
+                request.getBusinessType(),
+                request.getTaxCode(),
+                request.getAddress(),
+                request.getProvince(),
+                request.getDistrict(),
+                request.getWard(),
+                request.getCity(),
+                request.getLatitude(),
+                request.getLongitude(),
+                request.getDocuments().stream()
+                        .map(document -> new OwnerApplicationUploadedDocumentCommand(
+                                document.getSlot(),
+                                document.getObjectKey()
+                        ))
+                        .toList()
+        ));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ownerApplicationConverter.toResponse(
+                ownerApplicationMapper.toOwnerApplicationResponseCommand(application)
+        ));
+    }
+
+    @PostMapping("/uploads/cleanup")
+    public ResponseEntity<Void> cleanupUpload(
+            @Valid @RequestBody CleanupOwnerApplicationUploadRequest request
+    ) throws ServiceException {
+        registrationService.cleanupUpload(new CleanupOwnerApplicationUploadCommand(
+                request.getOwnerApplicationId(),
+                currentUserId(),
+                request.getObjectKeys()
+        ));
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID currentUserId() throws ServiceException {
+        String userId = currentUserProvider.getCurrentUserId()
+                .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập để nộp hồ sơ."));
+        return BaseUtil.uuid(userId);
+    }
+
+    private PreparedOwnerApplicationUploadResponse toResponse(PreparedOwnerApplicationUploadCommand command) {
+        return PreparedOwnerApplicationUploadResponse.builder()
+                .ownerApplicationId(command.ownerApplicationId())
+                .documents(command.documents().stream()
+                        .map(document -> PreparedOwnerApplicationUploadResponse.DocumentResponse.builder()
+                                .slot(document.slot().name())
+                                .uploadUrl(document.uploadUrl())
+                                .objectKey(document.objectKey())
+                                .build())
+                        .toList())
+                .build();
     }
 }

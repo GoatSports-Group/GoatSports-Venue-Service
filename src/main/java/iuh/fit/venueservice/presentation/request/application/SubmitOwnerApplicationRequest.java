@@ -1,48 +1,73 @@
 package iuh.fit.venueservice.presentation.request.application;
 
-import jakarta.validation.constraints.Email;
+import iuh.fit.venueservice.domain.enums.BusinessType;
+import iuh.fit.venueservice.domain.enums.OwnerApplicationDocumentSlot;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class SubmitOwnerApplicationRequest {
-    @NotBlank(message = "Mã người dùng không được để trống")
-    private String userId;
-    @NotBlank(message = "Họ tên không được để trống")
+    @NotNull
+    private UUID ownerApplicationId;
+    @NotBlank
     private String fullName;
-    @NotBlank(message = "Số điện thoại không được để trống")
+    @NotBlank
     private String phone;
-    @NotBlank(message = "Email không được để trống")
-    @Email(message = "Email không đúng định dạng")
+    @NotBlank
+    @Email
     private String email;
-    @NotBlank(message = "Số CCCD/Hộ chiếu không được để trống")
+    @NotBlank
     private String identityNumber;
-    @NotBlank(message = "Tên doanh nghiệp/Hộ kinh doanh không được để trống")
+    @NotBlank
     private String businessName;
-    @NotNull(message = "Loại hình kinh doanh không được để trống")
-    private String businessType;
-    @NotBlank(message = "Mã số thuế không được để trống")
+    @NotNull
+    private BusinessType businessType;
+    @NotBlank
     private String taxCode;
-    @NotBlank(message = "Địa chỉ chi tiết không được để trống")
+    @NotBlank
     private String address;
-    @NotBlank(message = "Tỉnh/Thành phố không được để trống")
+    @NotBlank
     private String province;
     private String district;
-    @NotBlank(message = "Phường/Xã không được để trống")
+    @NotBlank
     private String ward;
-    @NotBlank(message = "Thành phố không được để trống")
+    @NotBlank
     private String city;
-    @DecimalMin(value = "-90", message = "Vĩ độ không hợp lệ")
-    @DecimalMax(value = "90", message = "Vĩ độ không hợp lệ")
+    @DecimalMin("-90")
+    @DecimalMax("90")
     private Double latitude;
-    @DecimalMin(value = "-180", message = "Kinh độ không hợp lệ")
-    @DecimalMax(value = "180", message = "Kinh độ không hợp lệ")
+    @DecimalMin("-180")
+    @DecimalMax("180")
     private Double longitude;
+    @Valid
+    @NotEmpty
+    @Size(min = 4, max = 4)
+    private List<UploadedDocumentRequest> documents;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UploadedDocumentRequest {
+        @NotNull
+        private OwnerApplicationDocumentSlot slot;
+        @NotBlank
+        private String objectKey;
+    }
 }

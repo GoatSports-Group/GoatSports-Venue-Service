@@ -32,6 +32,8 @@ public class OwnerApplication extends BaseEntity {
     private String rejectReason;
     private UUID reviewerId;
     private LocalDateTime reviewedAt;
+    private LocalDateTime receivedAt;
+    private LocalDateTime viewedAt;
     private Address address;
     private Set<OwnerApplicationDocument> documents;
 }
