@@ -15,6 +15,7 @@ import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class VenueServiceImpl implements VenueService {
     private final VenueRepository venueRepository;
@@ -83,7 +85,7 @@ public class VenueServiceImpl implements VenueService {
     @Override
     public Venue updateVenue(UpdateVenueCommand command) throws ServiceException {
         Venue venue = getOwnedVenue(command.venueId(), command.currentUserId());
-        validate(command);
+        command.validate();
         List<String> imageKeys = finalizeNewImages(command.imageUrls());
 
         venue.setName(command.name().trim());
@@ -126,20 +128,20 @@ public class VenueServiceImpl implements VenueService {
             UUID currentUserId
     ) throws ServiceException {
         Venue venue = getOwnedVenue(venueId, currentUserId);
-        validateFacilityLayout(venue, layout);
+        ensureValidFacilityLayout(venue, layout);
         VenueFacilityLayout savedLayout = new VenueFacilityLayout(
                 1,
                 venueId,
                 List.copyOf(layout.items()),
                 List.copyOf(layout.zones()),
-                java.time.LocalDateTime.now()
+                LocalDateTime.now()
         );
         venue.setFacilityLayout(savedLayout);
         venueRepository.save(venue);
         return savedLayout;
     }
 
-    private void validateFacilityLayout(Venue venue, VenueFacilityLayout layout) throws ServiceException {
+    private void ensureValidFacilityLayout(Venue venue, VenueFacilityLayout layout) throws ServiceException {
         if (layout == null || layout.items() == null || layout.zones() == null) {
             throw new ServiceException("Dữ liệu bố cục cơ sở không hợp lệ.");
         }
@@ -152,7 +154,7 @@ public class VenueServiceImpl implements VenueService {
         Set<String> itemIds = new HashSet<>();
         Set<UUID> ownedCourtIds = venue.getCourts().stream()
                 .map(court -> court.getVenueCourtId())
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         for (VenueFacilityLayout.Item item : layout.items()) {
             if (!itemIds.add(item.id())) {
                 throw new ServiceException("Mỗi đối tượng trong bố cục phải có mã riêng.");
@@ -176,15 +178,6 @@ public class VenueServiceImpl implements VenueService {
     public Venue getVenue(UUID venueId) throws ServiceException {
         return venueRepository.findById(venueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cơ sở thể thao."));
-    }
-
-    private void validate(UpdateVenueCommand command) throws ServiceException {
-        if (!command.openTime().isBefore(command.closeTime())) {
-            throw new ServiceException("Giờ đóng cửa phải sau giờ mở cửa.");
-        }
-        if (command.minPrice() > command.maxPrice()) {
-            throw new ServiceException("Giá tối thiểu không được lớn hơn giá tối đa.");
-        }
     }
 
     private void assertOwner(Venue venue, UUID currentUserId) throws OwnershipException {

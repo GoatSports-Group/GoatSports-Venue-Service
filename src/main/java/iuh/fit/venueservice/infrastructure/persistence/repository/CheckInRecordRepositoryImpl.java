@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 
 import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository;
 import iuh.fit.venueservice.domain.entity.CheckInRecord;
+import iuh.fit.venueservice.infrastructure.persistence.entity.CheckInRecordEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.CheckInRecordEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaCheckInRecordRepository;
@@ -16,6 +17,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -33,14 +37,14 @@ public class CheckInRecordRepositoryImpl implements CheckInRecordRepository {
     }
 
     @Override
-    public java.util.Optional<CheckInRecord> findByBookingId(java.util.UUID bookingId) {
+    public Optional<CheckInRecord> findByBookingId(UUID bookingId) {
         return jpaRepository.findByBooking_BookingId(bookingId).map(mapper::toDomain);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResult<OwnerCheckInHistoryRecord> findOwnedCheckIns(OwnerCheckInFilter filter) {
-        Specification<iuh.fit.venueservice.infrastructure.persistence.entity.CheckInRecordEntity> spec =
+        Specification<CheckInRecordEntity> spec =
                 (root, query, cb) -> cb.equal(
                         root.get("booking").get("venueCourt").get("venue").get("ownerId"), filter.ownerId()
                 );

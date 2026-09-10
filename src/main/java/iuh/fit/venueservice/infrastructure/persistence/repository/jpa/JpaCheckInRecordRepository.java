@@ -5,10 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface JpaCheckInRecordRepository extends JpaRepository<CheckInRecordEntity, UUID>,
         JpaSpecificationExecutor<CheckInRecordEntity> {
-    java.util.Optional<CheckInRecordEntity> findByBooking_BookingId(UUID bookingId);
+    Optional<CheckInRecordEntity> findByBooking_BookingId(UUID bookingId);
 }

@@ -7,7 +7,9 @@ import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsR
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.domain.entity.Booking;
+import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.BookingEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueCourtRepository;
@@ -100,7 +102,9 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     @Transactional
     public List<Booking> findExpiredPaymentHoldsForUpdate(LocalDateTime cutoff) {
-        return jpaRepository.findExpiredPaymentHoldsForUpdate(cutoff).stream()
+        return jpaRepository.findExpiredPaymentHoldsForUpdate(
+                        cutoff, BookingStatus.PENDING_PAYMENT, BookingSource.WALK_IN
+                ).stream()
                 .map(mapper::toDomain)
                 .toList();
     }
@@ -111,6 +115,7 @@ public class BookingRepositoryImpl implements BookingRepository {
         return jpaRepository.findCompletionCandidatesForUpdate(
                         cutoff.toLocalDate(),
                         cutoff.toLocalTime(),
+                        BookingStatus.CHECKED_IN,
                         PageRequest.of(0, limit)
                 ).stream()
                 .map(mapper::toDomain)
@@ -120,7 +125,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     @Transactional(readOnly = true)
     public PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter) {
-        Specification<iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity> spec =
+        Specification<BookingEntity> spec =
                 (root, query, cb) -> cb.equal(
                         root.get("venueCourt").get("venue").get("ownerId"), filter.ownerId()
                 );
@@ -220,7 +225,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     private OwnerBookingRecord toOwnerRecord(
-            iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity entity
+            BookingEntity entity
     ) {
         var court = entity.getVenueCourt();
         var venue = court.getVenue();

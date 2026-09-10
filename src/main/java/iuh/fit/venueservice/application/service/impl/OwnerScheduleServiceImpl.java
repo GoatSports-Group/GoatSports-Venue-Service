@@ -28,8 +28,6 @@ import java.util.UUID;
 
 public class OwnerScheduleServiceImpl implements OwnerScheduleService {
     private static final int MAX_GENERATION_DAYS = 31;
-    private static final int MIN_SLOT_MINUTES = 30;
-    private static final int MAX_SLOT_MINUTES = 240;
 
     private final CourtPricingRuleRepository pricingRuleRepository;
     private final TimeSlotRepository timeSlotRepository;
@@ -59,8 +57,9 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
     public CourtPricingRule createPricingRule(UpsertCourtPricingRuleCommand command)
             throws ServiceException {
         OwnedCourt owned = getOwnedCourt(command.venueCourtId(), command.currentUserId());
-        validatePricingRule(command, owned.venue());
-        validateRuleStartMoment(command, null);
+        command.validate();
+        ensurePricingWithinVenue(command, owned.venue());
+        ensureRuleStartMoment(command, null);
         assertNoPricingOverlap(command, pricingRuleRepository.findByCourtId(command.venueCourtId()));
         return pricingRuleRepository.save(toPricingRule(command));
     }
@@ -71,11 +70,12 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         CourtPricingRule existing = pricingRuleRepository.findById(command.pricingRuleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quy tắc giá."));
         OwnedCourt owned = getOwnedCourt(existing.getCourtId(), command.currentUserId());
+        command.validate();
         if (!existing.getCourtId().equals(command.venueCourtId())) {
             throw new ServiceException("Không thể chuyển quy tắc giá sang sân thi đấu khác.");
         }
-        validatePricingRule(command, owned.venue());
-        validateRuleStartMoment(command, existing);
+        ensurePricingWithinVenue(command, owned.venue());
+        ensureRuleStartMoment(command, existing);
         assertNoPricingOverlap(command, pricingRuleRepository.findByCourtId(existing.getCourtId()));
         existing.setDayOfWeek(command.dayOfWeek());
         existing.setStartTime(command.startTime());
@@ -104,15 +104,14 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
             UUID venueCourtId, LocalDate fromDate, LocalDate toDate, UUID currentUserId
     ) throws ServiceException {
         getOwnedCourt(venueCourtId, currentUserId);
-        validateDateRange(fromDate, toDate, false);
+        ensureDateRange(fromDate, toDate, false);
         return timeSlotRepository.findByVenueCourtIdAndDateBetween(venueCourtId, fromDate, toDate);
     }
 
     @Override
     public List<TimeSlot> generateTimeSlots(GenerateTimeSlotsCommand command) throws ServiceException {
+        command.validate();
         OwnedCourt owned = getOwnedCourt(command.venueCourtId(), command.currentUserId());
-        validateDateRange(command.fromDate(), command.toDate(), true);
-        validateDuration(command.slotDurationMinutes());
         assertOpeningHours(owned.venue());
 
         List<CourtPricingRule> courtRules = pricingRuleRepository.findByCourtId(command.venueCourtId());
@@ -221,14 +220,7 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
     private List<CourtPricingRule> getSelectedApplicableRules(
             GenerateTimeSlotsCommand command, List<CourtPricingRule> courtRules
     ) throws ServiceException {
-        if (command.pricingRuleIds() == null || command.pricingRuleIds().isEmpty()
-                || command.pricingRuleIds().stream().anyMatch(java.util.Objects::isNull)) {
-            throw new ServiceException("Hãy chọn ít nhất một quy tắc giá để sinh lịch.");
-        }
         Set<UUID> selectedIds = new HashSet<>(command.pricingRuleIds());
-        if (selectedIds.size() != command.pricingRuleIds().size()) {
-            throw new ServiceException("Danh sách quy tắc giá được chọn không hợp lệ.");
-        }
 
         List<CourtPricingRule> selectedRules = courtRules.stream()
                 .filter(rule -> selectedIds.contains(rule.getPricingRuleId()))
@@ -269,19 +261,8 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
                 .build();
     }
 
-    private void validatePricingRule(UpsertCourtPricingRuleCommand command, Venue venue)
+    private void ensurePricingWithinVenue(UpsertCourtPricingRuleCommand command, Venue venue)
             throws ServiceException {
-        if (command.dayOfWeek() == null || command.startTime() == null || command.endTime() == null
-                || command.pricePerHour() == null || command.basePricePerHour() == null
-                || command.effectiveFrom() == null || command.effectiveTo() == null) {
-            throw new ServiceException("Vui lòng nhập đầy đủ thông tin quy tắc giá.");
-        }
-        if (!command.startTime().isBefore(command.endTime())) {
-            throw new ServiceException("Giờ bắt đầu phải trước giờ kết thúc.");
-        }
-        if (command.pricePerHour() <= 0 || command.basePricePerHour() <= 0) {
-            throw new ServiceException("Giá theo giờ phải lớn hơn 0.");
-        }
         if (venue.getMinPrice() == null || venue.getMaxPrice() == null
                 || venue.getMinPrice() > venue.getMaxPrice()) {
             throw new ServiceException("Cơ sở chưa thiết lập khoảng giá hợp lệ.");
@@ -290,22 +271,13 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
                 || command.pricePerHour() > venue.getMaxPrice()) {
             throw new ServiceException("Giá theo giờ phải nằm trong khoảng giá min-max của cơ sở.");
         }
-        if (command.effectiveFrom().isAfter(command.effectiveTo())) {
-            throw new ServiceException("Ngày bắt đầu hiệu lực phải trước hoặc bằng ngày kết thúc.");
-        }
-        int daysUntilRule = Math.floorMod(
-                command.dayOfWeek().getValue() - command.effectiveFrom().getDayOfWeek().getValue(), 7
-        );
-        if (command.effectiveFrom().plusDays(daysUntilRule).isAfter(command.effectiveTo())) {
-            throw new ServiceException("Khoảng hiệu lực không chứa ngày tương ứng với thứ đã chọn.");
-        }
         assertOpeningHours(venue);
         if (command.startTime().isBefore(venue.getOpenTime()) || command.endTime().isAfter(venue.getCloseTime())) {
             throw new ServiceException("Khung giờ giá phải nằm trong giờ hoạt động của cơ sở.");
         }
     }
 
-    private void validateRuleStartMoment(
+    private void ensureRuleStartMoment(
             UpsertCourtPricingRuleCommand command, CourtPricingRule existing
     ) throws ServiceException {
         boolean unchangedHistoricalStart = existing != null
@@ -348,7 +320,7 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         }
     }
 
-    private void validateDateRange(LocalDate fromDate, LocalDate toDate, boolean futureOnly)
+    private void ensureDateRange(LocalDate fromDate, LocalDate toDate, boolean futureOnly)
             throws ServiceException {
         if (fromDate == null || toDate == null || fromDate.isAfter(toDate)) {
             throw new ServiceException("Khoảng ngày không hợp lệ.");
@@ -358,13 +330,6 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         }
         if (ChronoUnit.DAYS.between(fromDate, toDate) >= MAX_GENERATION_DAYS) {
             throw new ServiceException("Mỗi lần chỉ được quản lý tối đa 31 ngày.");
-        }
-    }
-
-    private void validateDuration(Integer durationMinutes) throws ServiceException {
-        if (durationMinutes == null || durationMinutes < MIN_SLOT_MINUTES
-                || durationMinutes > MAX_SLOT_MINUTES || durationMinutes % 15 != 0) {
-            throw new ServiceException("Thời lượng slot phải từ 30 đến 240 phút và chia hết cho 15.");
         }
     }
 

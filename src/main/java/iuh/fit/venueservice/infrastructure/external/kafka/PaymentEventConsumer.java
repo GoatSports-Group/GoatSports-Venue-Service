@@ -14,6 +14,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -71,8 +73,8 @@ public class PaymentEventConsumer {
         }
     }
 
-    private java.util.UUID uuid(JsonNode node, String field) {
-        return java.util.UUID.fromString(node.path(field).asText());
+    private UUID uuid(JsonNode node, String field) {
+        return UUID.fromString(node.path(field).asText());
     }
 
     private String nullableText(JsonNode node, String field) {

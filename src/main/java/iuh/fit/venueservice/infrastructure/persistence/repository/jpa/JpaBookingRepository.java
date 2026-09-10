@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository.jpa;
 
 import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
+import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,7 @@ import java.util.Optional;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Repository
@@ -51,25 +53,30 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select booking from BookingEntity booking
-            where booking.status = iuh.fit.venueservice.domain.enums.BookingStatus.PENDING_PAYMENT
-              and booking.source <> iuh.fit.venueservice.domain.enums.BookingSource.WALK_IN
+            where booking.status = :status
+              and booking.source <> :excludedSource
               and booking.holdExpiresAt is not null
               and booking.holdExpiresAt <= :cutoff
             order by booking.holdExpiresAt asc
             """)
-    List<BookingEntity> findExpiredPaymentHoldsForUpdate(@Param("cutoff") LocalDateTime cutoff);
+    List<BookingEntity> findExpiredPaymentHoldsForUpdate(
+            @Param("cutoff") LocalDateTime cutoff,
+            @Param("status") BookingStatus status,
+            @Param("excludedSource") BookingSource excludedSource
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select booking from BookingEntity booking
-            where booking.status = iuh.fit.venueservice.domain.enums.BookingStatus.CHECKED_IN
+            where booking.status = :status
               and (booking.playDate < :cutoffDate
                    or (booking.playDate = :cutoffDate and booking.endTime <= :cutoffTime))
             order by booking.playDate, booking.endTime, booking.bookingId
             """)
     List<BookingEntity> findCompletionCandidatesForUpdate(
             @Param("cutoffDate") LocalDate cutoffDate,
-            @Param("cutoffTime") java.time.LocalTime cutoffTime,
+            @Param("cutoffTime") LocalTime cutoffTime,
+            @Param("status") BookingStatus status,
             Pageable pageable
     );
 

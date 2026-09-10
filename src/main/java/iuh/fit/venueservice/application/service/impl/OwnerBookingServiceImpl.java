@@ -19,8 +19,10 @@ import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepo
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.OwnerBookingService;
+import iuh.fit.venueservice.application.service.BookingPaymentStatusPolicy;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
+import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
@@ -35,12 +37,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static iuh.fit.venueservice.application.service.BookingPaymentStatusPolicy.isFullyPaid;
-
 public class OwnerBookingServiceImpl implements OwnerBookingService {
-    private static final int MAX_PAGE_SIZE = 20;
-    private static final int MAX_DATE_RANGE_DAYS = 366;
-
     private final BookingRepository bookingRepository;
     private final BookingCancellationRepository bookingCancellationRepository;
     private final VenueCourtRepository venueCourtRepository;
@@ -75,8 +72,8 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
 
     @Override
     public PageResult<OwnerBookingView> getBookings(OwnerBookingFilter filter) throws ServiceException {
-        validateFilter(filter);
-        validateRequestedScope(filter);
+        filter.validate();
+        ensureRequestedScope(filter);
         PageResult<OwnerBookingRecord> page = bookingRepository.findOwnedBookings(filter);
         Set<UUID> bookingIds = page.items().stream()
                 .map(item -> item.booking().getBookingId()).collect(Collectors.toSet());
@@ -101,10 +98,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
 
     @Override
     public OwnerBookingView updateStatus(UpdateOwnerBookingStatusCommand command) throws ServiceException {
-        if (command == null || command.bookingId() == null || command.ownerId() == null
-                || command.status() == null) {
-            throw new ServiceException("Booking, trạng thái và owner là bắt buộc.");
-        }
+        command.validate();
         OwnerBookingRecord record = getOwnedBookingForUpdate(command.bookingId(), command.ownerId());
         Booking booking = record.booking();
         if (command.status() != BookingStatus.COMPLETED) {
@@ -119,7 +113,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         }
 
         List<PaymentSnapshot> payments = paymentQueryPort.findByBookingIds(Set.of(command.bookingId()));
-        if (!isFullyPaid(booking, payments)) {
+        if (!BookingPaymentStatusPolicy.isFullyPaid(booking, payments)) {
             throw new ServiceException("Booking vẫn còn công nợ nên chưa thể chuyển sang hoàn thành.");
         }
         booking.setStatus(BookingStatus.COMPLETED);
@@ -131,10 +125,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
 
     @Override
     public OwnerBookingPaymentResult createPayment(CreateOwnerBookingPaymentCommand command) throws ServiceException {
-        if (command == null || command.bookingId() == null || command.ownerId() == null
-                || command.method() == null) {
-            throw new ServiceException("Booking, owner và phương thức thanh toán là bắt buộc.");
-        }
+        command.validate();
         OwnerBookingRecord record = getOwnedBookingForUpdate(command.bookingId(), command.ownerId());
         Booking booking = record.booking();
         if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
@@ -216,29 +207,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         bookingRepository.save(booking);
     }
 
-    private void validateFilter(OwnerBookingFilter filter) throws ServiceException {
-        if (filter == null || filter.ownerId() == null) {
-            throw new ServiceException("Không xác định được chủ sân.");
-        }
-        if (filter.page() < 0 || filter.size() < 1 || filter.size() > MAX_PAGE_SIZE) {
-            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 20.");
-        }
-        if (filter.fromDate() != null && filter.toDate() != null) {
-            if (filter.fromDate().isAfter(filter.toDate())) {
-                throw new ServiceException("Khoảng ngày booking không hợp lệ.");
-            }
-            if (java.time.temporal.ChronoUnit.DAYS.between(
-                    filter.fromDate(), filter.toDate()
-            ) > MAX_DATE_RANGE_DAYS) {
-                throw new ServiceException("Khoảng ngày booking tối đa 366 ngày.");
-            }
-        }
-        if (filter.query() != null && filter.query().trim().length() > 100) {
-            throw new ServiceException("Từ khóa tìm kiếm tối đa 100 ký tự.");
-        }
-    }
-
-    private void validateRequestedScope(OwnerBookingFilter filter) throws ServiceException {
+    private void ensureRequestedScope(OwnerBookingFilter filter) throws ServiceException {
         Venue requestedVenue = null;
         if (filter.venueId() != null) {
             requestedVenue = getOwnedVenue(filter.venueId(), filter.ownerId());
@@ -293,7 +262,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
 
     private OwnerBookingView toView(
             OwnerBookingRecord record,
-            iuh.fit.venueservice.domain.entity.BookingCancellation cancellation,
+            BookingCancellation cancellation,
             List<PaymentSnapshot> payments
     ) {
         return new OwnerBookingView(
@@ -305,7 +274,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     private List<BookingStatus> allowedTransitions(Booking booking, List<PaymentSnapshot> payments) {
         if (booking.getStatus() == BookingStatus.CHECKED_IN
                 && !LocalDateTime.of(booking.getPlayDate(), booking.getEndTime()).isAfter(LocalDateTime.now(clock))
-                && isFullyPaid(booking, payments)) {
+                && BookingPaymentStatusPolicy.isFullyPaid(booking, payments)) {
             return List.of(BookingStatus.COMPLETED);
         }
         return List.of();

@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.persistence.LockModeType;
@@ -24,5 +25,5 @@ public interface JpaOwnerApplicationRepository extends JpaRepository<OwnerApplic
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select application from OwnerApplicationEntity application where application.ownerApplicationId = :id")
-    java.util.Optional<OwnerApplicationEntity> findByIdForUpdate(@Param("id") UUID id);
+    Optional<OwnerApplicationEntity> findByIdForUpdate(@Param("id") UUID id);
 }

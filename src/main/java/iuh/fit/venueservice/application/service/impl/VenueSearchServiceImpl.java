@@ -12,6 +12,7 @@ import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -91,7 +92,7 @@ public class VenueSearchServiceImpl implements VenueSearchService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cơ sở thể thao đang hoạt động."));
 
         List<VenueCourt> courts = getVenueCourts(venueId);
-        venue.setCourts(new java.util.HashSet<>(courts));
+        venue.setCourts(new HashSet<>(courts));
 
         return venue;
     }

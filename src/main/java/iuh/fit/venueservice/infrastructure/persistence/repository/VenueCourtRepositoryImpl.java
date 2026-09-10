@@ -10,8 +10,10 @@ import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRe
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -49,9 +51,9 @@ public class VenueCourtRepositoryImpl implements VenueCourtRepository {
     }
 
     @Override
-    public java.util.List<VenueCourt> findByVenueId(UUID venueId) {
+    public List<VenueCourt> findByVenueId(UUID venueId) {
         return jpaRepository.findByVenue_VenueIdAndDeletedAtIsNull(venueId).stream()
                 .map(venueCourtEntityMapper::toDomain)
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
     }
 }

@@ -30,6 +30,7 @@ import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.CancellationReviewMode;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
+import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -123,7 +124,7 @@ public class BookingServiceImpl implements BookingService {
                 )
                 .orElseThrow(() -> new ServiceException("Khung giờ chưa được cấu hình."));
 
-        if (slot.getStatus() != iuh.fit.venueservice.domain.enums.TimeSlotStatus.AVAILABLE) {
+        if (slot.getStatus() != TimeSlotStatus.AVAILABLE) {
             throw new ServiceException("Khung giờ không còn khả dụng.");
         }
 
@@ -155,8 +156,8 @@ public class BookingServiceImpl implements BookingService {
                 .build();
 
         slot.setStatus(isWalkIn
-                ? iuh.fit.venueservice.domain.enums.TimeSlotStatus.BOOKED
-                : iuh.fit.venueservice.domain.enums.TimeSlotStatus.LOCKED);
+                ? TimeSlotStatus.BOOKED
+                : TimeSlotStatus.LOCKED);
         timeSlotRepository.save(slot);
         Booking saved = bookingRepository.save(booking);
         if (isWalkIn) {
@@ -209,13 +210,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingCancellation requestCancellation(CancelBookingCommand command) throws ServiceException {
-        if (command == null || command.bookingId() == null || command.requestedByUserId() == null
-                || command.reason() == null || command.reason().isBlank()) {
-            throw new ServiceException("Booking, người yêu cầu và lý do hủy là bắt buộc.");
-        }
-        if (command.reason().trim().length() > 1000) {
-            throw new ServiceException("Lý do hủy không được vượt quá 1000 ký tự.");
-        }
+        command.validate();
         Booking booking = bookingRepository.findByIdForUpdate(command.bookingId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân."));
 
@@ -268,6 +263,7 @@ public class BookingServiceImpl implements BookingService {
         String automaticReason = unpaidBooking
                 ? "Tự động hủy booking chưa thanh toán."
                 : "Tự động chấp thuận trong vòng 60 phút kể từ lúc đặt.";
+
         return approveCancellation(saved, booking, command.requestedByUserId(), null, automaticReason);
     }
 

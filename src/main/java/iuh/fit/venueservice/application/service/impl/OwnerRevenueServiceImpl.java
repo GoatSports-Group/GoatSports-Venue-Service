@@ -35,7 +35,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 public class OwnerRevenueServiceImpl implements OwnerRevenueService {
-    private static final int MAX_DATE_RANGE_DAYS = 366;
     private static final int PAYMENT_BATCH_SIZE = 100;
     private static final String CURRENCY = "VND";
     private static final String PERIOD_BASIS = "BOOKING_PLAY_DATE";
@@ -57,8 +56,8 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
 
     @Override
     public OwnerRevenueView getRevenue(OwnerRevenueQuery query) throws ServiceException {
-        validate(query);
-        validateVenueScope(query.venueId(), query.ownerId());
+        query.validate();
+        ensureVenueScope(query.venueId(), query.ownerId());
 
         long periodDays = ChronoUnit.DAYS.between(query.fromDate(), query.toDate()) + 1;
         LocalDate previousTo = query.fromDate().minusDays(1);
@@ -85,8 +84,8 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
 
     @Override
     public OwnerCustomerMetricsView getCustomerMetrics(OwnerCustomerMetricsQuery query) throws ServiceException {
-        validateCustomerMetrics(query);
-        validateVenueScope(query.venueId(), query.ownerId());
+        query.validate();
+        ensureVenueScope(query.venueId(), query.ownerId());
 
         YearMonth currentMonth = query.month();
         YearMonth previousMonth = currentMonth.minusMonths(1);
@@ -150,7 +149,7 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
             if (booking == null) {
                 continue;
             }
-            validatePayment(payment);
+            ensureValidPaymentSnapshot(payment);
             BigDecimal amount = BigDecimal.valueOf(payment.amount());
             StatusAccumulator status = breakdown.computeIfAbsent(
                     payment.status(), ignored -> new StatusAccumulator()
@@ -200,26 +199,6 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
         return result;
     }
 
-    private void validate(OwnerRevenueQuery query) throws ServiceException {
-        if (query == null || query.ownerId() == null
-                || query.fromDate() == null || query.toDate() == null) {
-            throw new ServiceException("Owner, từ ngày và đến ngày là bắt buộc.");
-        }
-        if (query.toDate().isBefore(query.fromDate())) {
-            throw new ServiceException("Đến ngày không được trước từ ngày.");
-        }
-        long days = ChronoUnit.DAYS.between(query.fromDate(), query.toDate()) + 1;
-        if (days > MAX_DATE_RANGE_DAYS) {
-            throw new ServiceException("Khoảng thời gian doanh thu tối đa 366 ngày.");
-        }
-    }
-
-    private void validateCustomerMetrics(OwnerCustomerMetricsQuery query) throws ServiceException {
-        if (query == null || query.ownerId() == null || query.venueId() == null || query.month() == null) {
-            throw new ServiceException("Owner, cơ sở và tháng thống kê là bắt buộc.");
-        }
-    }
-
     private OwnerCustomerMetricsPeriod customerPeriod(
             LocalDate fromDate,
             LocalDate toDate,
@@ -237,7 +216,7 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
         );
     }
 
-    private void validateVenueScope(UUID venueId, UUID ownerId) throws ServiceException {
+    private void ensureVenueScope(UUID venueId, UUID ownerId) throws ServiceException {
         if (venueId == null) {
             return;
         }
@@ -248,7 +227,7 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
         }
     }
 
-    private void validatePayment(PaymentSnapshot payment) throws ServiceException {
+    private void ensureValidPaymentSnapshot(PaymentSnapshot payment) throws ServiceException {
         if (payment.referenceId() == null || payment.status() == null
                 || payment.status().isBlank() || payment.amount() == null
                 || payment.amount() < 0 || payment.currency() == null) {

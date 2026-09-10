@@ -88,7 +88,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
 
     @Override
     public OwnerCheckInView lookup(OwnerCheckInLookupCommand command) throws ServiceException {
-        validateLookup(command);
+        command.validate();
         UUID bookingId = resolveBookingId(command);
         OwnerBookingRecord record = getOwnedBooking(bookingId, command.ownerId(), false);
         List<PaymentSnapshot> payments = loadPayments(bookingId);
@@ -97,14 +97,11 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
 
     @Override
     public OwnerCheckInView confirm(ConfirmOwnerCheckInCommand command) throws ServiceException {
-        if (command == null || command.ownerId() == null || command.bookingId() == null
-                || command.method() == null || command.paymentMode() == null) {
-            throw new ServiceException("Đơn đặt sân, phương thức nhận sân và cách thu tiền là bắt buộc.");
-        }
+        command.validate();
         OwnerBookingRecord record = getOwnedBooking(command.bookingId(), command.ownerId(), true);
         Booking booking = record.booking();
-        validateCheckInEligibility(booking);
-        validateCheckInEvidence(command, booking);
+        ensureCheckInEligible(booking);
+        ensureCheckInEvidenceMatches(command, booking);
         if (checkInRecordRepository.findByBookingId(booking.getBookingId()).isPresent()) {
             throw new ServiceException("Mã vé này đã được dùng để nhận sân trước đó.");
         }
@@ -151,7 +148,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
 
     @Override
     public OwnerCheckInView createWalkIn(CreateWalkInBookingCommand command) throws ServiceException {
-        validateWalkIn(command);
+        command.validate();
         VenueCourt court = venueCourtRepository.findById(command.venueCourtId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân thi đấu."));
         if (!Boolean.TRUE.equals(court.getActive()) || court.getDeletedAt() != null) {
@@ -185,7 +182,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 .totalPrice(total).depositAmount(0.0).remainingAmount(total)
                 .bookingCode(generateBookingCode())
                 .walkInCustomerName(command.customerName().trim())
-                .walkInCustomerPhone(normalizePhone(command.customerPhone()))
+                .walkInCustomerPhone(command.normalizedPhone())
                 .build());
         saved.setQrCode(bookingQrPort.issue(saved.getBookingId(), end));
         saved = bookingRepository.save(saved);
@@ -198,8 +195,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
 
     @Override
     public PageResult<OwnerCheckInView> history(OwnerCheckInFilter filter) throws ServiceException {
-        validateHistoryFilter(filter);
-        validateHistoryScope(filter);
+        filter.validate();
+        ensureHistoryScope(filter);
         var page = checkInRecordRepository.findOwnedCheckIns(filter);
         Set<UUID> bookingIds = page.items().stream()
                 .map(item -> item.bookingRecord().booking().getBookingId()).collect(Collectors.toSet());
@@ -213,17 +210,6 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 item.checkInRecord()
         )).toList();
         return new PageResult<>(items, page.total(), page.page(), page.pageSize(), page.totalPages());
-    }
-
-    private void validateLookup(OwnerCheckInLookupCommand command) throws ServiceException {
-        if (command == null || command.ownerId() == null) {
-            throw new ServiceException("Không xác định được chủ sân.");
-        }
-        int identifiers = (command.bookingId() == null ? 0 : 1)
-                + hasText(command.qrCode()) + hasText(command.bookingCode());
-        if (identifiers != 1) {
-            throw new ServiceException("Cần cung cấp đúng một mã QR, mã đặt sân hoặc mã định danh đơn.");
-        }
     }
 
     private UUID resolveBookingId(OwnerCheckInLookupCommand command) throws ServiceException {
@@ -242,7 +228,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 .orElseThrow(() -> new ServiceException("Không tìm thấy đơn đặt sân để nhận sân."));
     }
 
-    private void validateCheckInEligibility(Booking booking) throws ServiceException {
+    private void ensureCheckInEligible(Booking booking) throws ServiceException {
         String reason = checkInIneligibilityReason(booking);
         if (reason != null) {
             throw new ServiceException(reason);
@@ -289,7 +275,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         return null;
     }
 
-    private void validateCheckInEvidence(ConfirmOwnerCheckInCommand command, Booking booking)
+    private void ensureCheckInEvidenceMatches(ConfirmOwnerCheckInCommand command, Booking booking)
             throws ServiceException {
         switch (command.method()) {
             case QR_CODE -> {
@@ -356,16 +342,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         return venue;
     }
 
-    private void validateHistoryFilter(OwnerCheckInFilter filter) throws ServiceException {
-        if (filter == null || filter.ownerId() == null) {
-            throw new ServiceException("Không xác định được chủ sân.");
-        }
-        if (filter.page() < 0 || filter.size() < 1 || filter.size() > 20) {
-            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 20.");
-        }
-    }
-
-    private void validateHistoryScope(OwnerCheckInFilter filter) throws ServiceException {
+    private void ensureHistoryScope(OwnerCheckInFilter filter) throws ServiceException {
         Venue requestedVenue = filter.venueId() == null
                 ? null : getOwnedVenue(filter.venueId(), filter.ownerId());
         if (filter.venueCourtId() != null) {
@@ -376,25 +353,6 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 throw new ServiceException("Sân thi đấu không thuộc cơ sở đã chọn.");
             }
         }
-    }
-
-    private void validateWalkIn(CreateWalkInBookingCommand command) throws ServiceException {
-        if (command == null || command.ownerId() == null || command.venueCourtId() == null
-                || command.timeSlotId() == null || !hasLength(command.customerName(), 2, 120)) {
-            throw new ServiceException("Sân, khung giờ và tên khách tại quầy là bắt buộc.");
-        }
-        String phone = normalizePhone(command.customerPhone());
-        if (!phone.matches("\\+?[0-9]{8,15}")) {
-            throw new ServiceException("Số điện thoại khách tại quầy không hợp lệ.");
-        }
-    }
-
-    private String normalizePhone(String phone) {
-        return phone == null ? "" : phone.replaceAll("[\\s.-]", "");
-    }
-
-    private boolean hasLength(String value, int min, int max) {
-        return value != null && value.trim().length() >= min && value.trim().length() <= max;
     }
 
     private int hasText(String value) {

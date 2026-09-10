@@ -21,14 +21,9 @@ import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.ReviewStatus;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 public class ReviewServiceImpl implements ReviewService {
-    private static final int MAX_PAGE_SIZE = 20;
-    private static final int MAX_DATE_RANGE_DAYS = 366;
-    private static final int MAX_CONTENT_LENGTH = 2000;
-
     private final ReviewRepository reviewRepository;
     private final BookingRepository bookingRepository;
     private final VenueCourtRepository venueCourtRepository;
@@ -49,7 +44,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public PlayerReviewView createPlayerReview(CreatePlayerReviewCommand command) throws ServiceException {
-        validateCreate(command);
+        command.validate();
         Booking booking = bookingRepository.findByIdForUpdate(command.bookingId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy booking."));
         if (booking.getPlayerId() == null || !booking.getPlayerId().equals(command.playerId())) {
@@ -81,8 +76,8 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public PageResult<OwnerReviewView> getOwnerReviews(OwnerReviewFilter filter) throws ServiceException {
-        validateFilter(filter);
-        validateRequestedScope(filter);
+        filter.validate();
+        ensureRequestedScope(filter);
         PageResult<OwnerReviewRecord> page = reviewRepository.findOwnedReviews(filter);
         return new PageResult<>(
                 page.items().stream().map(this::toOwnerView).toList(),
@@ -90,40 +85,7 @@ public class ReviewServiceImpl implements ReviewService {
         );
     }
 
-    private void validateCreate(CreatePlayerReviewCommand command) throws ServiceException {
-        if (command == null || command.playerId() == null || command.bookingId() == null
-                || command.rating() == null) {
-            throw new ServiceException("Player, booking và số sao là bắt buộc.");
-        }
-        if (command.rating() < 1 || command.rating() > 5) {
-            throw new ServiceException("Số sao phải từ 1 đến 5.");
-        }
-        if (command.content() != null && command.content().trim().length() > MAX_CONTENT_LENGTH) {
-            throw new ServiceException("Nội dung đánh giá tối đa 2000 ký tự.");
-        }
-    }
-
-    private void validateFilter(OwnerReviewFilter filter) throws ServiceException {
-        if (filter == null || filter.ownerId() == null) {
-            throw new ServiceException("Không xác định được chủ sân.");
-        }
-        if (filter.page() < 0 || filter.size() < 1 || filter.size() > MAX_PAGE_SIZE) {
-            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 20.");
-        }
-        if (filter.rating() != null && (filter.rating() < 1 || filter.rating() > 5)) {
-            throw new ServiceException("Bộ lọc số sao phải từ 1 đến 5.");
-        }
-        if (filter.fromDate() != null && filter.toDate() != null) {
-            if (filter.fromDate().isAfter(filter.toDate())) {
-                throw new ServiceException("Khoảng ngày đánh giá không hợp lệ.");
-            }
-            if (ChronoUnit.DAYS.between(filter.fromDate(), filter.toDate()) + 1 > MAX_DATE_RANGE_DAYS) {
-                throw new ServiceException("Khoảng ngày đánh giá tối đa 366 ngày.");
-            }
-        }
-    }
-
-    private void validateRequestedScope(OwnerReviewFilter filter) throws ServiceException {
+    private void ensureRequestedScope(OwnerReviewFilter filter) throws ServiceException {
         Venue selectedVenue = null;
         if (filter.venueId() != null) {
             selectedVenue = getOwnedVenue(filter.venueId(), filter.ownerId());

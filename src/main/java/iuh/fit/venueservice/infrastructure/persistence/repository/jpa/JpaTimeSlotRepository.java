@@ -19,7 +19,7 @@ import java.util.Optional;
 @Repository
 public interface JpaTimeSlotRepository extends JpaRepository<TimeSlotEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    java.util.Optional<TimeSlotEntity> findLockedByTimeSlotId(UUID timeSlotId);
+    Optional<TimeSlotEntity> findLockedByTimeSlotId(UUID timeSlotId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

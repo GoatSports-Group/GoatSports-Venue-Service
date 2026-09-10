@@ -17,6 +17,7 @@ import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class BookingPaymentEventServiceImpl implements BookingPaymentEventService {
     private final BookingRepository bookingRepository;
@@ -44,15 +45,10 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
 
     @Override
     public boolean applyTerminalPayment(PaymentTerminalCommand command) throws ServiceException {
-        if (command == null
-                || !"BOOKING".equals(command.referenceType())
-                || !"BOOKING_DEPOSIT".equals(command.purpose())
-                || !isTerminalPaymentStatus(command.status())) {
+        if (command == null || !command.isBookingDepositTerminal()) {
             return false;
         }
-        if (command.paymentId() == null || command.referenceId() == null || command.payerId() == null) {
-            throw new ServiceException("Payment terminal event thiếu định danh bắt buộc.");
-        }
+        command.validateIdentity();
 
         Booking booking = bookingRepository.findByIdForUpdate(command.referenceId()).orElse(null);
         if (booking == null || booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
@@ -72,9 +68,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
 
     @Override
     public boolean applyRefundResult(RefundResultCommand command) throws ServiceException {
-        if (command == null || command.refundId() == null || command.paymentId() == null) {
-            throw new ServiceException("Refund event thiếu định danh bắt buộc.");
-        }
+        command.validateIdentity();
         var cancellation = bookingCancellationRepository.findByRefundIdForUpdate(command.refundId()).orElse(null);
         if (cancellation == null) return false;
         Booking booking = bookingRepository.findByIdForUpdate(cancellation.getBookingId())
@@ -106,24 +100,18 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
 
     @Override
     public boolean applySucceededPayment(PaymentSucceededCommand command) throws ServiceException {
-        if (command == null || !"SUCCEEDED".equals(command.status())
-                || !"BOOKING".equals(command.referenceType())) {
+        if (command == null || !command.isBookingPaymentSucceeded()) {
             return false;
         }
-        if (command.paymentId() == null || command.referenceId() == null || command.payerId() == null) {
-            throw new ServiceException("Payment event thiếu định danh bắt buộc.");
-        }
+        command.validateIdentity();
         Booking booking = bookingRepository.findByIdForUpdate(command.referenceId()).orElse(null);
         if (booking == null) return false;
         if (!isExpectedPayer(booking, command.payerId())) {
             throw new ServiceException("Payer của payment event không khớp booking.");
         }
-        if (!"VND".equals(command.currency())) {
-            throw new ServiceException("Currency của payment event không hợp lệ.");
-        }
 
         if ("BOOKING_DEPOSIT".equals(command.purpose())) {
-            validateAmount(command.amount(), booking.getDepositAmount());
+            ensureAmountMatches(command.amount(), booking.getDepositAmount());
             if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
                     && booking.getStatus() != BookingStatus.CONFIRMED) {
                 return false;
@@ -149,7 +137,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         }
 
         if ("BOOKING_REMAINING".equals(command.purpose())) {
-            validateAmount(command.amount(), booking.getRemainingAmount());
+            ensureAmountMatches(command.amount(), booking.getRemainingAmount());
             if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
                     && booking.getStatus() != BookingStatus.CONFIRMED
                     && booking.getStatus() != BookingStatus.CHECKED_IN
@@ -173,7 +161,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         return false;
     }
 
-    private boolean isExpectedPayer(Booking booking, java.util.UUID payerId) throws ServiceException {
+    private boolean isExpectedPayer(Booking booking, UUID payerId) throws ServiceException {
         if (booking.getSource() != BookingSource.WALK_IN) {
             return booking.getPlayerId() != null && booking.getPlayerId().equals(payerId);
         }
@@ -184,11 +172,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         return payerId.equals(venue.getOwnerId());
     }
 
-    private boolean isTerminalPaymentStatus(String status) {
-        return "FAILED".equals(status) || "CANCELLED".equals(status) || "EXPIRED".equals(status);
-    }
-
-    private void validateAmount(Double actual, Double expected) throws ServiceException {
+    private void ensureAmountMatches(Double actual, Double expected) throws ServiceException {
         if (actual == null || expected == null || Math.abs(actual - expected) >= 0.01) {
             throw new ServiceException("Số tiền payment event không khớp booking.");
         }
