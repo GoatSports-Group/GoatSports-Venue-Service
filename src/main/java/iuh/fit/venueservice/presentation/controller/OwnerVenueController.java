@@ -37,9 +37,9 @@ public class OwnerVenueController {
     @PreAuthorize("hasAuthority('GET_OWN_VENUES')")
     public ResponseEntity<List<VenueDetailResponse>> getMyVenues() throws ServiceException {
         UUID currentUserId = currentUserId();
-        List<VenueDetailResponse> response = venueService.getMyVenue(currentUserId)
-                .map(venueSearchConverter::toDetailResponse)
+        List<VenueDetailResponse> response = venueService.getMyVenues(currentUserId)
                 .stream()
+                .map(venueSearchConverter::toDetailResponse)
                 .toList();
         return ResponseEntity.ok(response);
     }

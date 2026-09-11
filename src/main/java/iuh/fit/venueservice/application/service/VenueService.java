@@ -7,13 +7,14 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface VenueService {
     Venue createVenue(CreateVenueCommand command) throws ServiceException;
 
-    Optional<Venue> getMyVenue(UUID currentUserId);
+    List<Venue> getMyVenues(UUID currentUserId);
 
     Venue getOwnedVenue(UUID venueId, UUID currentUserId) throws ServiceException;
 

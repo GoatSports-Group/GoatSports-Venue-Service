@@ -71,8 +71,8 @@ public class VenueServiceImpl implements VenueService {
     }
 
     @Override
-    public Optional<Venue> getMyVenue(UUID currentUserId) {
-        return venueRepository.findByUserId(currentUserId).stream().findFirst();
+    public List<Venue> getMyVenues(UUID currentUserId) {
+        return venueRepository.findByUserId(currentUserId);
     }
 
     @Override

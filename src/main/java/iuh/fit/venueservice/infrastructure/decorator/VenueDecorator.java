@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,8 +31,8 @@ public class VenueDecorator implements VenueService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Venue> getMyVenue(UUID currentUserId) {
-        return venueServiceImpl.getMyVenue(currentUserId);
+    public List<Venue> getMyVenues(UUID currentUserId) {
+        return venueServiceImpl.getMyVenues(currentUserId);
     }
 
     @Override
