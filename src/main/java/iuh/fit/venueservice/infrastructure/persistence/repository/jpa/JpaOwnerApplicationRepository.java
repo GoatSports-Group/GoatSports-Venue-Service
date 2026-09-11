@@ -33,15 +33,27 @@ public interface JpaOwnerApplicationRepository extends JpaRepository<OwnerApplic
     @Query("select application from OwnerApplicationEntity application where application.ownerApplicationId = :id")
     Optional<OwnerApplicationEntity> findByIdForUpdate(@Param("id") UUID id);
 
+    @Query("""
+            select application.ownerApplicationId
+            from OwnerApplicationEntity application
+            where exists (
+                select document.documentId
+                from OwnerApplicationDocumentEntity document
+                where document.ownerApplication = application
+                  and document.fileUrl like concat(:prefix, '%')
+            )
+            """)
+    List<UUID> findIdsWithDocumentFileUrlPrefix(
+            @Param("prefix") String prefix,
+            Pageable pageable
+    );
+
     @EntityGraph(attributePaths = { "address", "ownerApplicationDocuments", "venue" })
     @Query("""
             select distinct application
             from OwnerApplicationEntity application
-            join application.ownerApplicationDocuments document
-            where document.fileUrl like concat(:prefix, '%')
+            where application.ownerApplicationId in :ids
+            order by application.createdAt asc
             """)
-    List<OwnerApplicationEntity> findWithDocumentFileUrlPrefix(
-            @Param("prefix") String prefix,
-            Pageable pageable
-    );
+    List<OwnerApplicationEntity> findDetailedByIdIn(@Param("ids") List<UUID> ids);
 }

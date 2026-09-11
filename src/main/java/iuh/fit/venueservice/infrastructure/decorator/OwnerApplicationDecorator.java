@@ -51,6 +51,7 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
                 rejectReason
         );
         afterCommit(() -> notificationPort.notifyRejected(application));
+        afterCommit(() -> notificationPort.notifyProgressChanged(application));
         return application;
     }
 
@@ -59,13 +60,16 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
     public OwnerApplication approveOwnerApplication(UUID applicationId, UUID reviewerId) throws ServiceException {
         OwnerApplication application = ownerApplicationServiceImpl.approveOwnerApplication(applicationId, reviewerId);
         afterCommit(() -> notificationPort.notifyApproved(application));
+        afterCommit(() -> notificationPort.notifyProgressChanged(application));
         return application;
     }
 
     @Override
     @Transactional(rollbackFor = ServiceException.class)
     public OwnerApplication markViewed(UUID applicationId) throws ServiceException {
-        return ownerApplicationServiceImpl.markViewed(applicationId);
+        OwnerApplication application = ownerApplicationServiceImpl.markViewed(applicationId);
+        afterCommit(() -> notificationPort.notifyProgressChanged(application));
+        return application;
     }
 
     @Override
@@ -87,6 +91,11 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
     }
 
     private void afterCommit(PostCommitAction action) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()
+                || !TransactionSynchronizationManager.isSynchronizationActive()) {
+            throw new IllegalStateException("Owner application post-commit action requires an active transaction.");
+        }
+
         Runnable callback = () -> {
             try {
                 action.run();
@@ -94,16 +103,12 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
                 log.error("Không thể thực thi công việc nền của hồ sơ chủ sân.", exception);
             }
         };
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    callback.run();
-                }
-            });
-            return;
-        }
-        callback.run();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                callback.run();
+            }
+        });
     }
 
     @FunctionalInterface

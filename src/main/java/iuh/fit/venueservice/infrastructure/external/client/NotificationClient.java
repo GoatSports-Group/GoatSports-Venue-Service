@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.external.client;
 import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.infrastructure.external.client.dto.NotificationResponseCommand;
 import iuh.fit.venueservice.infrastructure.external.client.dto.OwnerApplicationNotificationEvent;
+import iuh.fit.venueservice.infrastructure.external.client.dto.OwnerApplicationProgressChangedEvent;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,4 +21,7 @@ public interface NotificationClient {
 
     @PostMapping("/notify")
     BaseResponse<Void> notifyUser(@RequestBody NotificationResponseCommand notification);
+
+    @PostMapping("/owner-application-progress")
+    BaseResponse<Void> publishOwnerApplicationProgress(@RequestBody OwnerApplicationProgressChangedEvent event);
 }

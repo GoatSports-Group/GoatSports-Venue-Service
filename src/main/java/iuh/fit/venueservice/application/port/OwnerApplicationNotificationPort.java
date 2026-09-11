@@ -9,4 +9,6 @@ public interface OwnerApplicationNotificationPort {
     void notifyApproved(OwnerApplication application) throws ServiceException;
 
     void notifyRejected(OwnerApplication application) throws ServiceException;
+
+    void notifyProgressChanged(OwnerApplication application) throws ServiceException;
 }

@@ -7,9 +7,11 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
+import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 import iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressEntityMapper;
+import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationDocumentEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.OwnerApplicationEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaOwnerApplicationRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
@@ -24,7 +26,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     private final FilterSpecificationConverter filterSpecificationConverter;
     private final FilterParser filterParser;
     private final OwnerApplicationEntityMapper ownerApplicationEntityMapper;
+    private final OwnerApplicationDocumentEntityMapper ownerApplicationDocumentEntityMapper;
     private final AddressEntityMapper addressEntityMapper;
     private final JpaVenueRepository jpaVenueRepository;
     private final EntityManager entityManager;
@@ -43,6 +48,11 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
                 ownerApplication,
                 addressEntityMapper
         );
+        Set<OwnerApplicationDocument> documents =
+                ownerApplication.getDocuments() == null ? Set.of() : ownerApplication.getDocuments();
+        entity.setOwnerApplicationDocuments(documents.stream()
+                .map(document -> ownerApplicationDocumentEntityMapper.createEntity(document, entity))
+                .collect(Collectors.toSet()));
         entityManager.persist(entity);
         return ownerApplicationEntityMapper.toDomain(entity);
     }
@@ -114,7 +124,11 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     @Override
     public List<OwnerApplication> findWithTemporaryDocuments(int limit) {
         Pageable pageable = PageRequest.of(0, Math.max(1, limit), Sort.by(Sort.Direction.ASC, "createdAt"));
-        return jpaRepository.findWithDocumentFileUrlPrefix("temp/", pageable).stream()
+        List<UUID> applicationIds = jpaRepository.findIdsWithDocumentFileUrlPrefix("temp/", pageable);
+        if (applicationIds.isEmpty()) {
+            return List.of();
+        }
+        return jpaRepository.findDetailedByIdIn(applicationIds).stream()
                 .map(ownerApplicationEntityMapper::toDomain)
                 .toList();
     }

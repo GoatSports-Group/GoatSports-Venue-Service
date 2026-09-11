@@ -32,6 +32,7 @@ public class OwnerApplicationBackgroundAdapter implements OwnerApplicationBackgr
     public void schedule(UUID ownerApplicationId) {
         moveFiles(ownerApplicationId);
         sendNotification(ownerApplicationId);
+        sendProgressNotification(ownerApplicationId);
     }
 
     @Scheduled(fixedDelayString = "${owner-application.background-retry-ms}")
@@ -71,6 +72,17 @@ public class OwnerApplicationBackgroundAdapter implements OwnerApplicationBackgr
             }
         } catch (Exception exception) {
             log.error("Không thể gửi thông báo hồ sơ chủ sân {}.", ownerApplicationId, exception);
+        }
+    }
+
+    private void sendProgressNotification(UUID ownerApplicationId) {
+        try {
+            OwnerApplication application = ownerApplicationRepository.findById(ownerApplicationId).orElse(null);
+            if (application != null) {
+                notificationPort.notifyProgressChanged(application);
+            }
+        } catch (Exception exception) {
+            log.error("Unable to publish owner application progress for {}.", ownerApplicationId, exception);
         }
     }
 }

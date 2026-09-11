@@ -1,7 +1,6 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.PageFilter;
-import iuh.fit.venueservice.application.dto.request.application.OwnerApplicationUploadedDocumentCommand;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -23,6 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class OwnerApplicationServiceImpl implements OwnerApplicationService {
 
@@ -69,6 +69,12 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .longitude(command.longitude())
                 .build();
 
+        Set<OwnerApplicationDocument> documents = command.documents().stream()
+                .map(uploadedDocument -> OwnerApplicationDocument.builder()
+                        .documentType(toDocumentType(uploadedDocument.slot()))
+                        .fileUrl(uploadedDocument.objectKey().trim())
+                        .build())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
         OwnerApplication ownerApplication = OwnerApplication.builder()
                 .ownerApplicationId(command.ownerApplicationRequestId())
                 .userId(command.userId())
@@ -82,22 +88,10 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .status(OwnerApplicationStatus.PENDING)
                 .receivedAt(LocalDateTime.now())
                 .address(address)
-                .documents(Set.of())
+                .documents(documents)
                 .build();
 
-        OwnerApplication savedApplication = ownerApplicationRepository.create(ownerApplication);
-        Set<OwnerApplicationDocument> documents = new LinkedHashSet<>();
-        for (OwnerApplicationUploadedDocumentCommand uploadedDocument : command.documents()) {
-            documents.add(ownerApplicationDocumentRepository.save(
-                    OwnerApplicationDocument.builder()
-                            .documentType(toDocumentType(uploadedDocument.slot()))
-                            .fileUrl(uploadedDocument.objectKey().trim())
-                            .build(),
-                    savedApplication.getOwnerApplicationId()
-            ));
-        }
-        savedApplication.setDocuments(documents);
-        return savedApplication;
+        return ownerApplicationRepository.create(ownerApplication);
     }
 
     @Override

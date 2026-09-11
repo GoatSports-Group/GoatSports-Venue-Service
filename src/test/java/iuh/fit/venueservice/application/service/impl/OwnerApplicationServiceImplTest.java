@@ -26,9 +26,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -130,9 +130,6 @@ class OwnerApplicationServiceImplTest {
         );
         when(ownerApplicationRepository.create(any(OwnerApplication.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(ownerApplicationDocumentRepository.save(any(OwnerApplicationDocument.class), eq(requestId)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
         OwnerApplicationServiceImpl service = new OwnerApplicationServiceImpl(
                 ownerApplicationRepository, ownerApplicationDocumentRepository, venueRepository
         );
@@ -145,8 +142,7 @@ class OwnerApplicationServiceImplTest {
         assertThat(result.getAddress().getLongitude()).isEqualTo(106.7009);
         assertThat(result.getAddress().getDistrict()).isEmpty();
         assertThat(result.getDocuments()).hasSize(4);
-        verify(ownerApplicationDocumentRepository, times(4))
-                .save(any(OwnerApplicationDocument.class), eq(requestId));
+        verifyNoInteractions(ownerApplicationDocumentRepository);
     }
 
     @Test

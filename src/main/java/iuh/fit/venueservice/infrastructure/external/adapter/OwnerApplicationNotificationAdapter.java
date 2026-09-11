@@ -6,6 +6,7 @@ import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.infrastructure.external.client.NotificationClient;
 import iuh.fit.venueservice.infrastructure.external.client.dto.NotificationResponseCommand;
 import iuh.fit.venueservice.infrastructure.external.client.dto.OwnerApplicationNotificationEvent;
+import iuh.fit.venueservice.infrastructure.external.client.dto.OwnerApplicationProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -56,6 +57,22 @@ public class OwnerApplicationNotificationAdapter implements OwnerApplicationNoti
                 application.getStatus().name(),
                 application.getRejectReason()
         );
+    }
+
+    @Override
+    public void notifyProgressChanged(OwnerApplication application) throws ServiceException {
+        var response = notificationClient.publishOwnerApplicationProgress(
+                OwnerApplicationProgressChangedEvent.changed(
+                        application.getUserId(),
+                        application.getOwnerApplicationId()
+                )
+        );
+        if (response == null
+                || response.getStatusCode() == null
+                || response.getStatusCode() >= 400
+                || response.getError() != null && !response.getError().isBlank()) {
+            throw new ServiceException("Notification Service không thể phát tiến trình hồ sơ chủ sân.");
+        }
     }
 
     private void publish(
