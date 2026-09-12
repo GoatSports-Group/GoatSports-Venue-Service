@@ -49,12 +49,14 @@ public class ApplicationServiceConfig {
     public OwnerApplicationRegistrationServiceImpl ownerApplicationRegistrationService(
             OwnerApplicationService ownerApplicationService,
             OwnerApplicationRepository ownerApplicationRepository,
-            StoragePort storagePort
+            StoragePort storagePort,
+            IdentityVerificationPort identityVerificationPort
     ) {
         return new OwnerApplicationRegistrationServiceImpl(
                 ownerApplicationService,
                 ownerApplicationRepository,
-                storagePort
+                storagePort,
+                identityVerificationPort
         );
     }
 

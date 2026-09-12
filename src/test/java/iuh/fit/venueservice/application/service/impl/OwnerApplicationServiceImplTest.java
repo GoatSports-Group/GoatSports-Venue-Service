@@ -107,6 +107,7 @@ class OwnerApplicationServiceImplTest {
         SubmitOwnerApplicationCommand command = new SubmitOwnerApplicationCommand(
                 requestId,
                 userId,
+                UUID.randomUUID(),
                 "Nguyễn Văn A",
                 "0909000000",
                 "owner@goatsports.test",

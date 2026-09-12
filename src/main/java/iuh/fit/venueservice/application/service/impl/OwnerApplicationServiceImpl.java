@@ -11,11 +11,11 @@ import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
-import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.OwnerApplicationDocument;
-import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
+import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.enums.DocumentType;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationDocumentSlot;
+import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;

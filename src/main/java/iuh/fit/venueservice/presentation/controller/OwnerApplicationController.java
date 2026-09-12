@@ -4,6 +4,7 @@ import iuh.fit.shared.annotation.AuditLog;
 import iuh.fit.venueservice.application.dto.PageFilter;
 import iuh.fit.venueservice.application.dto.request.application.*;
 import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
 import iuh.fit.venueservice.application.dto.response.application.PreparedOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
@@ -18,8 +19,10 @@ import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
 import iuh.fit.venueservice.presentation.request.application.CleanupOwnerApplicationUploadRequest;
 import iuh.fit.venueservice.presentation.request.application.PrepareOwnerApplicationUploadRequest;
 import iuh.fit.venueservice.presentation.request.application.SubmitOwnerApplicationRequest;
+import iuh.fit.venueservice.presentation.request.application.VerifyOwnerIdentityRequest;
 import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
 import iuh.fit.venueservice.presentation.response.application.PreparedOwnerApplicationUploadResponse;
+import iuh.fit.venueservice.presentation.response.application.OwnerIdentityVerificationResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -71,6 +74,33 @@ public class OwnerApplicationController {
         return ResponseEntity.status(HttpStatus.OK).body(new BaseListResponse(meta, responses));
     }
 
+    @PostMapping("/{ownerApplicationId}/identity-verification")
+    public ResponseEntity<OwnerIdentityVerificationResponse> verifyIdentity(
+            @PathVariable UUID ownerApplicationId,
+            @Valid @RequestBody VerifyOwnerIdentityRequest request
+    ) throws ServiceException {
+        OwnerIdentityVerificationCommand result = registrationService.verifyIdentity(
+                new VerifyOwnerIdentityCommand(
+                        currentUserId(),
+                        ownerApplicationId,
+                        request.getIdentityFrontKey(),
+                        request.getIdentityBackKey(),
+                        request.getLivenessFrames()
+                )
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(result));
+    }
+
+    @GetMapping("/identity-verifications/{verificationId}")
+    public ResponseEntity<OwnerIdentityVerificationResponse> getIdentityVerification(
+            @PathVariable UUID verificationId
+    ) throws ServiceException {
+        OwnerIdentityVerificationCommand result = registrationService.getIdentityVerification(
+                new GetOwnerIdentityVerificationCommand(verificationId, currentUserId())
+        );
+        return ResponseEntity.ok(toResponse(result));
+    }
+
     @PostMapping("/uploads")
     public ResponseEntity<PreparedOwnerApplicationUploadResponse> prepareUpload(
             @RequestHeader("Idempotency-Key") String idempotencyKey,
@@ -100,6 +130,7 @@ public class OwnerApplicationController {
         OwnerApplication application = registrationService.submit(new SubmitOwnerApplicationCommand(
                 request.getOwnerApplicationId(),
                 currentUserId(),
+                request.getIdentityVerificationId(),
                 request.getFullName(),
                 request.getPhone(),
                 request.getEmail(),
@@ -155,6 +186,28 @@ public class OwnerApplicationController {
                                 .objectKey(document.objectKey())
                                 .build())
                         .toList())
+                .build();
+    }
+
+    private OwnerIdentityVerificationResponse toResponse(OwnerIdentityVerificationCommand command) {
+        OwnerIdentityVerificationCommand.IdentityDocument document = command.document();
+        return OwnerIdentityVerificationResponse.builder()
+                .verificationId(command.verificationId())
+                .status(command.status())
+                .document(document == null ? null : OwnerIdentityVerificationResponse.IdentityDocumentResponse.builder()
+                        .documentType(document.documentType())
+                        .identityNumber(document.identityNumber())
+                        .fullName(document.fullName())
+                        .dateOfBirth(document.dateOfBirth())
+                        .expiryDate(document.expiryDate())
+                        .gender(document.gender())
+                        .nationality(document.nationality())
+                        .placeOfOrigin(document.placeOfOrigin())
+                        .placeOfResidence(document.placeOfResidence())
+                        .build())
+                .scores(command.scores())
+                .reasonCode(command.reasonCode())
+                .message(command.message())
                 .build();
     }
 }

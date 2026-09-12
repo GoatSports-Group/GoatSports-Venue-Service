@@ -1,7 +1,10 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.request.application.GetOwnerIdentityVerificationCommand;
 import iuh.fit.venueservice.application.dto.request.application.OwnerApplicationUploadedDocumentCommand;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
+import iuh.fit.venueservice.application.port.IdentityVerificationPort;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
@@ -17,8 +20,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +35,34 @@ class OwnerApplicationRegistrationServiceImplTest {
     private OwnerApplicationRepository ownerApplicationRepository;
     @Mock
     private StoragePort storagePort;
+    @Mock
+    private IdentityVerificationPort identityVerificationPort;
+
+    @Test
+    void getIdentityVerificationReturnsCurrentBackgroundResult() throws Exception {
+        UUID verificationId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        GetOwnerIdentityVerificationCommand command = new GetOwnerIdentityVerificationCommand(
+                verificationId,
+                userId
+        );
+        OwnerIdentityVerificationCommand processing = new OwnerIdentityVerificationCommand(
+                verificationId,
+                userId,
+                "temp/identities/front.jpg",
+                "temp/identities/back.jpg",
+                "PROCESSING",
+                null,
+                null,
+                null,
+                null
+        );
+        when(identityVerificationPort.get(verificationId, userId)).thenReturn(processing);
+
+        OwnerIdentityVerificationCommand result = service().getIdentityVerification(command);
+
+        assertThat(result).isSameAs(processing);
+    }
 
     @Test
     void submitConfirmsFilesAndCreatesApplication() throws Exception {
@@ -42,6 +76,8 @@ class OwnerApplicationRegistrationServiceImplTest {
         when(storagePort.confirmFile(anyList())).thenReturn(command.documents().stream()
                 .map(document -> document.objectKey().substring("temp/".length()))
                 .toList());
+        when(identityVerificationPort.get(command.identityVerificationId(), userId))
+                .thenReturn(verification(command));
         when(ownerApplicationService.submitOwnerApplication(command)).thenReturn(application);
 
         OwnerApplicationRegistrationServiceImpl service = service();
@@ -53,11 +89,30 @@ class OwnerApplicationRegistrationServiceImplTest {
         verify(ownerApplicationService).submitOwnerApplication(command);
     }
 
+    @Test
+    void submitRejectsUnverifiedIdentityBeforeMovingFiles() throws Exception {
+        UUID userId = UUID.randomUUID();
+        SubmitOwnerApplicationCommand command = command(UUID.randomUUID(), userId);
+        OwnerIdentityVerificationCommand rejected = new OwnerIdentityVerificationCommand(
+                command.identityVerificationId(), userId,
+                command.documents().get(0).objectKey(), command.documents().get(1).objectKey(),
+                "REJECTED", null, null, "FACE_MISMATCH", "Khuôn mặt không khớp với CCCD."
+        );
+        when(identityVerificationPort.get(command.identityVerificationId(), userId)).thenReturn(rejected);
+
+        assertThatThrownBy(() -> service().submit(command))
+                .hasMessage("Khuôn mặt không khớp với CCCD.");
+
+        verify(storagePort, never()).confirmFile(anyList());
+        verifyNoInteractions(ownerApplicationService);
+    }
+
     private OwnerApplicationRegistrationServiceImpl service() {
         return new OwnerApplicationRegistrationServiceImpl(
                 ownerApplicationService,
                 ownerApplicationRepository,
-                storagePort
+                storagePort,
+                identityVerificationPort
         );
     }
 
@@ -65,6 +120,7 @@ class OwnerApplicationRegistrationServiceImplTest {
         return new SubmitOwnerApplicationCommand(
                 applicationId,
                 userId,
+                UUID.randomUUID(),
                 "Nguyễn Văn A",
                 "0909000000",
                 "owner@goatsports.test",
@@ -85,6 +141,23 @@ class OwnerApplicationRegistrationServiceImplTest {
                         document(userId, OwnerApplicationDocumentSlot.BUSINESS_LICENSE, "licenses/license.jpg"),
                         document(userId, OwnerApplicationDocumentSlot.VENUE_PHOTO, "venues/venue.jpg")
                 )
+        );
+    }
+
+    private OwnerIdentityVerificationCommand verification(SubmitOwnerApplicationCommand command) {
+        return new OwnerIdentityVerificationCommand(
+                command.identityVerificationId(),
+                command.userId(),
+                command.documents().get(0).objectKey(),
+                command.documents().get(1).objectKey(),
+                "VERIFIED",
+                new OwnerIdentityVerificationCommand.IdentityDocument(
+                        "CITIZEN_ID_CHIP", command.identityNumber(), command.fullName(),
+                        null, null, null, null, null, null
+                ),
+                null,
+                null,
+                "Xác minh thành công"
         );
     }
 

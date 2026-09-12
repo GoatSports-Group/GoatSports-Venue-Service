@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 public record SubmitOwnerApplicationCommand(
         UUID ownerApplicationRequestId,
         UUID userId,
+        UUID identityVerificationId,
         String fullName,
         String phone,
         String email,
@@ -36,7 +37,7 @@ public record SubmitOwnerApplicationCommand(
     );
 
     public void validate() throws ServiceException {
-        if (ownerApplicationRequestId == null || userId == null) {
+        if (ownerApplicationRequestId == null || userId == null || identityVerificationId == null) {
             throw new ServiceException("Không xác định được đơn đăng ký chủ sân.");
         }
         requireText(fullName, "Họ tên");
@@ -77,6 +78,15 @@ public record SubmitOwnerApplicationCommand(
                 != documents.size()) {
             throw new ServiceException("Danh sách tài liệu có object key bị trùng.");
         }
+    }
+
+    public SubmitOwnerApplicationCommand withVerifiedIdentity(String verifiedFullName, String verifiedIdentityNumber) {
+        return new SubmitOwnerApplicationCommand(
+                ownerApplicationRequestId, userId, identityVerificationId,
+                verifiedFullName, phone, email, verifiedIdentityNumber,
+                businessName, businessType, taxCode, address, province, district, ward, city,
+                latitude, longitude, documents
+        );
     }
 
     private void requireText(String value, String fieldName) throws ServiceException {

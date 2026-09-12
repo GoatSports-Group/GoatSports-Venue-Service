@@ -30,4 +30,7 @@ public interface StorageClient {
 
     @DeleteMapping
     void delete(@RequestParam String key);
+
+    @GetMapping
+    String getFileUrl(@RequestParam String key);
 }

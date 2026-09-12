@@ -1,14 +1,19 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.application.CleanupOwnerApplicationUploadCommand;
+import iuh.fit.venueservice.application.dto.request.application.GetOwnerIdentityVerificationCommand;
+import iuh.fit.venueservice.application.dto.request.application.IdentityVerificationRequestCommand;
 import iuh.fit.venueservice.application.dto.request.application.OwnerApplicationUploadDocumentCommand;
 import iuh.fit.venueservice.application.dto.request.application.PrepareOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
+import iuh.fit.venueservice.application.dto.request.application.VerifyOwnerIdentityCommand;
 import iuh.fit.venueservice.application.dto.request.file.FileMoveRequest;
 import iuh.fit.venueservice.application.dto.request.file.PresignedUrlRequestCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
 import iuh.fit.venueservice.application.dto.response.application.PreparedOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.dto.response.file.PresignedUrlResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.IdentityVerificationPort;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.service.OwnerApplicationRegistrationService;
@@ -23,15 +28,41 @@ public class OwnerApplicationRegistrationServiceImpl implements OwnerApplication
     private final OwnerApplicationService ownerApplicationService;
     private final OwnerApplicationRepository ownerApplicationRepository;
     private final StoragePort storagePort;
+    private final IdentityVerificationPort identityVerificationPort;
 
     public OwnerApplicationRegistrationServiceImpl(
             OwnerApplicationService ownerApplicationService,
             OwnerApplicationRepository ownerApplicationRepository,
-            StoragePort storagePort
+            StoragePort storagePort,
+            IdentityVerificationPort identityVerificationPort
     ) {
         this.ownerApplicationService = ownerApplicationService;
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.storagePort = storagePort;
+        this.identityVerificationPort = identityVerificationPort;
+    }
+
+    @Override
+    public OwnerIdentityVerificationCommand verifyIdentity(VerifyOwnerIdentityCommand command)
+            throws ServiceException {
+        command.validate();
+        String frontUrl = storagePort.getFileUrl(command.identityFrontKey());
+        String backUrl = storagePort.getFileUrl(command.identityBackKey());
+        return identityVerificationPort.verify(new IdentityVerificationRequestCommand(
+                command.userId(),
+                command.identityFrontKey(),
+                command.identityBackKey(),
+                frontUrl,
+                backUrl,
+                command.livenessFrames()
+        ));
+    }
+
+    @Override
+    public OwnerIdentityVerificationCommand getIdentityVerification(GetOwnerIdentityVerificationCommand command)
+            throws ServiceException {
+        command.validate();
+        return identityVerificationPort.get(command.verificationId(), command.userId());
     }
 
     @Override
@@ -74,7 +105,16 @@ public class OwnerApplicationRegistrationServiceImpl implements OwnerApplication
             return existing;
         }
 
-        List<String> objectKeys = command.documents().stream()
+        OwnerIdentityVerificationCommand verification = identityVerificationPort.get(
+                command.identityVerificationId(), command.userId()
+        );
+        ensureVerifiedIdentity(command, verification);
+        SubmitOwnerApplicationCommand trustedCommand = command.withVerifiedIdentity(
+                verification.document().fullName(),
+                verification.document().identityNumber()
+        );
+
+        List<String> objectKeys = trustedCommand.documents().stream()
                 .map(document -> document.objectKey().trim())
                 .toList();
         try {
@@ -84,10 +124,31 @@ public class OwnerApplicationRegistrationServiceImpl implements OwnerApplication
             if (finalKeys.size() != objectKeys.size()) {
                 throw new ServiceException("Không xác nhận đủ bốn tài liệu đã tải lên.");
             }
-            return ownerApplicationService.submitOwnerApplication(command);
+            return ownerApplicationService.submitOwnerApplication(trustedCommand);
         } catch (Exception exception) {
             compensateIfApplicationWasNotCreated(command, objectKeys);
             throw serviceException("Không thể hoàn tất hồ sơ đăng ký chủ sân.", exception);
+        }
+    }
+
+    private void ensureVerifiedIdentity(
+            SubmitOwnerApplicationCommand command,
+            OwnerIdentityVerificationCommand verification
+    ) throws ServiceException {
+        if (!verification.isVerified() || verification.document() == null) {
+            String message = verification.message() == null
+                    ? "CCCD và khuôn mặt chưa được xác minh."
+                    : verification.message();
+            throw new ServiceException(message);
+        }
+        if (!command.userId().equals(verification.subjectId())
+                || command.documents().stream().noneMatch(document ->
+                        document.slot() == OwnerApplicationDocumentSlot.IDENTITY_FRONT
+                                && document.objectKey().equals(verification.identityFrontKey()))
+                || command.documents().stream().noneMatch(document ->
+                        document.slot() == OwnerApplicationDocumentSlot.IDENTITY_BACK
+                                && document.objectKey().equals(verification.identityBackKey()))) {
+            throw new ServiceException("Phiên xác minh không thuộc bộ hồ sơ đang nộp.");
         }
     }
 

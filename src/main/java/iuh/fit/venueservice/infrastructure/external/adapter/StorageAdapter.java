@@ -52,4 +52,13 @@ public class StorageAdapter implements StoragePort {
     public void delete(String key) throws ServiceException {
         storageClient.delete(key);
     }
+
+    @Override
+    public String getFileUrl(String key) throws ServiceException {
+        String fileUrl = storageClient.getFileUrl(key);
+        if (fileUrl == null || fileUrl.isBlank()) {
+            throw new ServiceException("Không thể lấy đường dẫn đọc tài liệu tạm.");
+        }
+        return fileUrl;
+    }
 }

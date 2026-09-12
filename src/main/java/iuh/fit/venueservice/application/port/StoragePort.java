@@ -20,4 +20,6 @@ public interface StoragePort {
     void moveFile(MoveFileRequest request) throws ServiceException;
 
     void delete(String key) throws ServiceException;
+
+    String getFileUrl(String key) throws ServiceException;
 }

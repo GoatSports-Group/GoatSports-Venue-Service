@@ -25,6 +25,8 @@ import java.util.UUID;
 public class SubmitOwnerApplicationRequest {
     @NotNull
     private UUID ownerApplicationId;
+    @NotNull
+    private UUID identityVerificationId;
     @NotBlank
     private String fullName;
     @NotBlank
