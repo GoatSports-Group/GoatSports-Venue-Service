@@ -15,6 +15,8 @@ public interface ReviewRepository {
 
     PageResult<OwnerReviewRecord> findOwnedReviews(OwnerReviewFilter filter);
 
+    PageResult<Review> findPublishedByVenueId(UUID venueId, int page, int size);
+
     long countPublishedByVenueId(UUID venueId);
 
     Double averagePublishedRatingByVenueId(UUID venueId);

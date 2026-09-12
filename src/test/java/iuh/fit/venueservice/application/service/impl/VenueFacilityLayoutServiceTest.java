@@ -2,6 +2,7 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.port.StoragePort;
+import iuh.fit.venueservice.application.port.persistence.CancellationPolicyRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
@@ -22,12 +23,13 @@ import static org.mockito.Mockito.when;
 
 class VenueFacilityLayoutServiceTest {
     private final VenueRepository venueRepository = mock(VenueRepository.class);
+    private final CancellationPolicyRepository cancellationPolicyRepository = mock(CancellationPolicyRepository.class);
     private final StoragePort storagePort = mock(StoragePort.class);
     private VenueServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new VenueServiceImpl(venueRepository, storagePort);
+        service = new VenueServiceImpl(venueRepository, cancellationPolicyRepository, storagePort);
     }
 
     @Test

@@ -2,10 +2,12 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CreatePlayerReviewCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
+import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewView;
 import iuh.fit.venueservice.application.dto.response.venue.PlayerReviewView;
+import iuh.fit.venueservice.application.dto.response.venue.PublicReviewView;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
@@ -85,6 +87,23 @@ public class ReviewServiceImpl implements ReviewService {
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<PublicReviewView> getPublishedReviews(PublicReviewFilter filter)
+            throws ServiceException {
+        filter.validate();
+        venueRepository.findById(filter.venueId())
+                .filter(venue -> Boolean.TRUE.equals(venue.getActive()))
+                .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở đang hoạt động."));
+        PageResult<Review> page = reviewRepository.findPublishedByVenueId(
+                filter.venueId(), filter.page(), filter.size()
+        );
+        return new PageResult<>(
+                page.items().stream().map(this::toPublicView).toList(),
+                page.total(), page.page(), page.pageSize(), page.totalPages()
+        );
+    }
+
     private void ensureRequestedScope(OwnerReviewFilter filter) throws ServiceException {
         Venue selectedVenue = null;
         if (filter.venueId() != null) {
@@ -125,6 +144,12 @@ public class ReviewServiceImpl implements ReviewService {
         return new PlayerReviewView(
                 review.getReviewId(), review.getVenueId(), review.getBookingId(),
                 review.getRating(), review.getContent(), review.getStatus(), review.getCreatedAt()
+        );
+    }
+
+    private PublicReviewView toPublicView(Review review) {
+        return new PublicReviewView(
+                review.getReviewId(), review.getRating(), review.getContent(), review.getCreatedAt()
         );
     }
 

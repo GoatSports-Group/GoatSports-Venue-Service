@@ -61,10 +61,11 @@ public class ApplicationServiceConfig {
     @Bean
     public VenueServiceImpl venueService(
             VenueRepository venueRepository,
+            CancellationPolicyRepository cancellationPolicyRepository,
             StoragePort storagePort
     ) {
         return new VenueServiceImpl(
-                venueRepository, storagePort
+                venueRepository, cancellationPolicyRepository, storagePort
         );
     }
 

@@ -1,13 +1,17 @@
 package iuh.fit.venueservice.presentation.controller.open;
 
+import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.VenueSearchResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.VenueCourtMapper;
+import iuh.fit.venueservice.application.service.ReviewService;
 import iuh.fit.venueservice.application.service.VenueSearchService;
+import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.presentation.converter.VenueCourtConverter;
 import iuh.fit.venueservice.presentation.converter.VenueSearchConverter;
+import iuh.fit.venueservice.presentation.response.venue.PublicReviewResponse;
 import iuh.fit.venueservice.presentation.response.venue.VenueCourtResponse;
 import iuh.fit.venueservice.presentation.response.venue.VenueDetailResponse;
 import iuh.fit.venueservice.presentation.response.venue.VenueSearchResponse;
@@ -19,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import iuh.fit.venueservice.domain.enums.SportType;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +34,7 @@ public class PublicVenueController {
     private final VenueSearchConverter venueSearchConverter;
     private final VenueCourtMapper venueCourtMapper;
     private final VenueCourtConverter venueCourtConverter;
+    private final ReviewService reviewService;
 
     @GetMapping
     public ResponseEntity<PageResult<VenueSearchResponse>> getVenues(
@@ -76,5 +80,18 @@ public class PublicVenueController {
                 .map(venueCourtConverter::toResponse)
                 .toList();
         return ResponseEntity.ok(courts);
+    }
+
+    @GetMapping("/{venueId}/reviews")
+    public ResponseEntity<PageResult<PublicReviewResponse>> getVenueReviews(
+            @PathVariable UUID venueId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) throws ServiceException {
+        var result = reviewService.getPublishedReviews(new PublicReviewFilter(venueId, page, size));
+        return ResponseEntity.ok(new PageResult<>(
+                result.items().stream().map(venueSearchConverter::toResponse).toList(),
+                result.total(), result.page(), result.pageSize(), result.totalPages()
+        ));
     }
 }

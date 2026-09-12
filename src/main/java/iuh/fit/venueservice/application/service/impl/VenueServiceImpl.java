@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CreateVenueCommand;
+import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.file.FileMoveRequest;
 import iuh.fit.venueservice.application.dto.request.file.MoveFileRequest;
@@ -8,10 +9,12 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.persistence.CancellationPolicyRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.domain.entity.Address;
+import iuh.fit.venueservice.domain.entity.CancellationPolicy;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 
@@ -28,10 +31,16 @@ import java.util.stream.Collectors;
 
 public class VenueServiceImpl implements VenueService {
     private final VenueRepository venueRepository;
+    private final CancellationPolicyRepository cancellationPolicyRepository;
     private final StoragePort storagePort;
 
-    public VenueServiceImpl(VenueRepository venueRepository, StoragePort storagePort) {
+    public VenueServiceImpl(
+            VenueRepository venueRepository,
+            CancellationPolicyRepository cancellationPolicyRepository,
+            StoragePort storagePort
+    ) {
         this.venueRepository = venueRepository;
+        this.cancellationPolicyRepository = cancellationPolicyRepository;
         this.storagePort = storagePort;
     }
 
@@ -139,6 +148,20 @@ public class VenueServiceImpl implements VenueService {
         venue.setFacilityLayout(savedLayout);
         venueRepository.save(venue);
         return savedLayout;
+    }
+
+    @Override
+    public CancellationPolicy updateCancellationPolicy(UpdateCancellationPolicyCommand command)
+            throws ServiceException {
+        command.validate();
+        getOwnedVenue(command.venueId(), command.currentUserId());
+        CancellationPolicy policy = cancellationPolicyRepository.findByVenueId(command.venueId())
+                .orElseGet(CancellationPolicy::new);
+        policy.setFullRefundHoursBefore(command.fullRefundHoursBefore());
+        policy.setPartialRefundHoursBefore(command.partialRefundHoursBefore());
+        policy.setPartialRefundPercentage(command.partialRefundPercentage());
+        policy.setNoRefundHoursBefore(command.noRefundHoursBefore());
+        return cancellationPolicyRepository.save(command.venueId(), policy);
     }
 
     private void ensureValidFacilityLayout(Venue venue, VenueFacilityLayout layout) throws ServiceException {

@@ -2,6 +2,7 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CreatePlayerReviewCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
+import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewRecord;
 import iuh.fit.venueservice.application.exception.OwnershipException;
@@ -180,6 +181,39 @@ class ReviewServiceImplTest {
         assertThatThrownBy(() -> service.getOwnerReviews(new OwnerReviewFilter(
                 ownerId, null, null, null, null, null, 0, 21
         ))).isInstanceOf(ServiceException.class).hasMessageContaining("1 đến 20");
+    }
+
+    @Test
+    void returnsPublishedReviewsForAnActiveVenueWithoutPlayerIdentity() throws Exception {
+        Venue activeVenue = venue(ownerId);
+        activeVenue.setActive(true);
+        Review publishedReview = review();
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(activeVenue));
+        when(reviewRepository.findPublishedByVenueId(venueId, 0, 10)).thenReturn(
+                new PageResult<>(List.of(publishedReview), 1, 0, 10, 1)
+        );
+
+        var result = service.getPublishedReviews(new PublicReviewFilter(venueId, 0, 10));
+
+        assertThat(result.items()).singleElement().satisfies(view -> {
+            assertThat(view.reviewId()).isEqualTo(publishedReview.getReviewId());
+            assertThat(view.rating()).isEqualTo(5);
+            assertThat(view.content()).isEqualTo("Tốt");
+            assertThat(view.createdAt()).isEqualTo(publishedReview.getCreatedAt());
+        });
+    }
+
+    @Test
+    void rejectsPublicReviewsForInactiveVenueAndInvalidPagination() {
+        assertThatThrownBy(() -> service.getPublishedReviews(new PublicReviewFilter(venueId, -1, 10)))
+                .isInstanceOf(ServiceException.class).hasMessageContaining("phân trang");
+
+        Venue inactiveVenue = venue(ownerId);
+        inactiveVenue.setActive(false);
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(inactiveVenue));
+        assertThatThrownBy(() -> service.getPublishedReviews(new PublicReviewFilter(venueId, 0, 10)))
+                .isInstanceOf(ServiceException.class).hasMessageContaining("đang hoạt động");
+        verify(reviewRepository, never()).findPublishedByVenueId(venueId, 0, 10);
     }
 
     private CreatePlayerReviewCommand command() {

@@ -20,6 +20,7 @@ import java.util.UUID;
 public interface JpaReviewRepository extends JpaRepository<ReviewEntity, UUID>,
         JpaSpecificationExecutor<ReviewEntity> {
     List<ReviewEntity> findByVenue_VenueId(UUID venueId);
+    Page<ReviewEntity> findByVenue_VenueIdAndStatus(UUID venueId, ReviewStatus status, Pageable pageable);
     Optional<ReviewEntity> findByBooking_BookingId(UUID bookingId);
 
     @Override

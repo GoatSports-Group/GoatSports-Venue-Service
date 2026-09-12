@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCourtComman
 import iuh.fit.venueservice.application.dto.request.file.MoveFileRequest;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.port.StoragePort;
+import iuh.fit.venueservice.application.port.persistence.CancellationPolicyRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
@@ -37,6 +38,8 @@ class VenueOwnerAuthorizationTest {
     @Mock
     private VenueRepository venueRepository;
     @Mock
+    private CancellationPolicyRepository cancellationPolicyRepository;
+    @Mock
     private VenueCourtRepository venueCourtRepository;
     @Mock
     private StoragePort storagePort;
@@ -52,7 +55,7 @@ class VenueOwnerAuthorizationTest {
 
     @BeforeEach
     void setUp() {
-        venueService = new VenueServiceImpl(venueRepository, storagePort);
+        venueService = new VenueServiceImpl(venueRepository, cancellationPolicyRepository, storagePort);
         venueCourtService = new VenueCourtServiceImpl(
                 venueCourtRepository, venueRepository, timeSlotRepository, Clock.systemUTC()
         );

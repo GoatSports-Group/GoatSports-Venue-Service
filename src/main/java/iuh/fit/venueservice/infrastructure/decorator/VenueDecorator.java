@@ -2,11 +2,13 @@ package iuh.fit.venueservice.infrastructure.decorator;
 
 import iuh.fit.venueservice.application.dto.request.venue.CreateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
+import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.CancellationPolicy;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
@@ -62,6 +64,13 @@ public class VenueDecorator implements VenueService {
             UUID currentUserId
     ) throws ServiceException {
         return venueServiceImpl.updateFacilityLayout(venueId, layout, currentUserId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public CancellationPolicy updateCancellationPolicy(UpdateCancellationPolicyCommand command)
+            throws ServiceException {
+        return venueServiceImpl.updateCancellationPolicy(command);
     }
 
     @Override

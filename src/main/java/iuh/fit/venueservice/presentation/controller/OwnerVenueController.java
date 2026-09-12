@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.presentation.controller;
 
+import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
@@ -8,8 +9,10 @@ import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import iuh.fit.venueservice.presentation.converter.VenueSearchConverter;
-import iuh.fit.venueservice.presentation.request.venue.UpdateVenueRequest;
+import iuh.fit.venueservice.presentation.request.venue.UpdateCancellationPolicyRequest;
 import iuh.fit.venueservice.presentation.request.venue.UpdateVenueFacilityLayoutRequest;
+import iuh.fit.venueservice.presentation.request.venue.UpdateVenueRequest;
+import iuh.fit.venueservice.presentation.response.venue.CancellationPolicyResponse;
 import iuh.fit.venueservice.presentation.response.venue.VenueDetailResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -115,6 +118,23 @@ public class OwnerVenueController {
                 null
         );
         return ResponseEntity.ok(venueService.updateFacilityLayout(venueId, layout, currentUserId()));
+    }
+
+    @PutMapping("/{venueId}/cancellation-policy")
+    @PreAuthorize("hasAuthority('UPDATE_OWN_VENUE')")
+    public ResponseEntity<CancellationPolicyResponse> updateCancellationPolicy(
+            @PathVariable UUID venueId,
+            @Valid @RequestBody UpdateCancellationPolicyRequest request
+    ) throws ServiceException {
+        var policy = venueService.updateCancellationPolicy(new UpdateCancellationPolicyCommand(
+                venueId,
+                currentUserId(),
+                request.fullRefundHoursBefore(),
+                request.partialRefundHoursBefore(),
+                request.partialRefundPercentage(),
+                request.noRefundHoursBefore()
+        ));
+        return ResponseEntity.ok(venueSearchConverter.toResponse(policy));
     }
 
     private UUID currentUserId() throws ServiceException {

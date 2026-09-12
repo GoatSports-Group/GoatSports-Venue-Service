@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.presentation.response.venue;
 
+import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import lombok.*;
 
 import java.time.LocalTime;
@@ -33,5 +34,7 @@ public class VenueDetailResponse {
     private Double longitude;
     private List<String> imageUrls;
     private List<String> amenities;
+    private VenueFacilityLayout facilityLayout;
+    private CancellationPolicyResponse cancellationPolicy;
     private Set<VenueCourtResponse> courts;
 }

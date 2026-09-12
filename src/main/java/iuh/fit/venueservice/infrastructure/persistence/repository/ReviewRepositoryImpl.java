@@ -70,6 +70,20 @@ public class ReviewRepositoryImpl implements ReviewRepository {
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<Review> findPublishedByVenueId(UUID venueId, int page, int size) {
+        var result = jpaRepository.findByVenue_VenueIdAndStatus(
+                venueId,
+                ReviewStatus.PUBLISHED,
+                PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")))
+        );
+        return new PageResult<>(
+                result.getContent().stream().map(this::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalPages()
+        );
+    }
+
     private Specification<ReviewEntity> ownedReviewsSpecification(
             OwnerReviewFilter filter, LocalDateTime fromTime, LocalDateTime toTime
     ) {
