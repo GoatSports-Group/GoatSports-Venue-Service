@@ -142,7 +142,8 @@ public class OwnerApplicationController {
                                 .map(document -> new OwnerApplicationUploadDocumentCommand(
                                         document.getSlot(),
                                         document.getFileName(),
-                                        document.getContentType()
+                                        document.getContentType(),
+                                        document.getFileSize()
                                 ))
                                 .toList()
                 )

@@ -82,7 +82,8 @@ public class OwnerApplicationRegistrationServiceImpl implements OwnerApplication
                 .map(document -> new PresignedUrlRequestCommand(
                         document.fileName().trim(),
                         document.contentType().trim(),
-                        folderOf(document)
+                        folderOf(document),
+                        document.fileSize()
                 ))
                 .toList();
         List<PresignedUrlResponseCommand> presignedUrls = storagePort.generatePresignedUrls(
