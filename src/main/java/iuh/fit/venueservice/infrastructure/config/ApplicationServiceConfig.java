@@ -94,6 +94,11 @@ public class ApplicationServiceConfig {
     }
 
     @Bean
+    public GeocodingServiceImpl geocodingService(GeocodingPort geocodingPort) {
+        return new GeocodingServiceImpl(geocodingPort);
+    }
+
+    @Bean
     public BookingServiceImpl bookingService(
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
