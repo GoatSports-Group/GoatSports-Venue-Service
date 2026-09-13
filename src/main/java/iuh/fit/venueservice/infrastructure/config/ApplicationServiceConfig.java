@@ -99,6 +99,11 @@ public class ApplicationServiceConfig {
     }
 
     @Bean
+    public AddressSuggestionServiceImpl addressSuggestionService(AddressSuggestionPort addressSuggestionPort) {
+        return new AddressSuggestionServiceImpl(addressSuggestionPort);
+    }
+
+    @Bean
     public BookingServiceImpl bookingService(
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
