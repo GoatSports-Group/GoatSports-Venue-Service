@@ -81,7 +81,9 @@ class VenuePublicAccessTest {
         UUID venueId = UUID.randomUUID();
         SearchVenueCommand command = new SearchVenueCommand(
                 null, null, null, null,
-                null, null, null, null, null, null,
+                null, null, null,
+                null, null, null, null,
+                null, null, null,
                 0, 12
         );
         Venue venue = Venue.builder()

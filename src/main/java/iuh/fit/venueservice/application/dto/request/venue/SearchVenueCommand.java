@@ -2,8 +2,6 @@ package iuh.fit.venueservice.application.dto.request.venue;
 
 import iuh.fit.venueservice.domain.enums.SportType;
 
-import java.util.UUID;
-
 public record SearchVenueCommand(
         String keyword,
         SportType sportType,
@@ -12,6 +10,10 @@ public record SearchVenueCommand(
         Double latitude,
         Double longitude,
         Double radiusKm,
+        Double northLatitude,
+        Double southLatitude,
+        Double eastLongitude,
+        Double westLongitude,
         Double minPrice,
         Double maxPrice,
         Double minRating,

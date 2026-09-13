@@ -4,6 +4,7 @@ import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueEntityMapper;
@@ -17,9 +18,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -76,7 +79,16 @@ public class VenueRepositoryImpl implements VenueRepository {
                 Predicate descMatch = cb.like(cb.lower(root.get("description")), kw);
                 var address = root.join("address", JoinType.INNER);
                 Predicate addressMatch = cb.like(cb.lower(address.get("address")), kw);
-                predicates.add(cb.or(nameMatch, descMatch, addressMatch));
+                Optional<SportType> keywordSportType = resolveSportTypeKeyword(command.keyword());
+                if (keywordSportType.isPresent()) {
+                    var court = root.join("venueCourts", JoinType.LEFT);
+                    Predicate activeCourt = cb.isTrue(court.get("active"));
+                    Predicate sportMatch = cb.equal(court.get("sportType"), keywordSportType.get());
+                    predicates.add(cb.or(nameMatch, descMatch, addressMatch, cb.and(activeCourt, sportMatch)));
+                    query.distinct(true);
+                } else {
+                    predicates.add(cb.or(nameMatch, descMatch, addressMatch));
+                }
             }
 
             if (command.city() != null && !command.city().trim().isEmpty()) {
@@ -84,11 +96,29 @@ public class VenueRepositoryImpl implements VenueRepository {
             }
 
             if (command.district() != null && !command.district().trim().isEmpty()) {
-                predicates.add(cb.equal(cb.lower(root.join("address", JoinType.INNER).get("district")), command.district().trim().toLowerCase()));
+                String area = "%" + command.district().trim().toLowerCase() + "%";
+                var address = root.join("address", JoinType.INNER);
+                Predicate districtMatch = cb.like(cb.lower(address.get("district")), area);
+                Predicate wardMatch = cb.like(cb.lower(address.get("ward")), area);
+                predicates.add(cb.or(districtMatch, wardMatch));
+            }
+
+            if (hasViewportBounds(command)) {
+                var address = root.join("address", JoinType.INNER);
+                predicates.add(cb.between(
+                        address.get("latitude"),
+                        command.southLatitude(),
+                        command.northLatitude()
+                ));
+                predicates.add(cb.between(
+                        address.get("longitude"),
+                        command.westLongitude(),
+                        command.eastLongitude()
+                ));
             }
 
             if (command.minPrice() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("maxPrice"), command.minPrice()));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("minPrice"), command.minPrice()));
             }
 
             if (command.maxPrice() != null) {
@@ -149,6 +179,37 @@ public class VenueRepositoryImpl implements VenueRepository {
                 && command.longitude() != null
                 && command.radiusKm() != null
                 && command.radiusKm() > 0;
+    }
+
+    private boolean hasViewportBounds(SearchVenueCommand command) {
+        return command.northLatitude() != null
+                && command.southLatitude() != null
+                && command.eastLongitude() != null
+                && command.westLongitude() != null
+                && command.northLatitude() >= command.southLatitude()
+                && command.eastLongitude() >= command.westLongitude();
+    }
+
+    static Optional<SportType> resolveSportTypeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return Optional.empty();
+        }
+
+        String normalizedKeyword = normalizeSearchText(keyword);
+        return List.of(SportType.values()).stream()
+                .filter(sportType -> normalizedKeyword.equals(normalizeSearchText(sportType.getValue()))
+                        || normalizedKeyword.equals(normalizeSearchText(sportType.name())))
+                .findFirst();
+    }
+
+    private static String normalizeSearchText(String value) {
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", " ")
+                .trim();
     }
 
     private boolean hasCoordinates(VenueEntity venue) {

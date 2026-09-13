@@ -45,6 +45,10 @@ public class PublicVenueController {
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude,
             @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) Double northLatitude,
+            @RequestParam(required = false) Double southLatitude,
+            @RequestParam(required = false) Double eastLongitude,
+            @RequestParam(required = false) Double westLongitude,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) Double minRating,
@@ -53,6 +57,7 @@ public class PublicVenueController {
     ) {
         SearchVenueCommand command = new SearchVenueCommand(
                 keyword, sportType, district, city, latitude, longitude, radiusKm,
+                northLatitude, southLatitude, eastLongitude, westLongitude,
                 minPrice, maxPrice, minRating, page, size
         );
         PageResult<VenueSearchResponseCommand> result = venueSearchService.searchVenues(command);
