@@ -17,6 +17,9 @@ import java.util.UUID;
         path = "/api/v1/ai/identity-verifications"
 )
 public interface AiIdentityVerificationClient {
+    @PostMapping("/readiness")
+    FaceReadiness analyzeReadiness(@RequestBody FaceReadinessRequest request);
+
     @PostMapping
     VerificationEnvelope verify(@RequestBody VerificationRequest request);
 
@@ -37,6 +40,27 @@ public interface AiIdentityVerificationClient {
     }
 
     record VerificationEnvelope(Verification verification) {
+    }
+
+    record FaceReadinessRequest(UUID subjectId, String frame) {
+    }
+
+    record FaceReadiness(
+            boolean ready,
+            String reasonCode,
+            String message,
+            int faceCount,
+            double brightness,
+            boolean centered,
+            boolean frontal,
+            boolean glassesFree,
+            boolean eyesOpen,
+            boolean maskFree,
+            List<Double> faceBox,
+            double yawRatio,
+            double pitchRatio,
+            double rollDegrees
+    ) {
     }
 
     record Verification(

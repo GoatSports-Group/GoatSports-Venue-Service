@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.application.CleanupOwnerApplicationUploadCommand;
+import iuh.fit.venueservice.application.dto.request.application.AnalyzeOwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.dto.request.application.GetOwnerIdentityVerificationCommand;
 import iuh.fit.venueservice.application.dto.request.application.IdentityVerificationRequestCommand;
 import iuh.fit.venueservice.application.dto.request.application.OwnerApplicationUploadDocumentCommand;
@@ -10,6 +11,7 @@ import iuh.fit.venueservice.application.dto.request.application.VerifyOwnerIdent
 import iuh.fit.venueservice.application.dto.request.file.FileMoveRequest;
 import iuh.fit.venueservice.application.dto.request.file.PresignedUrlRequestCommand;
 import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.dto.response.application.PreparedOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.dto.response.file.PresignedUrlResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -40,6 +42,13 @@ public class OwnerApplicationRegistrationServiceImpl implements OwnerApplication
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.storagePort = storagePort;
         this.identityVerificationPort = identityVerificationPort;
+    }
+
+    @Override
+    public OwnerFaceReadinessCommand analyzeFaceReadiness(AnalyzeOwnerFaceReadinessCommand command)
+            throws ServiceException {
+        command.validate();
+        return identityVerificationPort.analyzeReadiness(command.userId(), command.frame());
     }
 
     @Override

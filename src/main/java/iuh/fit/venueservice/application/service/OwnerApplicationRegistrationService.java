@@ -1,16 +1,21 @@
 package iuh.fit.venueservice.application.service;
 
 import iuh.fit.venueservice.application.dto.request.application.CleanupOwnerApplicationUploadCommand;
+import iuh.fit.venueservice.application.dto.request.application.AnalyzeOwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.dto.request.application.GetOwnerIdentityVerificationCommand;
 import iuh.fit.venueservice.application.dto.request.application.PrepareOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.request.application.VerifyOwnerIdentityCommand;
 import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.dto.response.application.PreparedOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 
 public interface OwnerApplicationRegistrationService {
+    OwnerFaceReadinessCommand analyzeFaceReadiness(AnalyzeOwnerFaceReadinessCommand command)
+            throws ServiceException;
+
     PreparedOwnerApplicationUploadCommand prepareUpload(PrepareOwnerApplicationUploadCommand command)
             throws ServiceException;
 

@@ -4,6 +4,7 @@ import iuh.fit.shared.annotation.AuditLog;
 import iuh.fit.venueservice.application.dto.PageFilter;
 import iuh.fit.venueservice.application.dto.request.application.*;
 import iuh.fit.venueservice.application.dto.response.application.OwnerApplicationResponseCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
 import iuh.fit.venueservice.application.dto.response.application.PreparedOwnerApplicationUploadCommand;
 import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
@@ -17,10 +18,12 @@ import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
 import iuh.fit.venueservice.presentation.request.application.CleanupOwnerApplicationUploadRequest;
+import iuh.fit.venueservice.presentation.request.application.AnalyzeOwnerFaceReadinessRequest;
 import iuh.fit.venueservice.presentation.request.application.PrepareOwnerApplicationUploadRequest;
 import iuh.fit.venueservice.presentation.request.application.SubmitOwnerApplicationRequest;
 import iuh.fit.venueservice.presentation.request.application.VerifyOwnerIdentityRequest;
 import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
+import iuh.fit.venueservice.presentation.response.application.OwnerFaceReadinessResponse;
 import iuh.fit.venueservice.presentation.response.application.PreparedOwnerApplicationUploadResponse;
 import iuh.fit.venueservice.presentation.response.application.OwnerIdentityVerificationResponse;
 import jakarta.validation.Valid;
@@ -44,6 +47,31 @@ public class OwnerApplicationController {
     private final OwnerApplicationMapper ownerApplicationMapper;
     private final OwnerApplicationConverter ownerApplicationConverter;
     private final OwnerApplicationRegistrationService registrationService;
+
+    @PostMapping("/identity-verification/readiness")
+    public ResponseEntity<OwnerFaceReadinessResponse> analyzeFaceReadiness(
+            @Valid @RequestBody AnalyzeOwnerFaceReadinessRequest request
+    ) throws ServiceException {
+        OwnerFaceReadinessCommand result = registrationService.analyzeFaceReadiness(
+                new AnalyzeOwnerFaceReadinessCommand(currentUserId(), request.getFrame())
+        );
+        return ResponseEntity.ok(OwnerFaceReadinessResponse.builder()
+                .ready(result.ready())
+                .reasonCode(result.reasonCode())
+                .message(result.message())
+                .faceCount(result.faceCount())
+                .brightness(result.brightness())
+                .centered(result.centered())
+                .frontal(result.frontal())
+                .glassesFree(result.glassesFree())
+                .eyesOpen(result.eyesOpen())
+                .maskFree(result.maskFree())
+                .faceBox(result.faceBox())
+                .yawRatio(result.yawRatio())
+                .pitchRatio(result.pitchRatio())
+                .rollDegrees(result.rollDegrees())
+                .build());
+    }
 
     @GetMapping("/me")
     public ResponseEntity<BaseListResponse> getMyOwnerApplications(

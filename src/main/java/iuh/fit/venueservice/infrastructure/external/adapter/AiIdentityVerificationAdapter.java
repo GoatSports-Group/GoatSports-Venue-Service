@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.external.adapter;
 import feign.FeignException;
 import iuh.fit.venueservice.application.dto.request.application.IdentityVerificationRequestCommand;
 import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.IdentityVerificationPort;
 import iuh.fit.venueservice.infrastructure.external.client.AiIdentityVerificationClient;
@@ -15,6 +16,26 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AiIdentityVerificationAdapter implements IdentityVerificationPort {
     private final AiIdentityVerificationClient client;
+
+    @Override
+    public OwnerFaceReadinessCommand analyzeReadiness(UUID subjectId, String frame) throws ServiceException {
+        try {
+            AiIdentityVerificationClient.FaceReadiness result = client.analyzeReadiness(
+                    new AiIdentityVerificationClient.FaceReadinessRequest(subjectId, frame)
+            );
+            if (result == null) {
+                throw new ServiceException("AI Service trả về kết quả camera không hợp lệ.");
+            }
+            return new OwnerFaceReadinessCommand(
+                    result.ready(), result.reasonCode(), result.message(), result.faceCount(),
+                    result.brightness(), result.centered(), result.frontal(), result.glassesFree(),
+                    result.eyesOpen(), result.maskFree(), result.faceBox(), result.yawRatio(),
+                    result.pitchRatio(), result.rollDegrees()
+            );
+        } catch (FeignException exception) {
+            throw new ServiceException("Không thể phân tích khuôn mặt theo thời gian thực.");
+        }
+    }
 
     @Override
     public OwnerIdentityVerificationCommand verify(IdentityVerificationRequestCommand command)

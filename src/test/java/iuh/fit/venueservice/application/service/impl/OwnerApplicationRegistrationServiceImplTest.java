@@ -1,9 +1,11 @@
 package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.application.GetOwnerIdentityVerificationCommand;
+import iuh.fit.venueservice.application.dto.request.application.AnalyzeOwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.dto.request.application.OwnerApplicationUploadedDocumentCommand;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.dto.response.application.OwnerIdentityVerificationCommand;
+import iuh.fit.venueservice.application.dto.response.application.OwnerFaceReadinessCommand;
 import iuh.fit.venueservice.application.port.IdentityVerificationPort;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
@@ -37,6 +39,24 @@ class OwnerApplicationRegistrationServiceImplTest {
     private StoragePort storagePort;
     @Mock
     private IdentityVerificationPort identityVerificationPort;
+
+    @Test
+    void analyzeFaceReadinessDelegatesValidatedRealtimeFrame() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String frame = "data:image/jpeg;base64," + "A".repeat(32);
+        AnalyzeOwnerFaceReadinessCommand command = new AnalyzeOwnerFaceReadinessCommand(userId, frame);
+        OwnerFaceReadinessCommand ready = new OwnerFaceReadinessCommand(
+                true, "READY", "Sẵn sàng quét khuôn mặt.", 1, 120.0,
+                true, true, true, true, true,
+                List.of(0.25, 0.15, 0.5, 0.7), 0.0, 0.5, 0.0
+        );
+        when(identityVerificationPort.analyzeReadiness(userId, frame)).thenReturn(ready);
+
+        OwnerFaceReadinessCommand result = service().analyzeFaceReadiness(command);
+
+        assertThat(result).isSameAs(ready);
+        verify(identityVerificationPort).analyzeReadiness(userId, frame);
+    }
 
     @Test
     void getIdentityVerificationReturnsCurrentBackgroundResult() throws Exception {
