@@ -20,6 +20,8 @@ public interface BookingService {
 
     Booking getBookingById(UUID bookingId) throws ServiceException;
 
+    Booking getMatchmakingBooking(UUID matchmakingSessionId) throws ServiceException;
+
     PlayerBookingView getPlayerBooking(UUID bookingId, UUID playerId) throws ServiceException;
 
     List<Booking> getBookingHistory(UUID userId, String status, int page, int size);

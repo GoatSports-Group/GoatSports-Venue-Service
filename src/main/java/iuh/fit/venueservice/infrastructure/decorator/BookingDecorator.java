@@ -46,6 +46,12 @@ public class BookingDecorator implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public Booking getMatchmakingBooking(UUID matchmakingSessionId) throws ServiceException {
+        return delegate.getMatchmakingBooking(matchmakingSessionId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PlayerBookingView getPlayerBooking(UUID bookingId, UUID playerId) throws ServiceException {
         return delegate.getPlayerBooking(bookingId, playerId);
     }

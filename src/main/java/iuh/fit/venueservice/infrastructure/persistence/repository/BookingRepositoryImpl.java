@@ -69,6 +69,12 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    public Optional<Booking> findLatestByMatchmakingSessionId(UUID matchmakingSessionId) {
+        return jpaRepository.findFirstByMatchmakingSessionIdOrderByCreatedAtDesc(matchmakingSessionId)
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public List<Booking> findByPlayerId(UUID playerId, int page, int size) {
         return jpaRepository.findByPlayerIdOrderByCreatedAtDesc(playerId, PageRequest.of(page, size))
                 .stream().map(mapper::toDomain).collect(Collectors.toList());

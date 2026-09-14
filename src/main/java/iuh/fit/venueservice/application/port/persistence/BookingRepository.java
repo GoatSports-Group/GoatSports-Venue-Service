@@ -25,6 +25,8 @@ public interface BookingRepository {
 
     Optional<Booking> findByQrCode(String qrCode);
 
+    Optional<Booking> findLatestByMatchmakingSessionId(UUID matchmakingSessionId);
+
     List<Booking> findByPlayerId(UUID playerId, int page, int size);
 
     List<Booking> findByPlayerIdAndStatus(UUID playerId, String status, int page, int size);

@@ -34,6 +34,8 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
 
     Optional<BookingEntity> findByQrCode(String qrCode);
 
+    Optional<BookingEntity> findFirstByMatchmakingSessionIdOrderByCreatedAtDesc(UUID matchmakingSessionId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select booking from BookingEntity booking

@@ -176,6 +176,12 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    public Booking getMatchmakingBooking(UUID matchmakingSessionId) throws ServiceException {
+        return bookingRepository.findLatestByMatchmakingSessionId(matchmakingSessionId)
+                .orElseThrow(() -> new ServiceException("Không tìm thấy booking của phiên ghép trận."));
+    }
+
+    @Override
     public PlayerBookingView getPlayerBooking(UUID bookingId, UUID playerId) throws ServiceException {
         Booking booking = getBookingById(bookingId);
         if (booking.getPlayerId() == null || !booking.getPlayerId().equals(playerId)) {
