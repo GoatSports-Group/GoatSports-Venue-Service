@@ -62,13 +62,13 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             throw new ServiceException("Payer của payment terminal event không khớp booking.");
         }
 
-        booking.setStatus("CANCELLED".equals(command.status())
-                ? BookingStatus.CANCELLED
-                : BookingStatus.EXPIRED);
+        boolean paymentCancelled = "CANCELLED".equals(command.status());
+        booking.setStatus(paymentCancelled ? BookingStatus.CANCELLED : BookingStatus.EXPIRED);
         timeSlotLifecycleService.releaseBookingSlot(booking);
         Booking saved = bookingRepository.save(booking);
         matchmakingLifecycleSyncPort.syncBookingLifecycle(
-                saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name()
+                saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(),
+                paymentCancelled ? "PAYMENT_CANCELLED" : "PAYMENT_EXPIRED"
         );
         return true;
     }
@@ -101,7 +101,12 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         booking.setStatus(status == CancellationStatus.REFUNDED
                 ? BookingStatus.REFUNDED : BookingStatus.REFUND_PENDING);
         bookingCancellationRepository.save(cancellation);
-        bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+        if (status == CancellationStatus.REFUNDED) {
+            matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                    saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(), "REFUNDED"
+            );
+        }
         return true;
     }
 

@@ -11,5 +11,16 @@ import java.util.UUID;
  * outcome of the payment or check-in flow that triggered it.
  */
 public interface MatchmakingLifecycleSyncPort {
-    void syncBookingLifecycle(UUID matchmakingSessionId, UUID bookingId, String bookingStatus);
+    default void syncBookingLifecycle(UUID matchmakingSessionId, UUID bookingId, String bookingStatus) {
+        syncBookingLifecycle(matchmakingSessionId, bookingId, bookingStatus, null);
+    }
+
+    /**
+     * @param reason machine-readable cause for a CANCELLED/EXPIRED/REFUNDED status
+     *               (e.g. "PLAYER_CANCELLED", "PAYMENT_EXPIRED", "PAYMENT_CANCELLED",
+     *               "REFUNDED"), so the player sees a specific explanation instead of
+     *               a generic "booking was cancelled" message. Null for non-cancel
+     *               transitions (CONFIRMED, CHECKED_IN, ...).
+     */
+    void syncBookingLifecycle(UUID matchmakingSessionId, UUID bookingId, String bookingStatus, String reason);
 }

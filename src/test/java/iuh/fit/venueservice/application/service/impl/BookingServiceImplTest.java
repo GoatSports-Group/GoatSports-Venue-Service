@@ -56,6 +56,7 @@ class BookingServiceImplTest {
     @Mock VenueRepository venueRepository;
     @Mock BookingQrPort bookingQrPort;
     @Mock PaymentRefundPort paymentRefundPort;
+    @Mock iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
 
     @Test
     void createBookingStaysPendingPaymentWithoutFakeProviderSuccess() throws Exception {
@@ -89,7 +90,7 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1)
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -140,7 +141,7 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1)
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -329,7 +330,7 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1)
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
         );
     }
 }

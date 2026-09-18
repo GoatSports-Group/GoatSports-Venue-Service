@@ -10,6 +10,7 @@ import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseComma
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
@@ -57,6 +58,7 @@ public class BookingServiceImpl implements BookingService {
     private final Clock clock;
     private final Duration paymentHoldDuration;
     private final Duration cancellationAutoApprovalWindow;
+    private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
 
     public BookingServiceImpl(
             BookingRepository bookingRepository,
@@ -70,7 +72,8 @@ public class BookingServiceImpl implements BookingService {
             PaymentRefundPort paymentRefundPort,
             Clock clock,
             Duration paymentHoldDuration,
-            Duration cancellationAutoApprovalWindow
+            Duration cancellationAutoApprovalWindow,
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
@@ -84,6 +87,7 @@ public class BookingServiceImpl implements BookingService {
         this.clock = clock;
         this.paymentHoldDuration = paymentHoldDuration;
         this.cancellationAutoApprovalWindow = cancellationAutoApprovalWindow;
+        this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
     }
 
     @Override
@@ -345,7 +349,10 @@ public class BookingServiceImpl implements BookingService {
         }
         cancellation.setStatus(CancellationStatus.REFUNDED);
         booking.setStatus(BookingStatus.REFUNDED);
-        bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+        matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(), "REFUNDED"
+        );
         return bookingCancellationRepository.save(cancellation);
     }
 
@@ -378,7 +385,17 @@ public class BookingServiceImpl implements BookingService {
             booking.setStatus(BookingStatus.CANCELLED);
         }
         timeSlotLifecycleService.releaseBookingSlot(booking);
-        bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+        if (saved.getStatus() == BookingStatus.CANCELLED) {
+            matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                    saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(),
+                    "PLAYER_CANCELLED"
+            );
+        } else if (saved.getStatus() == BookingStatus.REFUNDED) {
+            matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                    saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(), "REFUNDED"
+            );
+        }
         return bookingCancellationRepository.save(cancellation);
     }
 

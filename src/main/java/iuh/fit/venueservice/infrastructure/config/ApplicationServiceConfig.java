@@ -116,12 +116,13 @@ public class ApplicationServiceConfig {
             PaymentRefundPort paymentRefundPort,
             Clock clock,
             @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration,
-            @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow
+            @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow,
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
     ) {
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository, timeSlotLifecycleService, bookingQrPort, paymentRefundPort,
-                clock, paymentHoldDuration, cancellationAutoApprovalWindow
+                clock, paymentHoldDuration, cancellationAutoApprovalWindow, matchmakingLifecycleSyncPort
         );
     }
 

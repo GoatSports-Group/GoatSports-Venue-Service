@@ -21,6 +21,6 @@ public interface AiMatchmakingSyncClient {
             @RequestBody LifecycleSyncRequest request
     );
 
-    record LifecycleSyncRequest(UUID bookingId, String status) {
+    record LifecycleSyncRequest(UUID bookingId, String status, String reason) {
     }
 }

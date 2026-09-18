@@ -15,19 +15,19 @@ public class MatchmakingLifecycleSyncAdapter implements MatchmakingLifecycleSync
     private final AiMatchmakingSyncClient client;
 
     @Override
-    public void syncBookingLifecycle(UUID matchmakingSessionId, UUID bookingId, String bookingStatus) {
+    public void syncBookingLifecycle(UUID matchmakingSessionId, UUID bookingId, String bookingStatus, String reason) {
         if (matchmakingSessionId == null) {
             return;
         }
         try {
             client.syncLifecycle(
                     matchmakingSessionId,
-                    new AiMatchmakingSyncClient.LifecycleSyncRequest(bookingId, bookingStatus)
+                    new AiMatchmakingSyncClient.LifecycleSyncRequest(bookingId, bookingStatus, reason)
             );
         } catch (Exception exception) {
             log.warn(
-                    "Không thể đồng bộ trạng thái booking {} (status={}) sang matchmaking session {}: {}",
-                    bookingId, bookingStatus, matchmakingSessionId, exception.getMessage()
+                    "Không thể đồng bộ trạng thái booking {} (status={}, reason={}) sang matchmaking session {}: {}",
+                    bookingId, bookingStatus, reason, matchmakingSessionId, exception.getMessage()
             );
         }
     }
