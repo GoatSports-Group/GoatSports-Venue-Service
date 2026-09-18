@@ -4,6 +4,7 @@ import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
+import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
@@ -43,6 +44,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -154,6 +156,43 @@ class BookingServiceImplTest {
         assertThat(result.getRemainingAmount()).isEqualTo(200_000.0);
         assertThat(result.getHoldExpiresAt()).isNull();
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.BOOKED);
+    }
+
+    @Test
+    void createBookingRejectsSlotAlreadyHeldByAnotherBooking() {
+        UUID courtId = UUID.randomUUID();
+        Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDate playDate = LocalDate.now(clock).plusDays(1);
+        LocalTime startTime = LocalTime.of(18, 0);
+        LocalTime endTime = LocalTime.of(19, 0);
+
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).active(true).build()
+        ));
+        TimeSlot heldSlot = TimeSlot.builder()
+                .venueCourtId(courtId)
+                .date(playDate)
+                .startTime(startTime)
+                .endTime(endTime)
+                .pricePerHour(200_000.0)
+                .status(TimeSlotStatus.LOCKED)
+                .build();
+        when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, startTime, endTime))
+                .thenReturn(Optional.of(heldSlot));
+        BookingServiceImpl service = new BookingServiceImpl(
+                bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
+                venueCourtRepository, venueRepository,
+                new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
+        );
+
+        assertThatThrownBy(() -> service.createBooking(new CreateBookingCommand(
+                UUID.randomUUID(), courtId, playDate, startTime, endTime,
+                BookingSource.DIRECT, null, null, null
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("không còn khả dụng");
+
+        assertThat(heldSlot.getStatus()).isEqualTo(TimeSlotStatus.LOCKED);
+        verify(bookingRepository, never()).save(any(Booking.class));
     }
 
     @Test
