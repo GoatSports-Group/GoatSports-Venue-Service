@@ -65,6 +65,7 @@ class OwnerCheckInServiceImplTest {
     @Mock private PaymentCollectionPort paymentCollectionPort;
     @Mock private BookingQrPort bookingQrPort;
     @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
+    @Mock private iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
 
     private OwnerCheckInServiceImpl service;
     private UUID ownerId;
@@ -81,7 +82,7 @@ class OwnerCheckInServiceImplTest {
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
-                Duration.ofMinutes(30)
+                Duration.ofMinutes(30), matchmakingLifecycleSyncPort
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();

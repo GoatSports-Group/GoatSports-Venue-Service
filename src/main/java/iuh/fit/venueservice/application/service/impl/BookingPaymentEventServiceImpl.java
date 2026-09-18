@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalComma
 import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
@@ -26,6 +27,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     private final VenueRepository venueRepository;
     private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final BookingCancellationRepository bookingCancellationRepository;
+    private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
@@ -33,7 +35,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
-            BookingCancellationRepository bookingCancellationRepository
+            BookingCancellationRepository bookingCancellationRepository,
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
@@ -41,6 +44,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         this.venueRepository = venueRepository;
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.bookingCancellationRepository = bookingCancellationRepository;
+        this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
     }
 
     @Override
@@ -62,7 +66,10 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 ? BookingStatus.CANCELLED
                 : BookingStatus.EXPIRED);
         timeSlotLifecycleService.releaseBookingSlot(booking);
-        bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+        matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name()
+        );
         return true;
     }
 
@@ -132,7 +139,12 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                     || booking.getStatus() == BookingStatus.CONFIRMED) {
                 timeSlotLifecycleService.confirmBookingSlot(booking);
             }
-            if (changed) bookingRepository.save(booking);
+            if (changed) {
+                Booking saved = bookingRepository.save(booking);
+                matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                        saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name()
+                );
+            }
             return changed;
         }
 
@@ -155,7 +167,12 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                     || booking.getStatus() == BookingStatus.CONFIRMED) {
                 timeSlotLifecycleService.confirmBookingSlot(booking);
             }
-            if (changed) bookingRepository.save(booking);
+            if (changed) {
+                Booking saved = bookingRepository.save(booking);
+                matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                        saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name()
+                );
+            }
             return changed;
         }
         return false;

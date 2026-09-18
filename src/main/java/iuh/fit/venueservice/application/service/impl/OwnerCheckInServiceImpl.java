@@ -12,6 +12,7 @@ import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
@@ -59,6 +60,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final Clock clock;
     private final Duration onlineEarlyCheckInWindow;
+    private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
 
     public OwnerCheckInServiceImpl(
             BookingRepository bookingRepository,
@@ -71,7 +73,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
             BookingQrPort bookingQrPort,
             TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
-            Duration onlineEarlyCheckInWindow
+            Duration onlineEarlyCheckInWindow,
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
     ) {
         this.bookingRepository = bookingRepository;
         this.checkInRecordRepository = checkInRecordRepository;
@@ -84,6 +87,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.clock = clock;
         this.onlineEarlyCheckInWindow = onlineEarlyCheckInWindow;
+        this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
     }
 
     @Override
@@ -141,6 +145,9 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         timeSlotLifecycleService.confirmBookingSlot(booking);
         booking.setStatus(BookingStatus.CHECKED_IN);
         Booking saved = bookingRepository.save(booking);
+        matchmakingLifecycleSyncPort.syncBookingLifecycle(
+                saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name()
+        );
         return view(new OwnerBookingRecord(
                 saved, record.venueId(), record.venueName(), record.courtName()
         ), payments, checkIn);

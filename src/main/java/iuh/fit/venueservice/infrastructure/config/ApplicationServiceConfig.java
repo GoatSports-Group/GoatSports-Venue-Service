@@ -198,13 +198,14 @@ public class ApplicationServiceConfig {
             BookingQrPort bookingQrPort,
             TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
-            @Value("${booking.online-check-in-early-window}") Duration onlineEarlyCheckInWindow
+            @Value("${booking.online-check-in-early-window}") Duration onlineEarlyCheckInWindow,
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
     ) {
         return new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
-                onlineEarlyCheckInWindow
+                onlineEarlyCheckInWindow, matchmakingLifecycleSyncPort
         );
     }
 
@@ -215,11 +216,12 @@ public class ApplicationServiceConfig {
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
-            BookingCancellationRepository bookingCancellationRepository
+            BookingCancellationRepository bookingCancellationRepository,
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
     ) {
         return new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, bookingCancellationRepository
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort
         );
     }
 }
