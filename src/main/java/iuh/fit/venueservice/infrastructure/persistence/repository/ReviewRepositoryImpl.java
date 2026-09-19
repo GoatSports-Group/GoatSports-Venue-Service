@@ -45,6 +45,12 @@ public class ReviewRepositoryImpl implements ReviewRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Review> findById(UUID reviewId) {
+        return jpaRepository.findById(reviewId).map(this::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Review> findByBookingId(UUID bookingId) {
         return jpaRepository.findByBooking_BookingId(bookingId).map(this::toDomain);
     }

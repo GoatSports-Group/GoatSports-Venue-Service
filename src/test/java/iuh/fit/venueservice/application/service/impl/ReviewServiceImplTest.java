@@ -246,4 +246,64 @@ class ReviewServiceImplTest {
                 .status(ReviewStatus.PUBLISHED)
                 .createdAt(LocalDateTime.of(2026, 8, 30, 10, 0)).build();
     }
+
+    private Review reviewWithStatus(UUID reviewId, ReviewStatus status) {
+        return Review.builder()
+                .reviewId(reviewId)
+                .venueId(venueId)
+                .playerId(playerId)
+                .bookingId(bookingId)
+                .rating(5)
+                .content("Sân đẹp")
+                .status(status)
+                .build();
+    }
+
+    @Test
+    void hidingReviewRecomputesVenueRatingBecauseOnlyPublishedCounts() throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        Venue venue = Venue.builder().venueId(venueId).ownerId(ownerId).averageRating(5.0).totalReviews(1).build();
+        when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(reviewWithStatus(reviewId, ReviewStatus.PUBLISHED)));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(i -> i.getArgument(0));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
+        when(reviewRepository.countPublishedByVenueId(venueId)).thenReturn(0L);
+        when(reviewRepository.averagePublishedRatingByVenueId(venueId)).thenReturn(null);
+
+        Review result = service.moderateReview(reviewId, ReviewStatus.HIDDEN);
+
+        assertThat(result.getStatus()).isEqualTo(ReviewStatus.HIDDEN);
+        assertThat(venue.getAverageRating()).isEqualTo(0.0);
+        assertThat(venue.getTotalReviews()).isEqualTo(0);
+        verify(venueRepository).save(venue);
+    }
+
+    @Test
+    void removedReviewCannotBeMovedBackToPublished() {
+        UUID reviewId = UUID.randomUUID();
+        when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(reviewWithStatus(reviewId, ReviewStatus.REMOVED)));
+
+        assertThatThrownBy(() -> service.moderateReview(reviewId, ReviewStatus.PUBLISHED))
+                .isInstanceOf(ServiceException.class);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void moderatingToTheSameStatusDoesNotTouchTheDatabase() throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(reviewWithStatus(reviewId, ReviewStatus.PUBLISHED)));
+
+        service.moderateReview(reviewId, ReviewStatus.PUBLISHED);
+
+        verify(reviewRepository, never()).save(any(Review.class));
+        verify(venueRepository, never()).save(any(Venue.class));
+    }
+
+    @Test
+    void deletedIsNotAModerationTarget() {
+        UUID reviewId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.moderateReview(reviewId, ReviewStatus.DELETED))
+                .isInstanceOf(ServiceException.class);
+        verify(reviewRepository, never()).findById(any(UUID.class));
+    }
 }

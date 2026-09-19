@@ -127,6 +127,36 @@ public class ReviewServiceImpl implements ReviewService {
         return venue;
     }
 
+    @Override
+    @Transactional
+    public Review moderateReview(UUID reviewId, ReviewStatus targetStatus) throws ServiceException {
+        if (targetStatus == null
+                || (targetStatus != ReviewStatus.PUBLISHED
+                && targetStatus != ReviewStatus.HIDDEN
+                && targetStatus != ReviewStatus.REMOVED)) {
+            throw new ServiceException("Trạng thái kiểm duyệt không hợp lệ.");
+        }
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ServiceException("Không tìm thấy đánh giá."));
+        if (review.getStatus() == ReviewStatus.REMOVED) {
+            throw new ServiceException("Đánh giá đã bị gỡ và không thể đổi trạng thái.");
+        }
+        if (review.getStatus() == ReviewStatus.DELETED) {
+            throw new ServiceException("Đánh giá đã bị xoá.");
+        }
+        if (review.getStatus() == targetStatus) {
+            return review;
+        }
+
+        review.setStatus(targetStatus);
+        Review saved = reviewRepository.save(review);
+
+        Venue venue = venueRepository.findById(review.getVenueId())
+                .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của đánh giá."));
+        refreshVenueRating(venue);
+        return saved;
+    }
+
     private void refreshVenueRating(Venue venue) {
         long count = reviewRepository.countPublishedByVenueId(venue.getVenueId());
         Double average = reviewRepository.averagePublishedRatingByVenueId(venue.getVenueId());

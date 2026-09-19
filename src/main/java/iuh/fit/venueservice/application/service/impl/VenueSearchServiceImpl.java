@@ -5,13 +5,16 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.VenueSearchResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
+import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.VenueSearchService;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
@@ -19,17 +22,27 @@ import java.util.stream.Collectors;
 
 public class VenueSearchServiceImpl implements VenueSearchService {
 
+    /** Tran cho semantic: lay du rong de con loc tiep bang cac filter khac. */
+    private static final int SEMANTIC_CANDIDATE_LIMIT = 100;
+
     private final VenueRepository venueRepository;
     private final VenueCourtRepository venueCourtRepository;
+    private final VenueSemanticSearchPort semanticSearchPort;
 
-    public VenueSearchServiceImpl(VenueRepository venueRepository, VenueCourtRepository venueCourtRepository) {
+    public VenueSearchServiceImpl(
+            VenueRepository venueRepository,
+            VenueCourtRepository venueCourtRepository,
+            VenueSemanticSearchPort semanticSearchPort
+    ) {
         this.venueRepository = venueRepository;
         this.venueCourtRepository = venueCourtRepository;
+        this.semanticSearchPort = semanticSearchPort;
     }
 
     @Override
+    @Cacheable(cacheNames = "venueSearch", sync = true)
     public PageResult<VenueSearchResponseCommand> searchVenues(SearchVenueCommand command) {
-        PageResult<Venue> pageResult = venueRepository.search(command);
+        PageResult<Venue> pageResult = venueRepository.search(applySemanticSearch(command));
 
         List<VenueSearchResponseCommand> dtoList = pageResult.items().stream().map(venue -> {
             List<VenueCourt> courts = venueCourtRepository.findByVenueId(venue.getVenueId()).stream()
@@ -127,5 +140,18 @@ public class VenueSearchServiceImpl implements VenueSearchService {
                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return Math.round(R * c * 10.0) / 10.0;
+    }
+
+    /**
+     * Khi co keyword, thu hoi semantic search truoc. AI hong hoac tat thi tra ve
+     * command nguyen ban de repository dung lai keyword LIKE nhu cu.
+     */
+    private SearchVenueCommand applySemanticSearch(SearchVenueCommand command) {
+        if (command.keyword() == null || command.keyword().trim().isEmpty()) {
+            return command;
+        }
+        Optional<List<UUID>> semanticIds =
+                semanticSearchPort.findVenueIds(command.keyword(), SEMANTIC_CANDIDATE_LIMIT);
+        return semanticIds.map(command::withSemanticVenueIds).orElse(command);
     }
 }

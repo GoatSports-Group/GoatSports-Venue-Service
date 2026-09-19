@@ -150,7 +150,7 @@ class VenueOwnerAuthorizationTest {
                 .name("Sân 01")
                 .active(true)
                 .build();
-        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(court));
+        when(venueCourtRepository.findByIdAndDeletedAtIsNull(courtId)).thenReturn(Optional.of(court));
         when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
 
         assertThatThrownBy(() -> venueCourtService.getVenueCourt(courtId, otherOwnerId))

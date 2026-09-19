@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface ReviewRepository {
     Review save(Review review);
 
+    Optional<Review> findById(UUID reviewId);
+
     Optional<Review> findByBookingId(UUID bookingId);
 
     PageResult<OwnerReviewRecord> findOwnedReviews(OwnerReviewFilter filter);

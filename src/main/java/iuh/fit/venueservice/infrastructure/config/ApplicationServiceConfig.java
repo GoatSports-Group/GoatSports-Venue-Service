@@ -86,10 +86,11 @@ public class ApplicationServiceConfig {
     @Bean
     public VenueSearchServiceImpl venueSearchService(
             VenueRepository venueRepository,
-            VenueCourtRepository venueCourtRepository
+            VenueCourtRepository venueCourtRepository,
+            VenueSemanticSearchPort semanticSearchPort
     ) {
         return new VenueSearchServiceImpl(
-                venueRepository, venueCourtRepository
+                venueRepository, venueCourtRepository, semanticSearchPort
         );
     }
 

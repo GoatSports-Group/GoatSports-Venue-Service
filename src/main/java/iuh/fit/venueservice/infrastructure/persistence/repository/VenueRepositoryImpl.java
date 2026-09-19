@@ -73,7 +73,16 @@ public class VenueRepositoryImpl implements VenueRepository {
                 query.distinct(true);
             }
 
-            if (command.keyword() != null && !command.keyword().trim().isEmpty()) {
+            if (command.usesSemanticSearch()) {
+                // Semantic THAY THE keyword LIKE chu khong AND them: neu AND thi ket qua
+                // bi thu ve dung tap ma LIKE tim duoc, tuc mat sach gia tri cua semantic.
+                List<UUID> semanticIds = command.semanticVenueIds();
+                if (semanticIds.isEmpty()) {
+                    predicates.add(cb.disjunction());
+                } else {
+                    predicates.add(root.get("venueId").in(semanticIds));
+                }
+            } else if (command.keyword() != null && !command.keyword().trim().isEmpty()) {
                 String kw = "%" + command.keyword().trim().toLowerCase() + "%";
                 Predicate nameMatch = cb.like(cb.lower(root.get("name")), kw);
                 Predicate descMatch = cb.like(cb.lower(root.get("description")), kw);

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20260919-dedupe-reviews-per-booking" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1 FROM reviews
+                    WHERE booking_id IS NOT NULL
+                    GROUP BY booking_id HAVING COUNT(*) > 1
+                ) THEN 1 ELSE 0 END
+            </sqlCheck>
+        </preConditions>
+        <comment>Giữ lại review sớm nhất của mỗi booking trước khi thêm ràng buộc</comment>
+        <sql>
+            DELETE FROM reviews r
+            USING reviews keep
+            WHERE r.booking_id IS NOT NULL
+              AND r.booking_id = keep.booking_id
+              AND (keep.created_at, keep.review_id) &lt; (r.created_at, r.review_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="20260919-unique-review-per-booking" author="codex">
+        <addUniqueConstraint tableName="reviews"
+                             columnNames="booking_id"
+                             constraintName="uc_reviews_booking"/>
+    </changeSet>
+
+</databaseChangeLog>
