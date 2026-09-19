@@ -3,7 +3,6 @@ package iuh.fit.venueservice.infrastructure.decorator;
 import iuh.fit.venueservice.application.service.OwnerApplicationDocumentService;
 import iuh.fit.venueservice.application.port.OwnerApplicationNotificationPort;
 import iuh.fit.venueservice.application.port.OwnerApplicationBackgroundPort;
-import iuh.fit.venueservice.application.port.OwnerRoleProvisioningPort;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.service.OwnerCheckInService;
 import iuh.fit.venueservice.application.service.VenueCourtService;
@@ -32,10 +31,6 @@ class DecoratorBeanSelectionTest {
             context.registerBean(
                     OwnerApplicationBackgroundPort.class,
                     () -> mock(OwnerApplicationBackgroundPort.class)
-            );
-            context.registerBean(
-                    OwnerRoleProvisioningPort.class,
-                    () -> mock(OwnerRoleProvisioningPort.class)
             );
             context.registerBean(
                     OwnerApplicationDocumentServiceImpl.class,

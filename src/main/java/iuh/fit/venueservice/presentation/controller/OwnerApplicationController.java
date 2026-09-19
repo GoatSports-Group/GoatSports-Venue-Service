@@ -31,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -48,6 +49,7 @@ public class OwnerApplicationController {
     private final OwnerApplicationConverter ownerApplicationConverter;
     private final OwnerApplicationRegistrationService registrationService;
 
+    @PreAuthorize("hasAuthority('CREATE_OWN_OWNER_APPLICATION')")
     @PostMapping("/identity-verification/readiness")
     public ResponseEntity<OwnerFaceReadinessResponse> analyzeFaceReadiness(
             @Valid @RequestBody AnalyzeOwnerFaceReadinessRequest request
@@ -73,6 +75,7 @@ public class OwnerApplicationController {
                 .build());
     }
 
+    @PreAuthorize("hasAuthority('GET_OWN_OWNER_APPLICATION')")
     @GetMapping("/me")
     public ResponseEntity<BaseListResponse> getMyOwnerApplications(
             @RequestParam(value = "filter", required = false) String filter,
@@ -102,6 +105,7 @@ public class OwnerApplicationController {
         return ResponseEntity.status(HttpStatus.OK).body(new BaseListResponse(meta, responses));
     }
 
+    @PreAuthorize("hasAuthority('CREATE_OWN_OWNER_APPLICATION')")
     @PostMapping("/{ownerApplicationId}/identity-verification")
     public ResponseEntity<OwnerIdentityVerificationResponse> verifyIdentity(
             @PathVariable UUID ownerApplicationId,
@@ -119,6 +123,7 @@ public class OwnerApplicationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(result));
     }
 
+    @PreAuthorize("hasAuthority('GET_OWN_OWNER_APPLICATION')")
     @GetMapping("/identity-verifications/{verificationId}")
     public ResponseEntity<OwnerIdentityVerificationResponse> getIdentityVerification(
             @PathVariable UUID verificationId
@@ -129,6 +134,7 @@ public class OwnerApplicationController {
         return ResponseEntity.ok(toResponse(result));
     }
 
+    @PreAuthorize("hasAuthority('CREATE_OWN_OWNER_APPLICATION')")
     @PostMapping("/uploads")
     public ResponseEntity<PreparedOwnerApplicationUploadResponse> prepareUpload(
             @RequestHeader("Idempotency-Key") String idempotencyKey,
@@ -151,6 +157,7 @@ public class OwnerApplicationController {
         return ResponseEntity.ok(toResponse(result));
     }
 
+    @PreAuthorize("hasAuthority('CREATE_OWN_OWNER_APPLICATION')")
     @PostMapping
     @AuditLog(action = "SUBMIT_APPLICATION", description = "Gửi đơn đăng ký chủ sân")
     public ResponseEntity<OwnerApplicationResponse> submit(
@@ -187,6 +194,7 @@ public class OwnerApplicationController {
         ));
     }
 
+    @PreAuthorize("hasAuthority('CREATE_OWN_OWNER_APPLICATION')")
     @PostMapping("/uploads/cleanup")
     public ResponseEntity<Void> cleanupUpload(
             @Valid @RequestBody CleanupOwnerApplicationUploadRequest request

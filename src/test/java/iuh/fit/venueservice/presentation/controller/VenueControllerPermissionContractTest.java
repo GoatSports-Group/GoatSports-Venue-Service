@@ -34,6 +34,13 @@ class VenueControllerPermissionContractTest {
         assertPermission(OwnerScheduleController.class, "generateTimeSlots", "CREATE_OWN_TIME_SLOTS");
         assertPermission(OwnerScheduleController.class, "updateTimeSlotStatus", "UPDATE_OWN_TIME_SLOT_STATUS");
         assertPermission(OwnerScheduleController.class, "deleteTimeSlot", "DELETE_OWN_TIME_SLOT");
+        assertPermission(OwnerApplicationController.class, "submit", "CREATE_OWN_OWNER_APPLICATION");
+        assertPermission(OwnerApplicationController.class, "prepareUpload", "CREATE_OWN_OWNER_APPLICATION");
+        assertPermission(OwnerApplicationController.class, "cleanupUpload", "CREATE_OWN_OWNER_APPLICATION");
+        assertPermission(OwnerApplicationController.class, "analyzeFaceReadiness", "CREATE_OWN_OWNER_APPLICATION");
+        assertPermission(OwnerApplicationController.class, "verifyIdentity", "CREATE_OWN_OWNER_APPLICATION");
+        assertPermission(OwnerApplicationController.class, "getMyOwnerApplications", "GET_OWN_OWNER_APPLICATION");
+        assertPermission(OwnerApplicationController.class, "getIdentityVerification", "GET_OWN_OWNER_APPLICATION");
         assertPermission(OwnerBookingController.class, "getBookings", "GET_OWN_BOOKINGS");
         assertPermission(OwnerBookingController.class, "getBooking", "GET_OWN_BOOKING");
         assertPermission(OwnerBookingController.class, "updateStatus", "UPDATE_OWN_BOOKING_STATUS");
