@@ -8,6 +8,7 @@ import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.VenueSearchService;
 import iuh.fit.venueservice.application.service.impl.VenueSearchServiceImpl;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -36,15 +37,34 @@ class VenueSearchCacheTest {
     }
 
     private AnnotationConfigApplicationContext contextWith(VenueRepository venueRepository) {
-        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext();
+
+        TestPropertyValues.of(
+                "venue.search.cache.ttl-seconds=60",
+                "venue.search.cache.max-entries=1000"
+        ).applyTo(context);
+
         VenueCourtRepository courtRepository = mock(VenueCourtRepository.class);
         VenueSemanticSearchPort semanticPort = mock(VenueSemanticSearchPort.class);
-        when(semanticPort.findVenueIds(anyString(), anyInt())).thenReturn(Optional.empty());
+
+        when(semanticPort.findVenueIds(anyString(), anyInt()))
+                .thenReturn(Optional.empty());
 
         context.registerBean(CacheConfig.class);
-        context.registerBean("venueSearchService", VenueSearchServiceImpl.class,
-                () -> new VenueSearchServiceImpl(venueRepository, courtRepository, semanticPort));
+
+        context.registerBean(
+                "venueSearchService",
+                VenueSearchServiceImpl.class,
+                () -> new VenueSearchServiceImpl(
+                        venueRepository,
+                        courtRepository,
+                        semanticPort
+                )
+        );
+
         context.refresh();
+
         return context;
     }
 
