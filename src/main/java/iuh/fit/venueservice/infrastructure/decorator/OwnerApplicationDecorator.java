@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.OwnerApplicationBackgroundPort;
 import iuh.fit.venueservice.application.port.OwnerApplicationNotificationPort;
+import iuh.fit.venueservice.application.port.OwnerRoleProvisioningPort;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
@@ -27,6 +28,7 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
     private final OwnerApplicationServiceImpl ownerApplicationServiceImpl;
     private final OwnerApplicationNotificationPort notificationPort;
     private final OwnerApplicationBackgroundPort backgroundPort;
+    private final OwnerRoleProvisioningPort roleProvisioningPort;
 
     @Override
     @Transactional(rollbackFor = ServiceException.class)
@@ -59,6 +61,7 @@ public class OwnerApplicationDecorator implements OwnerApplicationService {
     @Transactional(rollbackFor = ServiceException.class)
     public OwnerApplication approveOwnerApplication(UUID applicationId, UUID reviewerId) throws ServiceException {
         OwnerApplication application = ownerApplicationServiceImpl.approveOwnerApplication(applicationId, reviewerId);
+        afterCommit(() -> roleProvisioningPort.grantVenueOwnerRole(application.getUserId()));
         afterCommit(() -> notificationPort.notifyApproved(application));
         afterCommit(() -> notificationPort.notifyProgressChanged(application));
         return application;

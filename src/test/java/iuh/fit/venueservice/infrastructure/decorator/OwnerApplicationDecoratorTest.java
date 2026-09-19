@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.decorator;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.port.OwnerApplicationBackgroundPort;
 import iuh.fit.venueservice.application.port.OwnerApplicationNotificationPort;
+import iuh.fit.venueservice.application.port.OwnerRoleProvisioningPort;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +31,8 @@ class OwnerApplicationDecoratorTest {
     private OwnerApplicationNotificationPort notificationPort;
     @Mock
     private OwnerApplicationBackgroundPort backgroundPort;
+    @Mock
+    private OwnerRoleProvisioningPort roleProvisioningPort;
     @InjectMocks
     private OwnerApplicationDecorator decorator;
 
@@ -99,5 +102,49 @@ class OwnerApplicationDecoratorTest {
         TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
         verify(backgroundPort).schedule(applicationId);
         verify(notificationPort, never()).notifyProgressChanged(application);
+    }
+
+    @Test
+    void approveGrantsVenueOwnerRoleOnlyAfterCommit() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        UUID reviewerId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        OwnerApplication application = OwnerApplication.builder()
+                .ownerApplicationId(applicationId)
+                .userId(ownerId)
+                .build();
+        when(ownerApplicationServiceImpl.approveOwnerApplication(applicationId, reviewerId))
+                .thenReturn(application);
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        TransactionSynchronizationManager.initSynchronization();
+
+        decorator.approveOwnerApplication(applicationId, reviewerId);
+
+        verify(roleProvisioningPort, never()).grantVenueOwnerRole(ownerId);
+        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        verify(roleProvisioningPort).grantVenueOwnerRole(ownerId);
+        verify(notificationPort).notifyApproved(application);
+    }
+
+    @Test
+    void approveDoesNotGrantRoleWhenTransactionRollsBack() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        UUID reviewerId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        OwnerApplication application = OwnerApplication.builder()
+                .ownerApplicationId(applicationId)
+                .userId(ownerId)
+                .build();
+        when(ownerApplicationServiceImpl.approveOwnerApplication(applicationId, reviewerId))
+                .thenReturn(application);
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        TransactionSynchronizationManager.initSynchronization();
+
+        decorator.approveOwnerApplication(applicationId, reviewerId);
+
+        TransactionSynchronizationManager.getSynchronizations().forEach(
+                synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK)
+        );
+        verify(roleProvisioningPort, never()).grantVenueOwnerRole(ownerId);
     }
 }
