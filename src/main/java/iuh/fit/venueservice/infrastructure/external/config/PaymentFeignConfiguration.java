@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 public class PaymentFeignConfiguration {
     @Bean
     RequestInterceptor paymentServiceIdentity(
-            @Value("${app.gateway.secret}") String gatewaySecret
+            @Value("${app.jwt.secret}") String gatewaySecret
     ) {
         return template -> template.header("X-Gateway-Secret", gatewaySecret);
     }
