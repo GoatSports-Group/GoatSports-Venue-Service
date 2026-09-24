@@ -88,7 +88,17 @@ public class DemoDataSeeder implements CommandLineRunner {
                     16.0756, 108.2288, LocalTime.of(6, 0), LocalTime.of(21, 0),
                     "02363892157", "pickleballsontra@goatsports.vn",
                     List.of(new CourtSeed("Sân Mỹ Khê 1", SportType.PICKLEBALL, 4, "Mặt nhựa acrylic", 150_000),
-                            new CourtSeed("Sân Mỹ Khê 2", SportType.PICKLEBALL, 4, "Mặt nhựa acrylic", 150_000)))
+                            new CourtSeed("Sân Mỹ Khê 2", SportType.PICKLEBALL, 4, "Mặt nhựa acrylic", 150_000))),
+
+            // Nhà thi đấu cho các giải bóng rổ / bóng chuyền mẫu của club-service.
+            new VenueSeed("Nhà Thi Đấu Tân Bình", "bao.tranquoc@goatsports.vn",
+                    "Nhà thi đấu đa năng trong nhà: sân bóng rổ sàn gỗ và sân bóng chuyền tiêu chuẩn, có khán đài.",
+                    "448 Hoàng Văn Thụ", "Phường 4", "Tân Bình", "Hồ Chí Minh",
+                    10.7996, 106.6588, LocalTime.of(6, 0), LocalTime.of(22, 0),
+                    "02838112233", "nhathidautanbinh@goatsports.vn",
+                    List.of(new CourtSeed("Sân bóng rổ 1", SportType.BASKETBALL, 10, "Sàn gỗ", 350_000),
+                            new CourtSeed("Sân bóng rổ 2", SportType.BASKETBALL, 10, "Sàn gỗ", 350_000),
+                            new CourtSeed("Sân bóng chuyền 1", SportType.VOLLEYBALL, 12, "Sàn PVC", 300_000)))
     );
 
     /**
@@ -119,6 +129,22 @@ public class DemoDataSeeder implements CommandLineRunner {
                     "Sân Mỹ Khê 1", 3, LocalTime.of(17, 0), "CONFIRMED", null, null)
     );
 
+    /**
+     * Sân giữ cho các giải mẫu của club-service (TournamentShowcaseSeeder). Tên giải là khóa sinh tournamentId,
+     * phải trùng từng ký tự với bên club-service. Người chơi thấy các khung giờ này là "Giải đấu" và không đặt được.
+     */
+    private record CourtHoldSeed(String tournamentName, String venueName, List<String> courtNames,
+                                 int fromDay, int toDay, LocalTime dailyStart, LocalTime dailyEnd) {}
+
+    private static final List<CourtHoldSeed> COURT_HOLDS = List.of(
+            new CourtHoldSeed("Cúp Sân 7 Bình Thạnh Mùa Thu 2026", "Sân Thể Thao Bình Thạnh",
+                    List.of("Sân số 1 (7 người)", "Sân số 2 (7 người)"), -4, 3, LocalTime.of(17, 0), LocalTime.of(22, 0)),
+            new CourtHoldSeed("Giải Futsal 5 Người Bình Thạnh 2026", "Sân Thể Thao Bình Thạnh",
+                    List.of("Sân số 3 (5 người)"), -8, 1, LocalTime.of(18, 0), LocalTime.of(21, 0)),
+            new CourtHoldSeed("Giải Bóng Chuyền Tân Bình Mở Rộng 2026", "Nhà Thi Đấu Tân Bình",
+                    List.of("Sân bóng chuyền 1"), 10, 12, LocalTime.of(17, 0), LocalTime.of(21, 0))
+    );
+
     /** Số ngày mở khung giờ tính từ hôm nay. */
     private static final int SLOT_DAYS = 7;
 
@@ -146,6 +172,11 @@ public class DemoDataSeeder implements CommandLineRunner {
             reviews += insertReview(booking);
         }
         refreshVenueRatings();
+        int holds = 0;
+        for (CourtHoldSeed hold : COURT_HOLDS) {
+            for (String courtName : hold.courtNames()) holds += insertCourtHold(hold, courtName);
+        }
+        log.info("Dữ liệu mẫu: {} lịch giữ sân cho giải đấu (bỏ qua bản ghi đã có)", holds);
         log.info("Dữ liệu mẫu: {} sân, {} sân con, {} khung giờ, {} chính sách hủy,"
                         + " {} lượt đặt, {} đánh giá (bỏ qua bản ghi đã có)",
                 venues, courts, slots, policies, bookings, reviews);
@@ -352,6 +383,26 @@ public class DemoDataSeeder implements CommandLineRunner {
                 .setParameter("email", seed.email())
                 .setParameter("ownerId", userId(seed.ownerEmail()))
                 .setParameter("addressId", addressId)
+                .executeUpdate();
+    }
+
+    private int insertCourtHold(CourtHoldSeed hold, String courtName) {
+        UUID tournamentId = id("tournament", hold.tournamentName());
+        UUID courtId = id("court", hold.venueName() + "|" + courtName);
+        return entityManager.createNativeQuery("""
+                        insert into court_holds (hold_id, tournament_id, venue_id, venue_court_id,
+                                                 from_date, to_date, daily_start, daily_end, created_at)
+                        select :holdId, :tournamentId, :venueId, :courtId, :fromDate, :toDate, :dailyStart, :dailyEnd, now()
+                        where not exists (select 1 from court_holds where hold_id = :holdId)
+                        """)
+                .setParameter("holdId", id("court-hold", tournamentId + "|" + courtId))
+                .setParameter("tournamentId", tournamentId)
+                .setParameter("venueId", id("venue", hold.venueName()))
+                .setParameter("courtId", courtId)
+                .setParameter("fromDate", LocalDate.now().plusDays(hold.fromDay()))
+                .setParameter("toDate", LocalDate.now().plusDays(hold.toDay()))
+                .setParameter("dailyStart", hold.dailyStart())
+                .setParameter("dailyEnd", hold.dailyEnd())
                 .executeUpdate();
     }
 
