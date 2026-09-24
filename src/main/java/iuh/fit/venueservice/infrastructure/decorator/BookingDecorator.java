@@ -1,6 +1,5 @@
 package iuh.fit.venueservice.infrastructure.decorator;
 
-import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.PlayerBookingView;
@@ -9,7 +8,6 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingService;
 import iuh.fit.venueservice.application.service.impl.BookingServiceImpl;
 import iuh.fit.venueservice.domain.entity.Booking;
-import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -68,28 +66,6 @@ public class BookingDecorator implements BookingService {
             UUID playerId, String status, int page, int size
     ) throws ServiceException {
         return delegate.getPlayerBookingHistory(playerId, status, page, size);
-    }
-
-    @Override
-    @Transactional(rollbackFor = ServiceException.class)
-    public BookingCancellation requestCancellation(CancelBookingCommand command) throws ServiceException {
-        return delegate.requestCancellation(command);
-    }
-
-    @Override
-    @Transactional(rollbackFor = ServiceException.class)
-    public BookingCancellation processCancellation(
-            UUID cancellationId, boolean approved, UUID processedByUserId, String processNote
-    ) throws ServiceException {
-        return delegate.processCancellation(cancellationId, approved, processedByUserId, processNote);
-    }
-
-    @Override
-    @Transactional(rollbackFor = ServiceException.class)
-    public BookingCancellation completeManualRefund(
-            UUID cancellationId, UUID ownerId, String providerRefundId
-    ) throws ServiceException {
-        return delegate.completeManualRefund(cancellationId, ownerId, providerRefundId);
     }
 
     @Override

@@ -6,7 +6,6 @@ import iuh.fit.venueservice.application.dto.response.venue.PlayerBookingView;
 import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.domain.entity.Booking;
-import iuh.fit.venueservice.domain.entity.BookingCancellation;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,13 +29,8 @@ public interface BookingService {
             UUID playerId, String status, int page, int size
     ) throws ServiceException;
 
-    BookingCancellation requestCancellation(CancelBookingCommand command) throws ServiceException;
 
-    BookingCancellation processCancellation(UUID cancellationId, boolean approved, UUID processedByUserId, String processNote) throws ServiceException;
 
-    BookingCancellation completeManualRefund(
-            UUID cancellationId, UUID ownerId, String providerRefundId
-    ) throws ServiceException;
 
     String generateBookingCode();
 }

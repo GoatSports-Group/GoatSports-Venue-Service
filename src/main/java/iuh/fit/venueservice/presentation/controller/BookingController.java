@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.PlayerBookingView;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
+import iuh.fit.venueservice.application.service.BookingCancellationService;
 import iuh.fit.venueservice.application.service.BookingService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.Booking;
@@ -32,6 +33,7 @@ import java.util.UUID;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BookingCancellationService bookingCancellationService;
     private final CurrentUserProvider currentUserProvider;
     private final BookingConverter bookingConverter;
 
@@ -93,7 +95,7 @@ public class BookingController {
         UUID userId = BaseUtil.uuid(userIdStr);
 
         CancelBookingCommand command = new CancelBookingCommand(id, userId, request.getReason());
-        BookingCancellation cancellation = bookingService.requestCancellation(command);
+        BookingCancellation cancellation = bookingCancellationService.requestCancellation(command);
 
         return ResponseEntity.ok(bookingConverter.toCancellationResponse(cancellation));
     }
@@ -112,7 +114,7 @@ public class BookingController {
                 .orElseThrow(() -> new ServiceException("Bạn phải đăng nhập với vai trò quản trị/chủ sân."));
         UUID userId = BaseUtil.uuid(userIdStr);
 
-        BookingCancellation cancellation = bookingService.processCancellation(
+        BookingCancellation cancellation = bookingCancellationService.processCancellation(
                 id,
                 request.getApproved(),
                 userId,

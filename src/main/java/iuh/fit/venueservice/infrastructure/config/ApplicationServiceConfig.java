@@ -113,20 +113,33 @@ public class ApplicationServiceConfig {
             ReviewRepository reviewRepository,
             VenueCourtRepository venueCourtRepository,
             VenueRepository venueRepository,
-            TimeSlotLifecycleService timeSlotLifecycleService,
             BookingQrPort bookingQrPort,
-            PaymentRefundPort paymentRefundPort,
             Clock clock,
             @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration,
-            @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow,
-            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
             CourtHoldRepository courtHoldRepository
     ) {
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository, timeSlotLifecycleService, bookingQrPort, paymentRefundPort,
-                clock, paymentHoldDuration, cancellationAutoApprovalWindow, matchmakingLifecycleSyncPort,
-                courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, paymentHoldDuration, courtHoldRepository
+        );
+    }
+
+    @Bean
+    public BookingCancellationServiceImpl bookingCancellationService(
+            BookingRepository bookingRepository,
+            BookingCancellationRepository bookingCancellationRepository,
+            VenueCourtRepository venueCourtRepository,
+            VenueRepository venueRepository,
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            PaymentRefundPort paymentRefundPort,
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            Clock clock,
+            @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow
+    ) {
+        return new BookingCancellationServiceImpl(
+                bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService, paymentRefundPort, matchmakingLifecycleSyncPort, clock,
+                cancellationAutoApprovalWindow
         );
     }
 

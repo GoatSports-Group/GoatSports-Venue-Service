@@ -91,10 +91,7 @@ class BookingServiceImplTest {
         });
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository,
-                new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
-                courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -143,10 +140,7 @@ class BookingServiceImplTest {
 
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository,
-                new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
-                courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -184,10 +178,7 @@ class BookingServiceImplTest {
                 .thenReturn(Optional.of(heldSlot));
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository,
-                new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
-                courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
         );
 
         assertThatThrownBy(() -> service.createBooking(new CreateBookingCommand(
@@ -244,7 +235,7 @@ class BookingServiceImplTest {
         when(bookingCancellationRepository.save(any(BookingCancellation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        BookingCancellation result = serviceAt(Instant.parse("2026-09-02T22:00:00Z"))
+        BookingCancellation result = cancellationServiceAt(Instant.parse("2026-09-02T22:00:00Z"))
                 .requestCancellation(new CancelBookingCommand(bookingId, playerId, "Đổi lịch thi đấu"));
 
         assertThat(result.getRefundPercentage()).isEqualTo(50.0);
@@ -297,7 +288,7 @@ class BookingServiceImplTest {
         when(timeSlotRepository.save(slot)).thenReturn(slot);
         when(bookingRepository.save(booking)).thenReturn(booking);
 
-        BookingCancellation result = serviceAt(Instant.parse("2026-09-02T01:00:00Z"))
+        BookingCancellation result = cancellationServiceAt(Instant.parse("2026-09-02T01:00:00Z"))
                 .requestCancellation(new CancelBookingCommand(bookingId, playerId, "Đặt nhầm lịch"));
 
         assertThat(result.getReviewMode()).isEqualTo(CancellationReviewMode.AUTOMATIC);
@@ -355,7 +346,7 @@ class BookingServiceImplTest {
         when(bookingCancellationRepository.save(cancellation)).thenReturn(cancellation);
         when(bookingRepository.save(booking)).thenReturn(booking);
 
-        BookingCancellation result = serviceAt(Instant.parse("2026-09-02T01:00:00Z"))
+        BookingCancellation result = cancellationServiceAt(Instant.parse("2026-09-02T01:00:00Z"))
                 .processCancellation(cancellationId, true, ownerId, "Đồng ý");
 
         assertThat(result.getRefundId()).isEqualTo(refundId);
@@ -367,14 +358,20 @@ class BookingServiceImplTest {
         );
     }
 
+    private BookingCancellationServiceImpl cancellationServiceAt(Instant instant) {
+        Clock clock = Clock.fixed(instant, ZoneId.of("Asia/Ho_Chi_Minh"));
+        return new BookingCancellationServiceImpl(
+                bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository,
+                new TimeSlotLifecycleService(timeSlotRepository, clock), paymentRefundPort, matchmakingLifecycleSyncPort,
+                clock, Duration.ofHours(1)
+        );
+    }
+
     private BookingServiceImpl serviceAt(Instant instant) {
         Clock clock = Clock.fixed(instant, ZoneId.of("Asia/Ho_Chi_Minh"));
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository,
-                new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
-                courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
         );
     }
 

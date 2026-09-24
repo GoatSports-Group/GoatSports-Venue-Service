@@ -10,7 +10,7 @@ import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingPaymentRe
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerBookingService;
-import iuh.fit.venueservice.application.service.BookingService;
+import iuh.fit.venueservice.application.service.BookingCancellationService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.presentation.request.venue.UpdateOwnerBookingStatusRequest;
@@ -42,7 +42,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OwnerBookingController {
     private final OwnerBookingService ownerBookingService;
-    private final BookingService bookingService;
+    private final BookingCancellationService bookingCancellationService;
     private final CurrentUserProvider currentUserProvider;
     private final OwnerBookingResponseMapper responseMapper;
     private final BookingConverter bookingConverter;
@@ -108,7 +108,7 @@ public class OwnerBookingController {
             @Valid @RequestBody ProcessCancellationRequest request
     ) throws ServiceException {
         return ResponseEntity.ok(bookingConverter.toCancellationResponse(
-                bookingService.processCancellation(
+                bookingCancellationService.processCancellation(
                         cancellationId, request.getApproved(), currentUserId(), request.getProcessNote()
                 )
         ));
@@ -121,7 +121,7 @@ public class OwnerBookingController {
             @Valid @RequestBody CompleteManualRefundRequest request
     ) throws ServiceException {
         return ResponseEntity.ok(bookingConverter.toCancellationResponse(
-                bookingService.completeManualRefund(
+                bookingCancellationService.completeManualRefund(
                         cancellationId, currentUserId(), request.getProviderRefundId()
                 )
         ));
