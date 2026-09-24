@@ -59,4 +59,18 @@ public interface JpaTimeSlotRepository extends JpaRepository<TimeSlotEntity, UUI
     List<TimeSlotEntity> findByVenueCourt_VenueCourtIdAndDateBetweenOrderByDateAscStartTimeAsc(
             UUID venueCourtId, LocalDate fromDate, LocalDate toDate
     );
+
+    /** Khoa moi slot cua cac san trong khoang ngay: giu san cho giai va dat san thuong xep hang tai day. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select slot from TimeSlotEntity slot
+            where slot.venueCourt.venueCourtId in :courtIds
+              and slot.date between :fromDate and :toDate
+            order by slot.date asc, slot.startTime asc
+            """)
+    List<TimeSlotEntity> findByCourtsAndDateRangeForUpdate(
+            @Param("courtIds") java.util.Collection<UUID> courtIds,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
 }

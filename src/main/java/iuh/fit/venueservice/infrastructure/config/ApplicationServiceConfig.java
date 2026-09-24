@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.config;
 
 import iuh.fit.venueservice.application.port.*;
+import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
 import iuh.fit.venueservice.application.port.persistence.*;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.service.impl.*;
@@ -118,12 +119,14 @@ public class ApplicationServiceConfig {
             Clock clock,
             @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration,
             @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow,
-            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            CourtHoldRepository courtHoldRepository
     ) {
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository, timeSlotLifecycleService, bookingQrPort, paymentRefundPort,
-                clock, paymentHoldDuration, cancellationAutoApprovalWindow, matchmakingLifecycleSyncPort
+                clock, paymentHoldDuration, cancellationAutoApprovalWindow, matchmakingLifecycleSyncPort,
+                courtHoldRepository
         );
     }
 

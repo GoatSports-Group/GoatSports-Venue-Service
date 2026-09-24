@@ -12,6 +12,8 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
+import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.ReviewRepository;
@@ -59,6 +61,7 @@ public class BookingServiceImpl implements BookingService {
     private final Duration paymentHoldDuration;
     private final Duration cancellationAutoApprovalWindow;
     private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    private final CourtHoldRepository courtHoldRepository;
 
     public BookingServiceImpl(
             BookingRepository bookingRepository,
@@ -73,7 +76,8 @@ public class BookingServiceImpl implements BookingService {
             Clock clock,
             Duration paymentHoldDuration,
             Duration cancellationAutoApprovalWindow,
-            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            CourtHoldRepository courtHoldRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
@@ -88,6 +92,7 @@ public class BookingServiceImpl implements BookingService {
         this.paymentHoldDuration = paymentHoldDuration;
         this.cancellationAutoApprovalWindow = cancellationAutoApprovalWindow;
         this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
+        this.courtHoldRepository = courtHoldRepository;
     }
 
     @Override
@@ -95,10 +100,14 @@ public class BookingServiceImpl implements BookingService {
         venueCourtRepository.findById(venueCourtId)
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân con với ID: " + venueCourtId));
 
+        List<CourtHold> holds = courtHoldRepository.findOverlapping(List.of(venueCourtId), date, date);
+        // Slot trung gio giai dau hien "TOURNAMENT" de nguoi choi biet vi sao khong dat duoc.
         return timeSlotRepository.findAvailableSlots(venueCourtId, date).stream()
                 .map(slot -> new TimeSlotResponseCommand(
                         slot.getTimeSlotId(), slot.getVenueCourtId(), slot.getDate(),
-                        slot.getStartTime(), slot.getEndTime(), slot.getPricePerHour(), slot.getStatus().name()
+                        slot.getStartTime(), slot.getEndTime(), slot.getPricePerHour(),
+                        holds.stream().anyMatch(hold -> hold.covers(date, slot.getStartTime(), slot.getEndTime()))
+                                ? "TOURNAMENT" : slot.getStatus().name()
                 ))
                 .toList();
     }
@@ -130,6 +139,11 @@ public class BookingServiceImpl implements BookingService {
 
         if (slot.getStatus() != TimeSlotStatus.AVAILABLE) {
             throw new ServiceException("Khung giờ không còn khả dụng.");
+        }
+        // Doc hold sau khi da khoa slot: neu chu san vua giu san cho giai, lenh giu da xong truoc.
+        if (courtHoldRepository.findOverlapping(List.of(command.venueCourtId()), command.playDate(), command.playDate())
+                .stream().anyMatch(hold -> hold.covers(command.playDate(), command.startTime(), command.endTime()))) {
+            throw new ServiceException("Sân đang được dùng cho giải đấu trong khung giờ này, vui lòng chọn giờ hoặc sân khác.");
         }
 
         if (slot.getPricePerHour() == null) {

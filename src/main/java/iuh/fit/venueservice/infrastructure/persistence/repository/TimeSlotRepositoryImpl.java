@@ -73,6 +73,15 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
     }
 
     @Override
+    public List<TimeSlot> findByCourtsAndDateRangeForUpdate(
+            java.util.Collection<UUID> venueCourtIds, LocalDate fromDate, LocalDate toDate
+    ) {
+        if (venueCourtIds.isEmpty()) return List.of();
+        return jpaRepository.findByCourtsAndDateRangeForUpdate(venueCourtIds, fromDate, toDate)
+                .stream().map(mapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<TimeSlot> findByVenueCourtIdAndDateBetween(
             UUID venueCourtId, LocalDate fromDate, LocalDate toDate
     ) {

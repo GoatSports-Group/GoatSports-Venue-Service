@@ -59,6 +59,7 @@ class BookingServiceImplTest {
     @Mock BookingQrPort bookingQrPort;
     @Mock PaymentRefundPort paymentRefundPort;
     @Mock iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    @Mock iuh.fit.venueservice.application.port.persistence.CourtHoldRepository courtHoldRepository;
 
     @Test
     void createBookingStaysPendingPaymentWithoutFakeProviderSuccess() throws Exception {
@@ -92,7 +93,8 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
+                courtHoldRepository
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -143,7 +145,8 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
+                courtHoldRepository
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -183,7 +186,8 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
+                courtHoldRepository
         );
 
         assertThatThrownBy(() -> service.createBooking(new CreateBookingCommand(
@@ -369,7 +373,58 @@ class BookingServiceImplTest {
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
                 venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), bookingQrPort, paymentRefundPort,
-                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort
+                clock, Duration.ofMinutes(15), Duration.ofHours(1), matchmakingLifecycleSyncPort,
+                courtHoldRepository
         );
+    }
+
+    @Test
+    void bookingIsRejectedWhileCourtIsHeldForTournament() {
+        UUID courtId = UUID.randomUUID();
+        Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDate playDate = LocalDate.now(clock).plusDays(2);
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).active(true).build()));
+        TimeSlot slot = TimeSlot.builder().venueCourtId(courtId).date(playDate)
+                .startTime(LocalTime.of(18, 0)).endTime(LocalTime.of(19, 0))
+                .pricePerHour(200_000.0).status(TimeSlotStatus.AVAILABLE).build();
+        when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, LocalTime.of(18, 0), LocalTime.of(19, 0)))
+                .thenReturn(Optional.of(slot));
+        when(courtHoldRepository.findOverlapping(any(), any(), any())).thenReturn(List.of(
+                iuh.fit.venueservice.domain.entity.CourtHold.builder().tournamentId(UUID.randomUUID())
+                        .venueCourtId(courtId).fromDate(playDate.minusDays(1)).toDate(playDate.plusDays(1))
+                        .dailyStart(LocalTime.of(17, 0)).dailyEnd(LocalTime.of(22, 0)).build()));
+
+        assertThatThrownBy(() -> serviceAt(Instant.parse("2026-09-01T01:00:00Z")).createBooking(new CreateBookingCommand(
+                UUID.randomUUID(), courtId, playDate, LocalTime.of(18, 0), LocalTime.of(19, 0),
+                BookingSource.DIRECT, null, null, null)))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("giải đấu");
+        verify(bookingRepository, never()).save(any());
+        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.AVAILABLE);
+    }
+
+    @Test
+    void slotsOutsideTournamentWindowStayBookable() throws Exception {
+        UUID courtId = UUID.randomUUID();
+        LocalDate playDate = LocalDate.of(2026, 9, 3);
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).active(true).build()));
+        when(timeSlotRepository.findAvailableSlots(courtId, playDate)).thenReturn(List.of(
+                TimeSlot.builder().timeSlotId(UUID.randomUUID()).venueCourtId(courtId).date(playDate)
+                        .startTime(LocalTime.of(6, 0)).endTime(LocalTime.of(7, 0))
+                        .pricePerHour(100_000.0).status(TimeSlotStatus.AVAILABLE).build(),
+                TimeSlot.builder().timeSlotId(UUID.randomUUID()).venueCourtId(courtId).date(playDate)
+                        .startTime(LocalTime.of(18, 0)).endTime(LocalTime.of(19, 0))
+                        .pricePerHour(100_000.0).status(TimeSlotStatus.AVAILABLE).build()));
+        when(courtHoldRepository.findOverlapping(any(), any(), any())).thenReturn(List.of(
+                iuh.fit.venueservice.domain.entity.CourtHold.builder().tournamentId(UUID.randomUUID())
+                        .venueCourtId(courtId).fromDate(playDate).toDate(playDate)
+                        .dailyStart(LocalTime.of(17, 0)).dailyEnd(LocalTime.of(22, 0)).build()));
+
+        var slots = serviceAt(Instant.parse("2026-09-01T01:00:00Z")).getAvailableSlots(courtId, playDate);
+
+        assertThat(slots.get(0).status()).isEqualTo("AVAILABLE");
+        assertThat(slots.get(1).status()).isEqualTo("TOURNAMENT");
     }
 }

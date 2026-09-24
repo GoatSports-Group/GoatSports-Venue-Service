@@ -32,6 +32,10 @@ public interface TimeSlotRepository {
             UUID venueCourtId, LocalDate fromDate, LocalDate toDate
     );
 
+    List<TimeSlot> findByCourtsAndDateRangeForUpdate(
+            java.util.Collection<UUID> venueCourtIds, LocalDate fromDate, LocalDate toDate
+    );
+
     List<TimeSlot> saveAll(List<TimeSlot> timeSlots);
 
     void deleteById(UUID timeSlotId);
