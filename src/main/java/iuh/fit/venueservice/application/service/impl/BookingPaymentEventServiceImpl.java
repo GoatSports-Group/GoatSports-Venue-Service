@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
+import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
@@ -28,6 +29,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final BookingCancellationRepository bookingCancellationRepository;
     private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    private final PaymentRefundPort paymentRefundPort;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
@@ -36,7 +38,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
             BookingCancellationRepository bookingCancellationRepository,
-            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            PaymentRefundPort paymentRefundPort
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
@@ -45,6 +48,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.bookingCancellationRepository = bookingCancellationRepository;
         this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
+        this.paymentRefundPort = paymentRefundPort;
     }
 
     @Override
@@ -126,7 +130,14 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             ensureAmountMatches(command.amount(), booking.getDepositAmount());
             if (booking.getStatus() != BookingStatus.PENDING_PAYMENT
                     && booking.getStatus() != BookingStatus.CONFIRMED) {
-                return false;
+                // Sự kiện lặp của khoản cọc booking đã ghi nhận (rồi mới hủy): hủy sân tự lo phần hoàn theo chính sách.
+                if (command.paymentId().equals(booking.getDepositPaymentId())) return false;
+                // Tiền cọc về sau khi booking đã hết hạn giữ chỗ / đã hủy: sân không còn giữ nên hoàn đủ.
+                return refundUnaccepted(command,
+                        "Tiền cọc về sau khi lượt đặt sân đã hết hạn giữ chỗ hoặc đã hủy — hoàn lại toàn bộ");
+            }
+            if (booking.getDepositPaymentId() != null && !booking.getDepositPaymentId().equals(command.paymentId())) {
+                return refundUnaccepted(command, "Lượt đặt sân đã được đóng cọc bằng giao dịch khác — hoàn khoản trùng");
             }
             boolean changed = !command.paymentId().equals(booking.getDepositPaymentId());
             booking.setDepositPaymentId(command.paymentId());
@@ -159,6 +170,11 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                     && booking.getStatus() != BookingStatus.CONFIRMED
                     && booking.getStatus() != BookingStatus.CHECKED_IN
                     && booking.getStatus() != BookingStatus.COMPLETED) {
+                // Tiền còn lại về cho booking đã hết hạn / đã hủy: không có gì để thu nữa, hoàn đủ.
+                if (booking.getStatus() == BookingStatus.EXPIRED || booking.getStatus() == BookingStatus.CANCELLED) {
+                    return refundUnaccepted(command,
+                            "Tiền còn lại về sau khi lượt đặt sân đã hết hạn hoặc đã hủy — hoàn lại toàn bộ");
+                }
                 return false;
             }
             boolean changed = !command.paymentId().equals(booking.getRemainingPaymentId());
@@ -181,6 +197,17 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             return changed;
         }
         return false;
+    }
+
+    /**
+     * Tiền đã vào tài khoản nhưng booking không nhận được nữa: tạo lệnh hoàn toàn bộ, tự chuyển về ngân hàng
+     * (chưa liên kết thì chờ, liên kết xong tự nhận). Khóa idempotency theo paymentId nên sự kiện lặp không hoàn hai lần.
+     * Gọi payment-service lỗi thì ném ra để Kafka thử lại (hết lượt thì vào topic -dlt), không nuốt mất tiền.
+     */
+    private boolean refundUnaccepted(PaymentSucceededCommand command, String reason) {
+        paymentRefundPort.createRefund(command.paymentId(), command.payerId(), "unaccepted-payment:" + command.paymentId(),
+                reason, command.amount(), true);
+        return true;
     }
 
     private boolean isExpectedPayer(Booking booking, UUID payerId) throws ServiceException {

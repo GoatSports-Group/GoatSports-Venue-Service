@@ -236,11 +236,12 @@ public class ApplicationServiceConfig {
             VenueRepository venueRepository,
             TimeSlotLifecycleService timeSlotLifecycleService,
             BookingCancellationRepository bookingCancellationRepository,
-            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            PaymentRefundPort paymentRefundPort
     ) {
         return new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
         );
     }
 }

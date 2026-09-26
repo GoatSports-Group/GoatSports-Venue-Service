@@ -42,6 +42,7 @@ class BookingPaymentEventServiceImplTest {
     @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
     @Mock private iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository bookingCancellationRepository;
     @Mock private iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    @Mock private iuh.fit.venueservice.application.port.PaymentRefundPort paymentRefundPort;
 
     @Test
     void confirmsBookingAndIssuesSignedQrExactlyOnceForValidDeposit() throws Exception {
@@ -56,7 +57,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
         );
         var event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
 
@@ -78,7 +79,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
         );
 
         assertThatThrownBy(() -> service.applySucceededPayment(event(
@@ -113,7 +114,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
         );
 
         assertThat(service.applySucceededPayment(event(
@@ -146,7 +147,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
         );
 
         assertThat(service.applyRefundResult(new RefundResultCommand(
@@ -170,7 +171,7 @@ class BookingPaymentEventServiceImplTest {
         when(bookingRepository.save(booking)).thenReturn(booking);
         var service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
         );
 
         assertThat(service.applyTerminalPayment(new PaymentTerminalCommand(
@@ -181,6 +182,47 @@ class BookingPaymentEventServiceImplTest {
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.EXPIRED);
         verify(timeSlotLifecycleService).releaseBookingSlot(booking);
         verify(bookingRepository).save(booking);
+    }
+
+    @Test
+    void refundsDepositThatArrivesAfterTheBookingExpired() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        UUID paymentId = UUID.randomUUID();
+        UUID payerId = UUID.randomUUID();
+        Booking booking = booking(bookingId, payerId);
+        booking.setStatus(BookingStatus.EXPIRED);
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
+        );
+
+        assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isTrue();
+
+        org.mockito.Mockito.verify(paymentRefundPort).createRefund(org.mockito.ArgumentMatchers.eq(paymentId),
+                org.mockito.ArgumentMatchers.eq(payerId), org.mockito.ArgumentMatchers.eq("unaccepted-payment:" + paymentId),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(60_000.0),
+                org.mockito.ArgumentMatchers.eq(true));
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.EXPIRED);
+    }
+
+    @Test
+    void doesNotRefundAgainWhenDepositEventOfCancelledBookingIsRedelivered() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        UUID paymentId = UUID.randomUUID();
+        UUID payerId = UUID.randomUUID();
+        Booking booking = booking(bookingId, payerId);
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setDepositPaymentId(paymentId);
+        when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort
+        );
+
+        assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isFalse();
+
+        org.mockito.Mockito.verifyNoInteractions(paymentRefundPort);
     }
 
     private Booking booking(UUID bookingId, UUID payerId) {
