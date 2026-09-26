@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.request.venue.UpsertCourtPricingRule
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.OwnerScheduleService;
 import iuh.fit.venueservice.application.service.impl.OwnerScheduleServiceImpl;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.domain.entity.CourtPricingRule;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
@@ -57,6 +58,14 @@ public class OwnerScheduleDecorator implements OwnerScheduleService {
             UUID venueCourtId, LocalDate fromDate, LocalDate toDate, UUID currentUserId
     ) throws ServiceException {
         return delegate.getTimeSlots(venueCourtId, fromDate, toDate, currentUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourtHold> getCourtHolds(
+            UUID venueCourtId, LocalDate fromDate, LocalDate toDate, UUID currentUserId
+    ) throws ServiceException {
+        return delegate.getCourtHolds(venueCourtId, fromDate, toDate, currentUserId);
     }
 
     @Override

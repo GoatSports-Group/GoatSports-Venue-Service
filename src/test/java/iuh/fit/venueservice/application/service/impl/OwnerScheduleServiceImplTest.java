@@ -4,10 +4,12 @@ import iuh.fit.venueservice.application.dto.request.venue.GenerateTimeSlotsComma
 import iuh.fit.venueservice.application.dto.request.venue.UpsertCourtPricingRuleCommand;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
 import iuh.fit.venueservice.application.port.persistence.CourtPricingRuleRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.domain.entity.CourtPricingRule;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.entity.Venue;
@@ -41,6 +43,7 @@ class OwnerScheduleServiceImplTest {
     @Mock private TimeSlotRepository timeSlotRepository;
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
+    @Mock private CourtHoldRepository courtHoldRepository;
 
     private OwnerScheduleServiceImpl service;
     private UUID ownerId;
@@ -50,7 +53,7 @@ class OwnerScheduleServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new OwnerScheduleServiceImpl(
-                pricingRuleRepository, timeSlotRepository, venueCourtRepository, venueRepository
+                pricingRuleRepository, timeSlotRepository, venueCourtRepository, venueRepository, courtHoldRepository
         );
         ownerId = UUID.randomUUID();
         courtId = UUID.randomUUID();
@@ -270,6 +273,22 @@ class OwnerScheduleServiceImplTest {
                 slotId, TimeSlotStatus.MAINTENANCE, ownerId
         )).isInstanceOf(ServiceException.class).hasMessageContaining("đã đặt");
         verify(timeSlotRepository, never()).save(any());
+    }
+
+    @Test
+    void preventsDeletingSlotHeldByTournament() {
+        UUID slotId = UUID.randomUUID();
+        LocalDate day = LocalDate.now().plusDays(1);
+        when(timeSlotRepository.findById(slotId)).thenReturn(Optional.of(TimeSlot.builder()
+                .timeSlotId(slotId).venueCourtId(courtId).date(day)
+                .startTime(LocalTime.of(16, 0)).endTime(LocalTime.of(17, 0)).status(TimeSlotStatus.AVAILABLE).build()));
+        when(courtHoldRepository.findOverlapping(List.of(courtId), day, day)).thenReturn(List.of(CourtHold.builder()
+                .tournamentId(UUID.randomUUID()).venueCourtId(courtId).fromDate(day).toDate(day)
+                .dailyStart(LocalTime.of(6, 0)).dailyEnd(LocalTime.of(23, 0)).build()));
+
+        assertThatThrownBy(() -> service.deleteTimeSlot(slotId, ownerId))
+                .isInstanceOf(ServiceException.class).hasMessageContaining("giải đấu");
+        verify(timeSlotRepository, never()).deleteById(any());
     }
 
     private UpsertCourtPricingRuleCommand ruleCommand(

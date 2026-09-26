@@ -3,6 +3,7 @@ package iuh.fit.venueservice.application.service;
 import iuh.fit.venueservice.application.dto.request.venue.GenerateTimeSlotsCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpsertCourtPricingRuleCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.domain.entity.CourtPricingRule;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
@@ -21,6 +22,11 @@ public interface OwnerScheduleService {
     void deletePricingRule(UUID venueCourtId, UUID pricingRuleId, UUID currentUserId) throws ServiceException;
 
     List<TimeSlot> getTimeSlots(
+            UUID venueCourtId, LocalDate fromDate, LocalDate toDate, UUID currentUserId
+    ) throws ServiceException;
+
+    /** Cac lich giu san cua giai dau giao voi khoang ngay, de lich chu san hien slot nao dang thuoc giai. */
+    List<CourtHold> getCourtHolds(
             UUID venueCourtId, LocalDate fromDate, LocalDate toDate, UUID currentUserId
     ) throws ServiceException;
 

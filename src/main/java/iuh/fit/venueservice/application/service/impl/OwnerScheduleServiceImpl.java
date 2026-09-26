@@ -5,11 +5,13 @@ import iuh.fit.venueservice.application.dto.request.venue.UpsertCourtPricingRule
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
 import iuh.fit.venueservice.application.port.persistence.CourtPricingRuleRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.OwnerScheduleService;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.domain.entity.CourtPricingRule;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.entity.Venue;
@@ -33,17 +35,20 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
     private final TimeSlotRepository timeSlotRepository;
     private final VenueCourtRepository venueCourtRepository;
     private final VenueRepository venueRepository;
+    private final CourtHoldRepository courtHoldRepository;
 
     public OwnerScheduleServiceImpl(
             CourtPricingRuleRepository pricingRuleRepository,
             TimeSlotRepository timeSlotRepository,
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            CourtHoldRepository courtHoldRepository
     ) {
         this.pricingRuleRepository = pricingRuleRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.venueRepository = venueRepository;
+        this.courtHoldRepository = courtHoldRepository;
     }
 
     @Override
@@ -109,6 +114,15 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
     }
 
     @Override
+    public List<CourtHold> getCourtHolds(
+            UUID venueCourtId, LocalDate fromDate, LocalDate toDate, UUID currentUserId
+    ) throws ServiceException {
+        getOwnedCourt(venueCourtId, currentUserId);
+        ensureDateRange(fromDate, toDate, false);
+        return courtHoldRepository.findOverlapping(List.of(venueCourtId), fromDate, toDate);
+    }
+
+    @Override
     public List<TimeSlot> generateTimeSlots(GenerateTimeSlotsCommand command) throws ServiceException {
         command.validate();
         OwnedCourt owned = getOwnedCourt(command.venueCourtId(), command.currentUserId());
@@ -155,6 +169,7 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         if (slot.getStatus() == TimeSlotStatus.LOCKED || slot.getStatus() == TimeSlotStatus.BOOKED) {
             throw new ServiceException("Không thể thay đổi slot đang được giữ chỗ hoặc đã đặt.");
         }
+        assertNotHeldByTournament(slot);
         slot.setStatus(status);
         return timeSlotRepository.save(slot);
     }
@@ -165,7 +180,17 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
         if (slot.getStatus() == TimeSlotStatus.LOCKED || slot.getStatus() == TimeSlotStatus.BOOKED) {
             throw new ServiceException("Không thể xóa slot đang được giữ chỗ hoặc đã đặt.");
         }
+        assertNotHeldByTournament(slot);
         timeSlotRepository.deleteById(timeSlotId);
+    }
+
+    /** Slot nam trong khung gio giai dau da giu la cho chu san xep tran, khong cho xoa hay khoa bao tri. */
+    private void assertNotHeldByTournament(TimeSlot slot) throws ServiceException {
+        boolean held = courtHoldRepository.findOverlapping(List.of(slot.getVenueCourtId()), slot.getDate(), slot.getDate())
+                .stream().anyMatch(hold -> hold.covers(slot.getDate(), slot.getStartTime(), slot.getEndTime()));
+        if (held) {
+            throw new ServiceException("Slot đang được giải đấu giữ để xếp trận, không thể xóa hay đặt bảo trì.");
+        }
     }
 
     private void generateRuleSlots(

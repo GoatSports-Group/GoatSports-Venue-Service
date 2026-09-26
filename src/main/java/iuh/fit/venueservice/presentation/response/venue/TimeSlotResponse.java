@@ -19,4 +19,6 @@ public class TimeSlotResponse {
     private LocalTime endTime;
     private Double pricePerHour;
     private String status;
+    /** Giai dang giu san trong khung gio nay (null neu khong co). */
+    private UUID tournamentId;
 }

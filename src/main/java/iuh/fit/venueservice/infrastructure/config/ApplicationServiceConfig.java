@@ -156,10 +156,11 @@ public class ApplicationServiceConfig {
             CourtPricingRuleRepository courtPricingRuleRepository,
             TimeSlotRepository timeSlotRepository,
             VenueCourtRepository venueCourtRepository,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            CourtHoldRepository courtHoldRepository
     ) {
         return new OwnerScheduleServiceImpl(
-                courtPricingRuleRepository, timeSlotRepository, venueCourtRepository, venueRepository
+                courtPricingRuleRepository, timeSlotRepository, venueCourtRepository, venueRepository, courtHoldRepository
         );
     }
 

@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerScheduleService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.domain.entity.CourtPricingRule;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.presentation.request.venue.GenerateTimeSlotsRequest;
 import iuh.fit.venueservice.presentation.request.venue.UpdateTimeSlotStatusRequest;
@@ -90,9 +91,18 @@ public class OwnerScheduleController {
             @RequestParam LocalDate fromDate,
             @RequestParam LocalDate toDate
     ) throws ServiceException {
-        return ResponseEntity.ok(scheduleService.getTimeSlots(
-                venueCourtId, fromDate, toDate, currentUserId()
-        ).stream().map(this::toTimeSlotResponse).toList());
+        UUID ownerId = currentUserId();
+        List<CourtHold> holds = scheduleService.getCourtHolds(venueCourtId, fromDate, toDate, ownerId);
+        return ResponseEntity.ok(scheduleService.getTimeSlots(venueCourtId, fromDate, toDate, ownerId).stream()
+                .map(slot -> {
+                    TimeSlotResponse response = toTimeSlotResponse(slot);
+                    holds.stream()
+                            .filter(hold -> hold.covers(slot.getDate(), slot.getStartTime(), slot.getEndTime()))
+                            .findFirst()
+                            .ifPresent(hold -> response.setTournamentId(hold.getTournamentId()));
+                    return response;
+                })
+                .toList());
     }
 
     @PostMapping("/venue-courts/{venueCourtId}/time-slots")
