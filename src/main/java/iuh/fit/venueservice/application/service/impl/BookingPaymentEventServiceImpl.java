@@ -139,6 +139,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             if (booking.getDepositPaymentId() != null && !booking.getDepositPaymentId().equals(command.paymentId())) {
                 return refundUnaccepted(command, "Lượt đặt sân đã được đóng cọc bằng giao dịch khác — hoàn khoản trùng");
             }
+            // Gọi trước khi commit: lỗi thì cả sự kiện được Kafka xử lý lại; gọi lặp thì payment-service bỏ qua.
+            paymentRefundPort.assignPayee(command.paymentId(), venueOwnerId(booking));
             boolean changed = !command.paymentId().equals(booking.getDepositPaymentId());
             booking.setDepositPaymentId(command.paymentId());
             if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
@@ -177,6 +179,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 }
                 return false;
             }
+            paymentRefundPort.assignPayee(command.paymentId(), venueOwnerId(booking));
             boolean changed = !command.paymentId().equals(booking.getRemainingPaymentId());
             booking.setRemainingPaymentId(command.paymentId());
             if (booking.getSource() == BookingSource.WALK_IN
@@ -214,11 +217,15 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         if (booking.getSource() != BookingSource.WALK_IN) {
             return booking.getPlayerId() != null && booking.getPlayerId().equals(payerId);
         }
+        return payerId.equals(venueOwnerId(booking));
+    }
+
+    private UUID venueOwnerId(Booking booking) throws ServiceException {
         var court = venueCourtRepository.findById(booking.getVenueCourtId())
-                .orElseThrow(() -> new ServiceException("Không tìm thấy sân của booking walk-in."));
+                .orElseThrow(() -> new ServiceException("Không tìm thấy sân của booking."));
         var venue = venueRepository.findById(court.getVenueId())
-                .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của booking walk-in."));
-        return payerId.equals(venue.getOwnerId());
+                .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của booking."));
+        return venue.getOwnerId();
     }
 
     private void ensureAmountMatches(Double actual, Double expected) throws ServiceException {

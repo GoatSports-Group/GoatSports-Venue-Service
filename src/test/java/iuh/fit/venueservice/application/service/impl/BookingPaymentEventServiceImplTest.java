@@ -49,7 +49,15 @@ class BookingPaymentEventServiceImplTest {
         UUID bookingId = UUID.randomUUID();
         UUID payerId = UUID.randomUUID();
         UUID paymentId = UUID.randomUUID();
+        UUID courtId = UUID.randomUUID();
+        UUID venueId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
         Booking booking = booking(bookingId, payerId);
+        booking.setVenueCourtId(courtId);
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).ownerId(ownerId).build()));
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(bookingQrPort.issue(bookingId, LocalDateTime.of(
                 LocalDate.of(2026, 9, 1), LocalTime.of(9, 0)
@@ -69,6 +77,8 @@ class BookingPaymentEventServiceImplTest {
         assertThat(service.applySucceededPayment(event)).isFalse();
         verify(bookingRepository).save(booking);
         verify(timeSlotLifecycleService, org.mockito.Mockito.times(2)).confirmBookingSlot(booking);
+        // Tiền cọc tính vào doanh thu chủ sân (gọi lặp ở sự kiện trùng là vô hại: payment-service bỏ qua).
+        verify(paymentRefundPort, org.mockito.Mockito.times(2)).assignPayee(paymentId, ownerId);
     }
 
     @Test

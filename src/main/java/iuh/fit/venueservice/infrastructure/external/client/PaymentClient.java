@@ -52,6 +52,9 @@ public interface PaymentClient {
             @RequestBody CreateRefundRequest request
     );
 
+    @PostMapping("/{paymentId}/payee")
+    void assignPayee(@PathVariable UUID paymentId, @RequestBody java.util.Map<String, UUID> request);
+
     @PostMapping("/refunds/{refundId}/manual-completion")
     BaseResponse<RefundSnapshot> completeManualRefund(
             @PathVariable UUID refundId,

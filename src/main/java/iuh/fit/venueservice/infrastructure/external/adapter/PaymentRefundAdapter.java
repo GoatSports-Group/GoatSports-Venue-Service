@@ -37,6 +37,11 @@ public class PaymentRefundAdapter implements PaymentRefundPort {
     }
 
     @Override
+    public void assignPayee(UUID paymentId, UUID payeeId) {
+        paymentClient.assignPayee(paymentId, java.util.Map.of("payeeId", payeeId));
+    }
+
+    @Override
     public RefundSnapshot completeManualRefund(UUID refundId, UUID completedBy, String providerRefundId) {
         var response = paymentClient.completeManualRefund(
                 refundId, completedBy, new CompleteManualRefundRequest(providerRefundId)
