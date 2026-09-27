@@ -38,6 +38,10 @@ public class Booking extends BaseEntity {
     private String walkInCustomerPhone;
     private UUID matchmakingSessionId;
     private LocalDateTime holdExpiresAt;
+    /** Khoản tiền về khi booking không còn nhận được (hết giờ giữ sân, đã hủy, trùng khoản) và đã được hoàn lại. */
+    private UUID lateRefundPaymentId;
+    private Double lateRefundAmount;
+    private LocalDateTime lateRefundAt;
 
     private BookingCancellation cancellation;
     private CheckInRecord checkInRecord;

@@ -72,6 +72,15 @@ public class BookingEntity extends BaseEntity {
     @Column(name = "hold_expires_at")
     private LocalDateTime holdExpiresAt;
 
+    @Column(name = "late_refund_payment_id", columnDefinition = "UUID")
+    private UUID lateRefundPaymentId;
+
+    @Column(name = "late_refund_amount")
+    private Double lateRefundAmount;
+
+    @Column(name = "late_refund_at")
+    private LocalDateTime lateRefundAt;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "venue_court_id", nullable = false)
     private VenueCourtEntity venueCourt;

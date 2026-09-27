@@ -39,6 +39,9 @@ public class BookingResponse {
     private String walkInCustomerPhone;
     private UUID matchmakingSessionId;
     private LocalDateTime holdExpiresAt;
+    private UUID lateRefundPaymentId;
+    private Double lateRefundAmount;
+    private LocalDateTime lateRefundAt;
     private LocalDateTime createdAt;
     private CancellationPolicyResponse cancellationPolicy;
     private BookingCancellationResponse cancellation;

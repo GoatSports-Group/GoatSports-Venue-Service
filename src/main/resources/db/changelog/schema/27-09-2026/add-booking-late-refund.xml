@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!-- Tien ve sau khi booking khong con nhan duoc (het gio giu san / da huy / trung khoan): ghi lai khoan
+         da hoan de man hinh ket qua va chi tiet dat san noi dung su that thay vi "thanh toan thanh cong". -->
+    <changeSet id="20260927-add-booking-late-refund" author="codex">
+        <addColumn tableName="bookings">
+            <column name="late_refund_payment_id" type="UUID"/>
+            <column name="late_refund_amount" type="DOUBLE PRECISION"/>
+            <column name="late_refund_at" type="TIMESTAMP"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

@@ -4,6 +4,7 @@ import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededComm
 import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
@@ -18,10 +19,15 @@ import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
 
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.UUID;
 
 public class BookingPaymentEventServiceImpl implements BookingPaymentEventService {
+    private static final Locale VI = Locale.forLanguageTag("vi-VN");
+    private static final String LATE_TITLE = "Hết giờ giữ sân — đang hoàn tiền";
+    private static final String LATE_DETAIL = "về sau khi lượt đặt đã hết giờ giữ chỗ hoặc đã hủy nên không giữ được sân.";
     private final BookingRepository bookingRepository;
     private final BookingQrPort bookingQrPort;
     private final VenueCourtRepository venueCourtRepository;
@@ -30,6 +36,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     private final BookingCancellationRepository bookingCancellationRepository;
     private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
     private final PaymentRefundPort paymentRefundPort;
+    private final BookingNotificationPort bookingNotificationPort;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
@@ -39,7 +46,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             TimeSlotLifecycleService timeSlotLifecycleService,
             BookingCancellationRepository bookingCancellationRepository,
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
-            PaymentRefundPort paymentRefundPort
+            PaymentRefundPort paymentRefundPort,
+            BookingNotificationPort bookingNotificationPort
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
@@ -49,6 +57,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         this.bookingCancellationRepository = bookingCancellationRepository;
         this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
         this.paymentRefundPort = paymentRefundPort;
+        this.bookingNotificationPort = bookingNotificationPort;
     }
 
     @Override
@@ -133,11 +142,15 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 // Sự kiện lặp của khoản cọc booking đã ghi nhận (rồi mới hủy): hủy sân tự lo phần hoàn theo chính sách.
                 if (command.paymentId().equals(booking.getDepositPaymentId())) return false;
                 // Tiền cọc về sau khi booking đã hết hạn giữ chỗ / đã hủy: sân không còn giữ nên hoàn đủ.
-                return refundUnaccepted(command,
-                        "Tiền cọc về sau khi lượt đặt sân đã hết hạn giữ chỗ hoặc đã hủy — hoàn lại toàn bộ");
+                return refundUnaccepted(booking, command,
+                        "Tiền cọc về sau khi lượt đặt sân đã hết hạn giữ chỗ hoặc đã hủy — hoàn lại toàn bộ",
+                        LATE_TITLE, LATE_DETAIL);
             }
             if (booking.getDepositPaymentId() != null && !booking.getDepositPaymentId().equals(command.paymentId())) {
-                return refundUnaccepted(command, "Lượt đặt sân đã được đóng cọc bằng giao dịch khác — hoàn khoản trùng");
+                return refundUnaccepted(booking, command,
+                        "Lượt đặt sân đã được đóng cọc bằng giao dịch khác — hoàn khoản trùng",
+                        "Khoản thanh toán trùng — đang hoàn tiền",
+                        "là khoản trùng: lượt đặt đã được đóng cọc bằng giao dịch khác, sân của bạn vẫn giữ nguyên.");
             }
             // Gọi trước khi commit: lỗi thì cả sự kiện được Kafka xử lý lại; gọi lặp thì payment-service bỏ qua.
             paymentRefundPort.assignPayee(command.paymentId(), venueOwnerId(booking));
@@ -174,8 +187,9 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                     && booking.getStatus() != BookingStatus.COMPLETED) {
                 // Tiền còn lại về cho booking đã hết hạn / đã hủy: không có gì để thu nữa, hoàn đủ.
                 if (booking.getStatus() == BookingStatus.EXPIRED || booking.getStatus() == BookingStatus.CANCELLED) {
-                    return refundUnaccepted(command,
-                            "Tiền còn lại về sau khi lượt đặt sân đã hết hạn hoặc đã hủy — hoàn lại toàn bộ");
+                    return refundUnaccepted(booking, command,
+                            "Tiền còn lại về sau khi lượt đặt sân đã hết hạn hoặc đã hủy — hoàn lại toàn bộ",
+                            LATE_TITLE, LATE_DETAIL);
                 }
                 return false;
             }
@@ -206,10 +220,25 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
      * Tiền đã vào tài khoản nhưng booking không nhận được nữa: tạo lệnh hoàn toàn bộ, tự chuyển về ngân hàng
      * (chưa liên kết thì chờ, liên kết xong tự nhận). Khóa idempotency theo paymentId nên sự kiện lặp không hoàn hai lần.
      * Gọi payment-service lỗi thì ném ra để Kafka thử lại (hết lượt thì vào topic -dlt), không nuốt mất tiền.
+     * Khoản hoàn được ghi lên booking để màn hình kết quả / chi tiết đặt sân nói đúng sự thật thay vì
+     * "thanh toán thành công", và người trả nhận một thông báo riêng (khóa dedupe theo paymentId).
      */
-    private boolean refundUnaccepted(PaymentSucceededCommand command, String reason) {
+    private boolean refundUnaccepted(Booking booking, PaymentSucceededCommand command, String reason,
+                                     String title, String detail) {
         paymentRefundPort.createRefund(command.paymentId(), command.payerId(), "unaccepted-payment:" + command.paymentId(),
                 reason, command.amount(), true);
+        if (!command.paymentId().equals(booking.getLateRefundPaymentId())) {
+            booking.setLateRefundPaymentId(command.paymentId());
+            booking.setLateRefundAmount(command.amount());
+            booking.setLateRefundAt(LocalDateTime.now());
+            bookingRepository.save(booking);
+        }
+        bookingNotificationPort.notifyPayer(command.payerId(), booking.getBookingId(),
+                "late-payment-refund:" + command.paymentId(), title,
+                "Khoản " + NumberFormat.getIntegerInstance(VI).format(command.amount()) + " đ cho lượt đặt "
+                        + booking.getBookingCode() + " " + detail
+                        + " GOAT SPORTS đang hoàn toàn bộ: tiền tự về tài khoản ngân hàng đã liên kết,"
+                        + " chưa liên kết thì vào Cài đặt › Ngân hàng & hoàn tiền để nhận.");
         return true;
     }
 
