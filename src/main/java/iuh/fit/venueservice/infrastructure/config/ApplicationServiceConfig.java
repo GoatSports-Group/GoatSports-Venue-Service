@@ -218,13 +218,14 @@ public class ApplicationServiceConfig {
             TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
             @Value("${booking.online-check-in-early-window}") Duration onlineEarlyCheckInWindow,
-            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            CourtHoldRepository courtHoldRepository
     ) {
         return new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
-                onlineEarlyCheckInWindow, matchmakingLifecycleSyncPort
+                onlineEarlyCheckInWindow, matchmakingLifecycleSyncPort, courtHoldRepository
         );
     }
 

@@ -130,8 +130,7 @@ public class BookingServiceImpl implements BookingService {
         }
         // Đọc lịch giữ sân của giải SAU khi đã khóa slot: nếu chủ sân vừa giữ sân cho giải thì lệnh giữ đã xong trước.
         // Đọc từ court_holds (không dựa vào trạng thái slot) nên cả slot sinh sau khi giữ cũng bị chặn.
-        if (courtHoldRepository.findOverlapping(List.of(command.venueCourtId()), command.playDate(), command.playDate())
-                .stream().anyMatch(hold -> hold.covers(command.playDate(), command.startTime(), command.endTime()))) {
+        if (courtHoldRepository.isHeld(command.venueCourtId(), command.playDate(), command.startTime(), command.endTime())) {
             throw new ServiceException("Sân đang được dùng cho giải đấu trong khung giờ này, vui lòng chọn giờ hoặc sân khác.");
         }
 

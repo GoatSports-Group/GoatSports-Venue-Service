@@ -43,7 +43,7 @@ class OwnerScheduleServiceImplTest {
     @Mock private TimeSlotRepository timeSlotRepository;
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
-    @Mock private CourtHoldRepository courtHoldRepository;
+    @Mock(answer = org.mockito.Answers.CALLS_REAL_METHODS) private CourtHoldRepository courtHoldRepository;
 
     private OwnerScheduleServiceImpl service;
     private UUID ownerId;
@@ -146,7 +146,8 @@ class OwnerScheduleServiceImplTest {
         UpsertCourtPricingRuleCommand command = new UpsertCourtPricingRuleCommand(
                 null, courtId, DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(10, 0),
                 350_000.0, 350_000.0,
-                LocalDate.now(), LocalDate.now().plusMonths(3), ownerId
+                // Tu ngay mai: quy tac thu Hai 8:00 "bat dau hom nay" se bi coi la khung da qua neu test chay vao thu Hai.
+                LocalDate.now().plusDays(1), LocalDate.now().plusMonths(3), ownerId
         );
 
         assertThatThrownBy(() -> service.createPricingRule(command))
@@ -297,7 +298,8 @@ class OwnerScheduleServiceImplTest {
         return new UpsertCourtPricingRuleCommand(
                 ruleId, courtId, DayOfWeek.MONDAY, startTime, endTime,
                 180_000.0, 150_000.0,
-                LocalDate.now(), LocalDate.now().plusMonths(3), ownerId
+                // Tu ngay mai: quy tac thu Hai 8:00 "bat dau hom nay" se bi coi la khung da qua neu test chay vao thu Hai.
+                LocalDate.now().plusDays(1), LocalDate.now().plusMonths(3), ownerId
         );
     }
 
@@ -305,7 +307,7 @@ class OwnerScheduleServiceImplTest {
         return CourtPricingRule.builder()
                 .pricingRuleId(ruleId).courtId(courtId).dayOfWeek(DayOfWeek.MONDAY)
                 .startTime(startTime).endTime(endTime).pricePerHour(180_000.0)
-                .basePricePerHour(150_000.0).effectiveFrom(LocalDate.now())
+                .basePricePerHour(150_000.0).effectiveFrom(LocalDate.now().plusDays(1))
                 .effectiveTo(LocalDate.now().plusMonths(3)).build();
     }
 }

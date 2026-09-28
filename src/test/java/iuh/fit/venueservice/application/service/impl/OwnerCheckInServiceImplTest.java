@@ -66,6 +66,9 @@ class OwnerCheckInServiceImplTest {
     @Mock private BookingQrPort bookingQrPort;
     @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
     @Mock private iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    // Goi that isHeld (default method) de test di qua dung phep so khung gio cua CourtHold.covers.
+    @Mock(answer = org.mockito.Answers.CALLS_REAL_METHODS)
+    private iuh.fit.venueservice.application.port.persistence.CourtHoldRepository courtHoldRepository;
 
     private OwnerCheckInServiceImpl service;
     private UUID ownerId;
@@ -82,7 +85,7 @@ class OwnerCheckInServiceImplTest {
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
-                Duration.ofMinutes(30), matchmakingLifecycleSyncPort
+                Duration.ofMinutes(30), matchmakingLifecycleSyncPort, courtHoldRepository
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();
@@ -314,6 +317,35 @@ class OwnerCheckInServiceImplTest {
         assertThat(created.getQrCode()).isEqualTo("GSQR.v1.walk-in");
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.BOOKED);
         assertThat(created.getHoldExpiresAt()).isNull();
+    }
+
+    @Test
+    void refusesWalkInOnSlotHeldForTournament() {
+        // Slot giu cho giai van co status AVAILABLE; lich giu nam o court_holds.
+        UUID slotId = UUID.randomUUID();
+        LocalDate day = LocalDate.of(2026, 8, 30);
+        TimeSlot slot = TimeSlot.builder()
+                .timeSlotId(slotId).venueCourtId(courtId).date(day)
+                .startTime(LocalTime.of(17, 0)).endTime(LocalTime.of(18, 0))
+                .status(TimeSlotStatus.AVAILABLE).pricePerHour(80_000.0).build();
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).name("Sân A").active(true).build()
+        ));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).ownerId(ownerId).name("Goat Arena").build()
+        ));
+        when(timeSlotRepository.findByIdForUpdate(slotId)).thenReturn(Optional.of(slot));
+        when(courtHoldRepository.findOverlapping(java.util.List.of(courtId), day, day)).thenReturn(java.util.List.of(
+                iuh.fit.venueservice.domain.entity.CourtHold.builder().venueCourtId(courtId)
+                        .fromDate(day).toDate(day).dailyStart(LocalTime.of(17, 0)).dailyEnd(LocalTime.of(19, 0)).build()
+        ));
+
+        assertThatThrownBy(() -> service.createWalkIn(new CreateWalkInBookingCommand(
+                ownerId, courtId, slotId, "Khách tại quầy", "0901 234 567"
+        ))).hasMessageContaining("giữ cho giải đấu");
+
+        verify(bookingRepository, never()).save(any());
+        assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.AVAILABLE);
     }
 
     @Test

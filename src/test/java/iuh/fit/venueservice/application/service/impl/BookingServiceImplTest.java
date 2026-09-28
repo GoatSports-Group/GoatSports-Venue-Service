@@ -59,7 +59,7 @@ class BookingServiceImplTest {
     @Mock BookingQrPort bookingQrPort;
     @Mock PaymentRefundPort paymentRefundPort;
     @Mock iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
-    @Mock iuh.fit.venueservice.application.port.persistence.CourtHoldRepository courtHoldRepository;
+    @Mock(answer = org.mockito.Answers.CALLS_REAL_METHODS) iuh.fit.venueservice.application.port.persistence.CourtHoldRepository courtHoldRepository;
 
     @Test
     void createBookingStaysPendingPaymentWithoutFakeProviderSuccess() throws Exception {

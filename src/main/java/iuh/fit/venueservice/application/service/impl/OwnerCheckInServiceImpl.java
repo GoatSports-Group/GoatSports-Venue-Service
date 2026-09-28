@@ -17,6 +17,7 @@ import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository;
+import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -61,6 +62,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     private final Clock clock;
     private final Duration onlineEarlyCheckInWindow;
     private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    private final CourtHoldRepository courtHoldRepository;
 
     public OwnerCheckInServiceImpl(
             BookingRepository bookingRepository,
@@ -74,7 +76,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
             TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
             Duration onlineEarlyCheckInWindow,
-            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort
+            MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            CourtHoldRepository courtHoldRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.checkInRecordRepository = checkInRecordRepository;
@@ -88,6 +91,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         this.clock = clock;
         this.onlineEarlyCheckInWindow = onlineEarlyCheckInWindow;
         this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
+        this.courtHoldRepository = courtHoldRepository;
     }
 
     @Override
@@ -169,6 +173,10 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         }
         if (slot.getStatus() != TimeSlotStatus.AVAILABLE) {
             throw new ServiceException("Khung giờ không còn khả dụng.");
+        }
+        // Trạng thái slot giữ cho giải vẫn là AVAILABLE (lịch giữ nằm ở court_holds), nên phải hỏi court_holds.
+        if (courtHoldRepository.isHeld(slot.getVenueCourtId(), slot.getDate(), slot.getStartTime(), slot.getEndTime())) {
+            throw new ServiceException("Khung giờ đang được giữ cho giải đấu, vui lòng chọn giờ hoặc sân khác.");
         }
         LocalDateTime end = LocalDateTime.of(slot.getDate(), slot.getEndTime());
         if (end.isBefore(LocalDateTime.now(clock))) {

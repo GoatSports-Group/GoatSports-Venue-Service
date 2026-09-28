@@ -186,9 +186,7 @@ public class OwnerScheduleServiceImpl implements OwnerScheduleService {
 
     /** Slot nam trong khung gio giai dau da giu la cho chu san xep tran, khong cho xoa hay khoa bao tri. */
     private void assertNotHeldByTournament(TimeSlot slot) throws ServiceException {
-        boolean held = courtHoldRepository.findOverlapping(List.of(slot.getVenueCourtId()), slot.getDate(), slot.getDate())
-                .stream().anyMatch(hold -> hold.covers(slot.getDate(), slot.getStartTime(), slot.getEndTime()));
-        if (held) {
+        if (courtHoldRepository.isHeld(slot.getVenueCourtId(), slot.getDate(), slot.getStartTime(), slot.getEndTime())) {
             throw new ServiceException("Slot đang được giải đấu giữ để xếp trận, không thể xóa hay đặt bảo trì.");
         }
     }
