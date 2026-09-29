@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +37,9 @@ public class Venue extends BaseEntity {
     private List<String> amenities;
     private VenueFacilityLayout facilityLayout;
     private UUID ownerId;
+    /** Admin đình chỉ: cơ sở bị ẩn và chủ sân không tự bật lại được cho tới khi admin gỡ đình chỉ. */
+    private LocalDateTime suspendedAt;
+    private String suspensionReason;
 
     private Address address;
     private CancellationPolicy cancellationPolicy;

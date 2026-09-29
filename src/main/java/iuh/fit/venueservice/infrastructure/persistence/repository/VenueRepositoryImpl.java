@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminVenueFilter;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
@@ -238,18 +240,35 @@ public class VenueRepositoryImpl implements VenueRepository {
     }
 
     @Override
-    public PageResult<Venue> findAll(int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(0, page), size > 0 ? Math.min(size, 100) : 10);
-        Page<VenueEntity> result = jpaRepository.findAll(pageable);
-        List<Venue> items = result.getContent().stream()
-                .map(venueEntityMapper::toDomain)
-                .collect(Collectors.toList());
+    public PageResult<Venue> findAll(AdminVenueFilter filter) {
+        Specification<VenueEntity> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (filter.status() != null) {
+                predicates.add(switch (filter.status()) {
+                    case ACTIVE -> cb.isTrue(root.get("active"));
+                    case INACTIVE -> cb.and(cb.isFalse(root.get("active")), cb.isNull(root.get("suspendedAt")));
+                    case SUSPENDED -> cb.isNotNull(root.get("suspendedAt"));
+                });
+            }
+            if (filter.query() != null && !filter.query().isBlank()) {
+                String like = "%" + filter.query().trim().toLowerCase(Locale.ROOT) + "%";
+                var address = root.join("address", JoinType.LEFT);
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), like),
+                        cb.like(cb.lower(root.get("email")), like),
+                        cb.like(root.get("phone"), like),
+                        cb.like(cb.lower(address.get("district")), like),
+                        cb.like(cb.lower(address.get("city")), like)
+                ));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<VenueEntity> result = jpaRepository.findAll(spec, PageRequest.of(
+                filter.page(), filter.size(), Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("venueId"))
+        ));
         return new PageResult<>(
-                items,
-                result.getTotalElements(),
-                result.getNumber(),
-                result.getSize(),
-                result.getTotalPages()
+                result.getContent().stream().map(venueEntityMapper::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalPages()
         );
     }
 }

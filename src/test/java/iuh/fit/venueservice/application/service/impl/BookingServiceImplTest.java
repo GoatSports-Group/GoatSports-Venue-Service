@@ -63,6 +63,7 @@ class BookingServiceImplTest {
 
     @Test
     void createBookingStaysPendingPaymentWithoutFakeProviderSuccess() throws Exception {
+        openVenue();
         UUID courtId = UUID.randomUUID();
         Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
         LocalDate playDate = LocalDate.now(clock).plusDays(1);
@@ -110,6 +111,7 @@ class BookingServiceImplTest {
 
     @Test
     void createWalkInConfirmsImmediatelyWithoutPaymentHold() throws Exception {
+        openVenue();
         UUID courtId = UUID.randomUUID();
         Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
         LocalDate playDate = LocalDate.now(clock).plusDays(1);
@@ -157,6 +159,7 @@ class BookingServiceImplTest {
 
     @Test
     void createBookingRejectsSlotAlreadyHeldByAnotherBooking() {
+        openVenue();
         UUID courtId = UUID.randomUUID();
         Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
         LocalDate playDate = LocalDate.now(clock).plusDays(1);
@@ -377,6 +380,7 @@ class BookingServiceImplTest {
 
     @Test
     void bookingIsRejectedWhileCourtIsHeldForTournament() {
+        openVenue();
         UUID courtId = UUID.randomUUID();
         Clock clock = Clock.fixed(Instant.parse("2026-09-01T01:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
         LocalDate playDate = LocalDate.now(clock).plusDays(2);
@@ -423,5 +427,28 @@ class BookingServiceImplTest {
 
         assertThat(slots.get(0).status()).isEqualTo("AVAILABLE");
         assertThat(slots.get(1).status()).isEqualTo("TOURNAMENT");
+    }
+
+    /** Cơ sở của sân con đang mở (test không quan tâm tới cơ sở). */
+    private void openVenue() {
+        org.mockito.Mockito.lenient().when(venueRepository.findById(any()))
+                .thenReturn(Optional.of(Venue.builder().active(true).build()));
+    }
+
+    @Test
+    void bookingIsRejectedWhenVenueIsSuspended() {
+        UUID courtId = UUID.randomUUID();
+        UUID venueId = UUID.randomUUID();
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).active(true).build()));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).active(false).suspendedAt(java.time.LocalDateTime.now()).build()));
+
+        assertThatThrownBy(() -> serviceAt(Instant.parse("2026-09-01T01:00:00Z")).createBooking(new CreateBookingCommand(
+                UUID.randomUUID(), courtId, LocalDate.of(2026, 9, 3), LocalTime.of(18, 0), LocalTime.of(19, 0),
+                BookingSource.DIRECT, null, null, null)))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("tạm ngừng nhận đặt sân");
+        verify(bookingRepository, never()).save(any());
     }
 }

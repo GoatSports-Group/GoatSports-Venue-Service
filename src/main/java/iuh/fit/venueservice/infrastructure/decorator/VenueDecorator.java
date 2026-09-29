@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.decorator;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminVenueFilter;
 import iuh.fit.venueservice.application.dto.request.venue.CreateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
@@ -12,6 +13,8 @@ import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.CancellationPolicy;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
+import iuh.fit.venueservice.infrastructure.external.client.NotificationClient;
+import iuh.fit.venueservice.infrastructure.external.client.dto.CreateNotificationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Primary;
@@ -33,6 +36,7 @@ public class VenueDecorator implements VenueService {
     private final VenueServiceImpl venueServiceImpl;
     private final VenueSemanticSearchPort semanticSearchPort;
     private final VenueCourtRepository venueCourtRepository;
+    private final NotificationClient notificationClient;
 
     @Override
     @Transactional(rollbackFor = ServiceException.class)
@@ -90,8 +94,32 @@ public class VenueDecorator implements VenueService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResult<Venue> getVenues(int page, int size) {
-        return venueServiceImpl.getVenues(page, size);
+    public PageResult<Venue> getVenues(AdminVenueFilter filter) throws ServiceException {
+        return venueServiceImpl.getVenues(filter);
+    }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    @CacheEvict(cacheNames = "venueSearch", allEntries = true)
+    public Venue suspendVenue(UUID venueId, String reason) throws ServiceException {
+        Venue venue = venueServiceImpl.suspendVenue(venueId, reason);
+        reindexAfterCommit(venue);
+        afterCommit(() -> notifyOwner(venue, "suspended-" + venue.getSuspendedAt(),
+                "Cơ sở " + venue.getName() + " bị đình chỉ",
+                "Quản trị viên đã tạm ẩn cơ sở khỏi tìm kiếm và đặt sân. Lý do: " + venue.getSuspensionReason()));
+        return venue;
+    }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    @CacheEvict(cacheNames = "venueSearch", allEntries = true)
+    public Venue reinstateVenue(UUID venueId) throws ServiceException {
+        Venue venue = venueServiceImpl.reinstateVenue(venueId);
+        reindexAfterCommit(venue);
+        afterCommit(() -> notifyOwner(venue, "reinstated-" + venue.getUpdatedAt(),
+                "Cơ sở " + venue.getName() + " đã được mở lại",
+                "Quản trị viên đã gỡ đình chỉ. Cơ sở hiển thị và nhận đặt sân trở lại."));
+        return venue;
     }
 
     @Override
@@ -109,16 +137,32 @@ public class VenueDecorator implements VenueService {
      */
     private void reindexAfterCommit(Venue venue) {
         if (venue == null || venue.getVenueId() == null) return;
+        afterCommit(() -> index(venue));
+    }
+
+    private void afterCommit(Runnable action) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            index(venue);
+            action.run();
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                index(venue);
+                action.run();
             }
         });
+    }
+
+    /** Best-effort: thông báo lỗi không làm hỏng thao tác đã commit. */
+    private void notifyOwner(Venue venue, String dedupeKey, String title, String content) {
+        UUID eventId = UUID.nameUUIDFromBytes((venue.getVenueId() + dedupeKey).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        try {
+            notificationClient.createNotification(new CreateNotificationRequest(
+                    eventId, venue.getOwnerId(), title, content, "CONTENT_MODERATION", "VENUE", "SYSTEM", venue.getVenueId()
+            ));
+        } catch (RuntimeException exception) {
+            log.warn("Khong gui duoc thong bao dinh chi venue {}: {}", venue.getVenueId(), exception.getMessage());
+        }
     }
 
     private void index(Venue venue) {

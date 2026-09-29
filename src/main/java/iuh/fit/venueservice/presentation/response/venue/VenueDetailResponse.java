@@ -3,6 +3,7 @@ package iuh.fit.venueservice.presentation.response.venue;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -37,4 +38,6 @@ public class VenueDetailResponse {
     private VenueFacilityLayout facilityLayout;
     private CancellationPolicyResponse cancellationPolicy;
     private Set<VenueCourtResponse> courts;
+    private LocalDateTime suspendedAt;
+    private String suspensionReason;
 }

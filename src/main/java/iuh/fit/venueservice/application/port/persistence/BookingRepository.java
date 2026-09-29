@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.port.persistence;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminBookingFilter;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
@@ -40,6 +41,11 @@ public interface BookingRepository {
     List<Booking> findCompletionCandidatesForUpdate(LocalDateTime cutoff, int limit);
 
     PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter);
+
+    /** Mọi đơn trên nền tảng (admin); ownerId trong bộ lọc chỉ thu hẹp khi có. */
+    PageResult<OwnerBookingRecord> findAllBookings(AdminBookingFilter filter);
+
+    Optional<OwnerBookingRecord> findBookingRecordById(UUID bookingId);
 
     Optional<OwnerBookingRecord> findOwnedBookingById(UUID bookingId, UUID ownerId);
 

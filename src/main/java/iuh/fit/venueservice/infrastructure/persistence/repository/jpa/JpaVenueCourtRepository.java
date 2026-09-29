@@ -14,4 +14,6 @@ public interface JpaVenueCourtRepository extends JpaRepository<VenueCourtEntity,
     List<VenueCourtEntity> findByVenue_VenueIdAndDeletedAtIsNull(UUID venueId);
 
     Optional<VenueCourtEntity> findByVenueCourtIdAndDeletedAtIsNull(UUID venueCourtId);
+
+    long countByActiveTrueAndDeletedAtIsNull();
 }

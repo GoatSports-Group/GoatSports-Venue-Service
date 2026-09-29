@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
@@ -53,6 +54,10 @@ public class VenueEntity extends BaseEntity {
 
     @Column(nullable = false, columnDefinition = "UUID")
     private UUID ownerId;
+
+    private LocalDateTime suspendedAt;
+    @Column(length = 500)
+    private String suspensionReason;
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
     @JoinColumn(name = "address_id", nullable = false, unique = true)

@@ -40,6 +40,10 @@ class DecoratorBeanSelectionTest {
             );
             context.registerBean(VenueSemanticSearchPort.class, () -> mock(VenueSemanticSearchPort.class));
             context.registerBean(VenueCourtRepository.class, () -> mock(VenueCourtRepository.class));
+            context.registerBean(
+                    iuh.fit.venueservice.infrastructure.external.client.NotificationClient.class,
+                    () -> mock(iuh.fit.venueservice.infrastructure.external.client.NotificationClient.class)
+            );
             context.registerBean(VenueServiceImpl.class, () -> mock(VenueServiceImpl.class));
             context.registerBean(VenueCourtServiceImpl.class, () -> mock(VenueCourtServiceImpl.class));
             context.registerBean(OwnerCheckInServiceImpl.class, () -> mock(OwnerCheckInServiceImpl.class));

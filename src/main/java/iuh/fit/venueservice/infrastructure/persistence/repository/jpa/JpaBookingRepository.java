@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository.jpa;
 
+import java.util.Collection;
 import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
@@ -149,4 +150,22 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             @Param("currentFrom") LocalDate currentFrom,
             @Param("currentToExclusive") LocalDate currentToExclusive
     );
+
+    @Query("""
+            select booking.createdAt, booking.status, booking.totalPrice from BookingEntity booking
+            where booking.createdAt >= :from and booking.createdAt < :to
+            """)
+    List<Object[]> findStatRows(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+            select venue.venueId, venue.name, count(booking),
+                   sum(case when booking.status in :paidStatuses then booking.totalPrice else 0 end)
+            from BookingEntity booking join booking.venueCourt court join court.venue venue
+            where booking.createdAt >= :from and booking.createdAt < :to
+            group by venue.venueId, venue.name
+            order by count(booking) desc
+            """)
+    List<Object[]> findTopVenues(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
+                                 @Param("paidStatuses") Collection<BookingStatus> paidStatuses,
+                                 Pageable pageable);
 }

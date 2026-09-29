@@ -107,6 +107,10 @@ public class BookingServiceImpl implements BookingService {
         if (!Boolean.TRUE.equals(court.getActive()) || court.getDeletedAt() != null) {
             throw new ServiceException("Sân đang tạm ngừng hoạt động.");
         }
+        // Cơ sở tắt hoặc bị admin đình chỉ thì không nhận đơn mới, kể cả khi từng sân con vẫn bật.
+        if (venueRepository.findById(court.getVenueId()).map(Venue::getActive).filter(Boolean.TRUE::equals).isEmpty()) {
+            throw new ServiceException("Cơ sở đang tạm ngừng nhận đặt sân.");
+        }
 
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime requestedStart = LocalDateTime.of(command.playDate(), command.startTime());

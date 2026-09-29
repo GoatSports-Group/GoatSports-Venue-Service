@@ -11,4 +11,6 @@ import java.util.UUID;
 @Repository
 public interface JpaVenueRepository extends JpaRepository<VenueEntity, UUID>, JpaSpecificationExecutor<VenueEntity> {
     List<VenueEntity> findByOwnerId(UUID ownerId);
+
+    long countByActiveTrue();
 }

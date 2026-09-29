@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.CreatePlayerReviewCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
@@ -81,6 +82,17 @@ public class ReviewServiceImpl implements ReviewService {
         filter.validate();
         ensureRequestedScope(filter);
         PageResult<OwnerReviewRecord> page = reviewRepository.findOwnedReviews(filter);
+        return new PageResult<>(
+                page.items().stream().map(this::toOwnerView).toList(),
+                page.total(), page.page(), page.pageSize(), page.totalPages()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<OwnerReviewView> getAllReviews(AdminReviewFilter filter) throws ServiceException {
+        filter.validate();
+        PageResult<OwnerReviewRecord> page = reviewRepository.findAllReviews(filter);
         return new PageResult<>(
                 page.items().stream().map(this::toOwnerView).toList(),
                 page.total(), page.page(), page.pageSize(), page.totalPages()

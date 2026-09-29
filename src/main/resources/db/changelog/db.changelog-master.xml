@@ -21,4 +21,5 @@
     <include file="/db/changelog/schema/19-09-2026/enforce-one-review-per-booking.xml"/>
     <include file="/db/changelog/schema/24-09-2026/add-tournament-court-holds.xml"/>
     <include file="/db/changelog/schema/27-09-2026/add-booking-late-refund.xml"/>
+    <include file="/db/changelog/schema/29-09-2026/add-venue-suspension.xml"/>
 </databaseChangeLog>

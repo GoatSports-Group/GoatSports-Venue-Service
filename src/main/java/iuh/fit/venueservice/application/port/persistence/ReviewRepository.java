@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.port.persistence;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewRecord;
@@ -16,6 +17,8 @@ public interface ReviewRepository {
     Optional<Review> findByBookingId(UUID bookingId);
 
     PageResult<OwnerReviewRecord> findOwnedReviews(OwnerReviewFilter filter);
+
+    PageResult<OwnerReviewRecord> findAllReviews(AdminReviewFilter filter);
 
     PageResult<Review> findPublishedByVenueId(UUID venueId, int page, int size);
 

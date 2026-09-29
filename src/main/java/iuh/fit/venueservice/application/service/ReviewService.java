@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.CreatePlayerReviewCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
@@ -17,6 +18,8 @@ public interface ReviewService {
     PlayerReviewView createPlayerReview(CreatePlayerReviewCommand command) throws ServiceException;
 
     PageResult<OwnerReviewView> getOwnerReviews(OwnerReviewFilter filter) throws ServiceException;
+
+    PageResult<OwnerReviewView> getAllReviews(AdminReviewFilter filter) throws ServiceException;
 
     PageResult<PublicReviewView> getPublishedReviews(PublicReviewFilter filter) throws ServiceException;
 

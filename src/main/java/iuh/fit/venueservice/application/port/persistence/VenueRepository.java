@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.port.persistence;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminVenueFilter;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.Venue;
@@ -17,5 +18,5 @@ public interface VenueRepository {
 
     PageResult<Venue> search(SearchVenueCommand command);
 
-    PageResult<Venue> findAll(int page, int size);
+    PageResult<Venue> findAll(AdminVenueFilter filter);
 }

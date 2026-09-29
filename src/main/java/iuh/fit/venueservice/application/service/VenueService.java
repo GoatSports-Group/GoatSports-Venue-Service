@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminVenueFilter;
 import iuh.fit.venueservice.application.dto.request.venue.CreateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
@@ -33,7 +34,13 @@ public interface VenueService {
     CancellationPolicy updateCancellationPolicy(UpdateCancellationPolicyCommand command)
             throws ServiceException;
 
-    PageResult<Venue> getVenues(int page, int size);
+    PageResult<Venue> getVenues(AdminVenueFilter filter) throws ServiceException;
+
+    /** Admin đình chỉ cơ sở: ẩn khỏi tìm kiếm và đặt sân; chủ sân không tự bật lại được. */
+    Venue suspendVenue(UUID venueId, String reason) throws ServiceException;
+
+    /** Gỡ đình chỉ và mở lại cơ sở. */
+    Venue reinstateVenue(UUID venueId) throws ServiceException;
 
     Venue getVenue(UUID venueId) throws ServiceException;
 }

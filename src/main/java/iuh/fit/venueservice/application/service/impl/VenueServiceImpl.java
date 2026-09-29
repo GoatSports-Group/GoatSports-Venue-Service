@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminVenueFilter;
 import iuh.fit.venueservice.application.dto.request.venue.CreateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
@@ -95,6 +96,9 @@ public class VenueServiceImpl implements VenueService {
     public Venue updateVenue(UpdateVenueCommand command) throws ServiceException {
         Venue venue = getOwnedVenue(command.venueId(), command.currentUserId());
         command.validate();
+        if (venue.getSuspendedAt() != null && Boolean.TRUE.equals(command.active())) {
+            throw new ServiceException("Cơ sở đang bị quản trị viên đình chỉ, bạn chưa thể mở lại.");
+        }
         List<String> imageKeys = finalizeNewImages(command.imageUrls());
 
         venue.setName(command.name().trim());
@@ -193,8 +197,34 @@ public class VenueServiceImpl implements VenueService {
     }
 
     @Override
-    public PageResult<Venue> getVenues(int page, int size) {
-        return venueRepository.findAll(page, size);
+    public PageResult<Venue> getVenues(AdminVenueFilter filter) throws ServiceException {
+        filter.validate();
+        return venueRepository.findAll(filter);
+    }
+
+    @Override
+    public Venue suspendVenue(UUID venueId, String reason) throws ServiceException {
+        String trimmed = reason == null ? "" : reason.trim();
+        if (trimmed.length() < 10 || trimmed.length() > 500) {
+            throw new ServiceException("Lý do đình chỉ phải từ 10 đến 500 ký tự.");
+        }
+        Venue venue = getVenue(venueId);
+        if (venue.getSuspendedAt() != null) throw new ServiceException("Cơ sở đã bị đình chỉ.");
+        venue.setActive(false);
+        venue.setSuspendedAt(LocalDateTime.now());
+        venue.setSuspensionReason(trimmed);
+        return venueRepository.save(venue);
+    }
+
+    @Override
+    public Venue reinstateVenue(UUID venueId) throws ServiceException {
+        Venue venue = getVenue(venueId);
+        if (venue.getSuspendedAt() == null) throw new ServiceException("Cơ sở không bị đình chỉ.");
+        // ponytail: mở lại luôn, kể cả khi chủ sân đã tự tắt trước lúc bị đình chỉ; chủ sân tắt lại được ngay.
+        venue.setActive(true);
+        venue.setSuspendedAt(null);
+        venue.setSuspensionReason(null);
+        return venueRepository.save(venue);
     }
 
     @Override

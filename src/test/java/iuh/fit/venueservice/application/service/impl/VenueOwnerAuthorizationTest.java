@@ -164,6 +164,29 @@ class VenueOwnerAuthorizationTest {
         verify(venueCourtRepository, never()).save(any(VenueCourt.class), any(Venue.class));
     }
 
+    @Test
+    void suspendedVenueStaysClosedUntilAdminReinstatesIt() throws Exception {
+        venue.setActive(true);
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
+        when(venueRepository.save(any(Venue.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThatThrownBy(() -> venueService.suspendVenue(venueId, "ngắn"))
+                .hasMessageContaining("10 đến 500");
+        Venue suspended = venueService.suspendVenue(venueId, "  Nhiều khiếu nại về an toàn sân  ");
+        assertThat(suspended.getActive()).isFalse();
+        assertThat(suspended.getSuspensionReason()).isEqualTo("Nhiều khiếu nại về an toàn sân");
+
+        // Chủ sân bật lại cơ sở bị từ chối và không đụng tới ảnh.
+        assertThatThrownBy(() -> venueService.updateVenue(updateVenueCommand(ownerId)))
+                .hasMessageContaining("đình chỉ");
+        org.mockito.Mockito.verifyNoInteractions(storagePort);
+
+        Venue reinstated = venueService.reinstateVenue(venueId);
+        assertThat(reinstated.getActive()).isTrue();
+        assertThat(reinstated.getSuspendedAt()).isNull();
+        assertThatThrownBy(() -> venueService.reinstateVenue(venueId)).hasMessageContaining("không bị đình chỉ");
+    }
+
     private UpdateVenueCommand updateVenueCommand(UUID currentUserId) {
         return updateVenueCommand(currentUserId, List.of("https://example.test/venue.jpg"));
     }

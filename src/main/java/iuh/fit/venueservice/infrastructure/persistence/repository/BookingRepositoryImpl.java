@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminBookingFilter;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
@@ -131,50 +132,58 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     @Transactional(readOnly = true)
     public PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter) {
-        Specification<BookingEntity> spec =
-                (root, query, cb) -> cb.equal(
-                        root.get("venueCourt").get("venue").get("ownerId"), filter.ownerId()
-                );
-        if (filter.venueId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(
-                    root.get("venueCourt").get("venue").get("venueId"), filter.venueId()
-            ));
+        return searchBookings(filter.ownerId(), filter.venueId(), filter.venueCourtId(), filter.status(),
+                filter.query(), filter.fromDate(), filter.toDate(), filter.page(), filter.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<OwnerBookingRecord> findAllBookings(AdminBookingFilter filter) {
+        return searchBookings(filter.ownerId(), filter.venueId(), null, filter.status(),
+                filter.query(), filter.fromDate(), filter.toDate(), filter.page(), filter.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OwnerBookingRecord> findBookingRecordById(UUID bookingId) {
+        return jpaRepository.findById(bookingId).map(this::toOwnerRecord);
+    }
+
+    /** Dùng chung cho chủ sân (ownerId bắt buộc) và admin (ownerId tùy chọn). */
+    private PageResult<OwnerBookingRecord> searchBookings(UUID ownerId, UUID venueId, UUID venueCourtId,
+                                                         BookingStatus status, String text, LocalDate fromDate,
+                                                         LocalDate toDate, int page, int size) {
+        Specification<BookingEntity> spec = (root, query, cb) -> cb.conjunction();
+        if (ownerId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("venueCourt").get("venue").get("ownerId"), ownerId));
         }
-        if (filter.venueCourtId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(
-                    root.get("venueCourt").get("venueCourtId"), filter.venueCourtId()
-            ));
+        if (venueId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("venueCourt").get("venue").get("venueId"), venueId));
         }
-        if (filter.status() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), filter.status()));
+        if (venueCourtId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("venueCourt").get("venueCourtId"), venueCourtId));
         }
-        if (filter.fromDate() != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(
-                    root.get("playDate"), filter.fromDate()
-            ));
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
-        if (filter.toDate() != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(
-                    root.get("playDate"), filter.toDate()
-            ));
+        if (fromDate != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("playDate"), fromDate));
         }
-        if (filter.query() != null && !filter.query().isBlank()) {
-            String term = "%" + filter.query().trim().toLowerCase() + "%";
+        if (toDate != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("playDate"), toDate));
+        }
+        if (text != null && !text.isBlank()) {
+            String term = "%" + text.trim().toLowerCase() + "%";
             spec = spec.and((root, query, cb) -> cb.or(
                     cb.like(cb.lower(root.get("bookingCode")), term),
                     cb.like(cb.lower(root.get("walkInCustomerName")), term),
-                    cb.like(cb.lower(root.get("walkInCustomerPhone")), term)
+                    cb.like(cb.lower(root.get("walkInCustomerPhone")), term),
+                    cb.like(cb.lower(root.get("venueCourt").get("venue").get("name")), term)
             ));
         }
-
-        var page = jpaRepository.findAll(
-                spec,
-                PageRequest.of(filter.page(), filter.size(), Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
-        List<OwnerBookingRecord> records = page.getContent().stream()
-                .map(this::toOwnerRecord)
-                .toList();
-        return new PageResult<>(records, page.getTotalElements(), filter.page(), filter.size(), page.getTotalPages());
+        var result = jpaRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        List<OwnerBookingRecord> records = result.getContent().stream().map(this::toOwnerRecord).toList();
+        return new PageResult<>(records, result.getTotalElements(), page, size, result.getTotalPages());
     }
 
     @Override

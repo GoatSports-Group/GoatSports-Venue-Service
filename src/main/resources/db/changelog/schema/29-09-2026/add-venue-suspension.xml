@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!-- Admin dinh chi co so vi pham: tach khoi co "active" cua chu san de chu san khong tu bat lai duoc. -->
+    <changeSet id="20260929-add-venue-suspension" author="codex">
+        <addColumn tableName="venues">
+            <column name="suspended_at" type="TIMESTAMP"/>
+            <column name="suspension_reason" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

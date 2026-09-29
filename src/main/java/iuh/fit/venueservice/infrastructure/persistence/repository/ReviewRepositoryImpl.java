@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewRecord;
@@ -62,17 +63,27 @@ public class ReviewRepositoryImpl implements ReviewRepository {
                 ? null : filter.fromDate().atStartOfDay();
         LocalDateTime toTime = filter.toDate() == null
                 ? null : filter.toDate().plusDays(1).atStartOfDay();
-        Specification<ReviewEntity> specification = ownedReviewsSpecification(filter, fromTime, toTime);
-        var page = jpaRepository.findAll(
+        return findRecords(reviewsSpecification(
+                filter.ownerId(), filter.venueId(), filter.venueCourtId(), filter.rating(), null, fromTime, toTime
+        ), filter.page(), filter.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<OwnerReviewRecord> findAllReviews(AdminReviewFilter filter) {
+        return findRecords(reviewsSpecification(
+                null, filter.venueId(), null, filter.rating(), filter.status(), null, null
+        ), filter.page(), filter.size());
+    }
+
+    private PageResult<OwnerReviewRecord> findRecords(Specification<ReviewEntity> specification, int page, int size) {
+        var result = jpaRepository.findAll(
                 specification,
-                PageRequest.of(
-                        filter.page(), filter.size(),
-                        Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("reviewId"))
-                )
+                PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("reviewId")))
         );
         return new PageResult<>(
-                page.getContent().stream().map(this::toOwnerRecord).toList(),
-                page.getTotalElements(), page.getNumber(), page.getSize(), page.getTotalPages()
+                result.getContent().stream().map(this::toOwnerRecord).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalPages()
         );
     }
 
@@ -90,27 +101,30 @@ public class ReviewRepositoryImpl implements ReviewRepository {
         );
     }
 
-    private Specification<ReviewEntity> ownedReviewsSpecification(
-            OwnerReviewFilter filter, LocalDateTime fromTime, LocalDateTime toTime
+    /** ownerId null là toàn nền tảng (admin); status null là mọi trạng thái trừ DELETED. */
+    private Specification<ReviewEntity> reviewsSpecification(
+            UUID ownerId, UUID venueId, UUID venueCourtId, Integer rating, ReviewStatus status,
+            LocalDateTime fromTime, LocalDateTime toTime
     ) {
         return (root, query, criteriaBuilder) -> {
             var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
-            predicates.add(criteriaBuilder.equal(root.get("venue").get("ownerId"), filter.ownerId()));
-            predicates.add(criteriaBuilder.notEqual(root.get("status"), ReviewStatus.DELETED));
+            if (ownerId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("venue").get("ownerId"), ownerId));
+            }
+            predicates.add(status == null
+                    ? criteriaBuilder.notEqual(root.get("status"), ReviewStatus.DELETED)
+                    : criteriaBuilder.equal(root.get("status"), status));
 
-            if (filter.venueId() != null) {
+            if (venueId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("venue").get("venueId"), venueId));
+            }
+            if (venueCourtId != null) {
                 predicates.add(criteriaBuilder.equal(
-                        root.get("venue").get("venueId"), filter.venueId()
+                        root.get("booking").get("venueCourt").get("venueCourtId"), venueCourtId
                 ));
             }
-            if (filter.venueCourtId() != null) {
-                predicates.add(criteriaBuilder.equal(
-                        root.get("booking").get("venueCourt").get("venueCourtId"),
-                        filter.venueCourtId()
-                ));
-            }
-            if (filter.rating() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("rating"), filter.rating()));
+            if (rating != null) {
+                predicates.add(criteriaBuilder.equal(root.get("rating"), rating));
             }
             if (fromTime != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), fromTime));
