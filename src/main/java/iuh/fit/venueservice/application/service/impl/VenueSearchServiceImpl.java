@@ -147,7 +147,8 @@ public class VenueSearchServiceImpl implements VenueSearchService {
      * command nguyen ban de repository dung lai keyword LIKE nhu cu.
      */
     private SearchVenueCommand applySemanticSearch(SearchVenueCommand command) {
-        if (command.keyword() == null || command.keyword().trim().isEmpty()) {
+        // Ben goi da gioi han theo danh sach id (vd. san da luu): giu nguyen, khong de semantic ghi de.
+        if (command.usesSemanticSearch() || command.keyword() == null || command.keyword().trim().isEmpty()) {
             return command;
         }
         Optional<List<UUID>> semanticIds =

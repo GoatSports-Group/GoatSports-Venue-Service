@@ -95,4 +95,15 @@ class VenueSemanticSearchFallbackTest {
         verify(semanticSearchPort, never()).findVenueIds(anyString(), anyInt());
         assertThat(captureSearchCommand().usesSemanticSearch()).isFalse();
     }
+
+    @Test
+    void callerIdsAreKeptAndSemanticSearchIsSkipped() {
+        UUID saved = UUID.randomUUID();
+
+        service.searchVenues(commandWithKeyword("sân").withSemanticVenueIds(List.of(saved)));
+
+        SearchVenueCommand used = captureSearchCommand();
+        assertThat(used.semanticVenueIds()).containsExactly(saved);
+        verify(semanticSearchPort, never()).findVenueIds(anyString(), anyInt());
+    }
 }

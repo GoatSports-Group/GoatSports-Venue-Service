@@ -30,6 +30,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/venues")
 @RequiredArgsConstructor
 public class PublicVenueController {
+    private static final int MAX_VENUE_IDS = 50;
+
     private final VenueSearchService venueSearchService;
     private final VenueSearchConverter venueSearchConverter;
     private final VenueCourtMapper venueCourtMapper;
@@ -52,14 +54,20 @@ public class PublicVenueController {
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) Double minRating,
+            /** Chi lay cac san nay (vd. trang "Sân đã lưu"), toi da MAX_VENUE_IDS id moi lan. */
+            @RequestParam(required = false) List<UUID> ids,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
-    ) {
+    ) throws ServiceException {
+        if (ids != null && ids.size() > MAX_VENUE_IDS) {
+            throw new ServiceException("Chỉ lấy tối đa " + MAX_VENUE_IDS + " sân mỗi lần.");
+        }
         SearchVenueCommand command = new SearchVenueCommand(
                 keyword, sportType, district, city, latitude, longitude, radiusKm,
                 northLatitude, southLatitude, eastLongitude, westLongitude,
                 minPrice, maxPrice, minRating, page, size
         );
+        if (ids != null) command = command.withSemanticVenueIds(ids.stream().distinct().toList());
         PageResult<VenueSearchResponseCommand> result = venueSearchService.searchVenues(command);
         List<VenueSearchResponse> items = result.items().stream()
                 .map(venueSearchConverter::toResponse)
