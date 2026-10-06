@@ -451,4 +451,17 @@ class BookingServiceImplTest {
                 .hasMessageContaining("tạm ngừng nhận đặt sân");
         verify(bookingRepository, never()).save(any());
     }
+
+    @Test
+    void upcomingHistoryFiltersByPlayTimeNotOnlyByStatus() throws Exception {
+        UUID playerId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-10-06T05:00:00Z");
+        when(bookingRepository.findPlayerUpcomingPage(playerId, java.time.LocalDateTime.of(2026, 10, 6, 12, 0), 0, 12))
+                .thenReturn(new iuh.fit.venueservice.application.dto.response.base.PageResult<>(List.of(), 0, 0, 12, 0));
+
+        serviceAt(now).getPlayerBookingHistory(playerId, "UPCOMING", 0, 12);
+
+        org.mockito.Mockito.verify(bookingRepository).findPlayerUpcomingPage(playerId, java.time.LocalDateTime.of(2026, 10, 6, 12, 0), 0, 12);
+        org.mockito.Mockito.verify(bookingRepository, org.mockito.Mockito.never()).findPlayerPage(any(), any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+    }
 }

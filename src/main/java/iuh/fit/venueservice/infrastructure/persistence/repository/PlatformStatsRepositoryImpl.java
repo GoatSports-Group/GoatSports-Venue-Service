@@ -38,7 +38,8 @@ public class PlatformStatsRepositoryImpl implements PlatformStatsRepository {
     public List<BookingRow> bookingRows(LocalDateTime from, LocalDateTime to) {
         return bookingRepository.findStatRows(from, to).stream()
                 .map(row -> new BookingRow((LocalDateTime) row[0], (BookingStatus) row[1],
-                        row[2] == null ? null : ((Number) row[2]).doubleValue()))
+                        row[2] == null ? null : ((Number) row[2]).doubleValue(),
+                        row[3] == null ? null : ((Number) row[3]).doubleValue()))
                 .toList();
     }
 
@@ -46,7 +47,7 @@ public class PlatformStatsRepositoryImpl implements PlatformStatsRepository {
     @Transactional(readOnly = true)
     public List<PlatformBookingStats.VenueStat> topVenues(LocalDateTime from, LocalDateTime to,
                                                           Collection<BookingStatus> paidStatuses, int limit) {
-        return bookingRepository.findTopVenues(from, to, paidStatuses, PageRequest.of(0, limit)).stream()
+        return bookingRepository.findTopVenues(from, to, paidStatuses, BookingStatus.NO_SHOW, PageRequest.of(0, limit)).stream()
                 .map(row -> new PlatformBookingStats.VenueStat((UUID) row[0], (String) row[1],
                         ((Number) row[2]).longValue(), row[3] == null ? 0D : ((Number) row[3]).doubleValue()))
                 .toList();

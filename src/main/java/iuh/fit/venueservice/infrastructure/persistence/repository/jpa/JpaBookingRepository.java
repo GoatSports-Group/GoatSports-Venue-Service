@@ -83,6 +83,26 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             Pageable pageable
     );
 
+    @Query(value = """
+            select booking from BookingEntity booking
+            where booking.playerId = :playerId
+              and booking.status in :statuses
+              and (booking.playDate > :today or (booking.playDate = :today and booking.endTime > :nowTime))
+            order by booking.playDate asc, booking.startTime asc, booking.bookingId asc
+            """, countQuery = """
+            select count(booking) from BookingEntity booking
+            where booking.playerId = :playerId
+              and booking.status in :statuses
+              and (booking.playDate > :today or (booking.playDate = :today and booking.endTime > :nowTime))
+            """)
+    Page<BookingEntity> findPlayerUpcoming(
+            @Param("playerId") UUID playerId,
+            @Param("statuses") Collection<BookingStatus> statuses,
+            @Param("today") LocalDate today,
+            @Param("nowTime") LocalTime nowTime,
+            Pageable pageable
+    );
+
     @Query("""
             select booking from BookingEntity booking
             join fetch booking.venueCourt court
@@ -152,14 +172,15 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
     );
 
     @Query("""
-            select booking.createdAt, booking.status, booking.totalPrice from BookingEntity booking
+            select booking.createdAt, booking.status, booking.totalPrice, booking.depositAmount from BookingEntity booking
             where booking.createdAt >= :from and booking.createdAt < :to
             """)
     List<Object[]> findStatRows(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""
             select venue.venueId, venue.name, count(booking),
-                   sum(case when booking.status in :paidStatuses then booking.totalPrice else 0 end)
+                   sum(case when booking.status in :paidStatuses then booking.totalPrice
+                            when booking.status = :noShow then booking.depositAmount else 0 end)
             from BookingEntity booking join booking.venueCourt court join court.venue venue
             where booking.createdAt >= :from and booking.createdAt < :to
             group by venue.venueId, venue.name
@@ -167,5 +188,6 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             """)
     List<Object[]> findTopVenues(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                                  @Param("paidStatuses") Collection<BookingStatus> paidStatuses,
+                                 @Param("noShow") BookingStatus noShow,
                                  Pageable pageable);
 }

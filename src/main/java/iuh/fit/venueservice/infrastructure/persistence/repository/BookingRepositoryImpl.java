@@ -130,6 +130,32 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    @Transactional
+    public List<Booking> findNoShowCandidatesForUpdate(LocalDateTime cutoff, int limit) {
+        return jpaRepository.findCompletionCandidatesForUpdate(
+                        cutoff.toLocalDate(),
+                        cutoff.toLocalTime(),
+                        BookingStatus.CONFIRMED,
+                        PageRequest.of(0, limit)
+                ).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<Booking> findPlayerUpcomingPage(UUID playerId, LocalDateTime now, int page, int size) {
+        var result = jpaRepository.findPlayerUpcoming(
+                playerId,
+                List.of(BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN),
+                now.toLocalDate(), now.toLocalTime(), PageRequest.of(page, size));
+        return new PageResult<>(
+                result.getContent().stream().map(mapper::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalPages()
+        );
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter) {
         return searchBookings(filter.ownerId(), filter.venueId(), filter.venueCourtId(), filter.status(),

@@ -55,9 +55,12 @@ public class AdminStatsServiceImpl implements AdminStatsService {
             byStatus.merge(row.status().name(), 1L, Long::sum);
             LocalDate day = row.createdAt().toLocalDate();
             dayCounts.merge(day, 1L, Long::sum);
-            if (PAID.contains(row.status()) && row.totalPrice() != null) {
-                gmv += row.totalPrice();
-                dayGmv.merge(day, row.totalPrice(), Double::sum);
+            // Khong den nhan san: co so chi giu tien coc, khoan con lai khong thu.
+            Double value = PAID.contains(row.status()) ? row.totalPrice()
+                    : row.status() == BookingStatus.NO_SHOW ? row.depositAmount() : null;
+            if (value != null) {
+                gmv += value;
+                dayGmv.merge(day, value, Double::sum);
             }
         }
         List<PlatformBookingStats.DayStat> byDay = new ArrayList<>();

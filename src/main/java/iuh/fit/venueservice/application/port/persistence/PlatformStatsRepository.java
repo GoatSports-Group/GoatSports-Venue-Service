@@ -13,11 +13,11 @@ public interface PlatformStatsRepository {
 
     long countActiveCourts();
 
-    /** Đơn tạo trong [from, to): chỉ ba trường cần để đếm theo trạng thái và gom theo ngày. */
+    /** Đơn tạo trong [from, to): chỉ các trường cần để đếm theo trạng thái và gom theo ngày. */
     List<BookingRow> bookingRows(LocalDateTime from, LocalDateTime to);
 
     List<PlatformBookingStats.VenueStat> topVenues(LocalDateTime from, LocalDateTime to,
                                                    Collection<BookingStatus> paidStatuses, int limit);
 
-    record BookingRow(LocalDateTime createdAt, BookingStatus status, Double totalPrice) { }
+    record BookingRow(LocalDateTime createdAt, BookingStatus status, Double totalPrice, Double depositAmount) { }
 }

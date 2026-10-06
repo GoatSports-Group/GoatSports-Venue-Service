@@ -216,8 +216,10 @@ public class BookingServiceImpl implements BookingService {
         if (page < 0 || size < 1 || size > MAX_PLAYER_PAGE_SIZE) {
             throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 50.");
         }
-        BookingStatus parsedStatus = parseStatus(status);
-        PageResult<Booking> result = bookingRepository.findPlayerPage(playerId, parsedStatus, page, size);
+        // "Sap dien ra" xet theo gio choi, khong chi trang thai: luot qua gio ma chua dong van khong lot vao.
+        PageResult<Booking> result = UPCOMING.equalsIgnoreCase(status == null ? "" : status.trim())
+                ? bookingRepository.findPlayerUpcomingPage(playerId, LocalDateTime.now(clock), page, size)
+                : bookingRepository.findPlayerPage(playerId, parseStatus(status), page, size);
         return new PageResult<>(
                 result.items().stream().map(this::toPlayerView).toList(),
                 result.total(), result.page(), result.pageSize(), result.totalPages()
@@ -232,6 +234,9 @@ public class BookingServiceImpl implements BookingService {
         }
         return code.toString();
     }
+
+    /** Bo loc lich su: luot con hieu luc chua toi gio ket thuc (khong phai mot BookingStatus). */
+    static final String UPCOMING = "UPCOMING";
 
     private BookingStatus parseStatus(String status) throws ServiceException {
         if (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)) return null;

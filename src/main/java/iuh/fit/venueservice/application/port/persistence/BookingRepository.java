@@ -40,6 +40,12 @@ public interface BookingRepository {
 
     List<Booking> findCompletionCandidatesForUpdate(LocalDateTime cutoff, int limit);
 
+    /** Luot "Da xac nhan" da qua gio ket thuc (chua ai quet QR): ung vien danh dau Khong den nhan san. */
+    List<Booking> findNoShowCandidatesForUpdate(LocalDateTime cutoff, int limit);
+
+    /** Luot con hieu luc (cho thanh toan / da xac nhan / da nhan san) chua toi gio ket thuc, som nhat truoc. */
+    PageResult<Booking> findPlayerUpcomingPage(UUID playerId, LocalDateTime now, int page, int size);
+
     PageResult<OwnerBookingRecord> findOwnedBookings(OwnerBookingFilter filter);
 
     /** Mọi đơn trên nền tảng (admin); ownerId trong bộ lọc chỉ thu hẹp khi có. */
