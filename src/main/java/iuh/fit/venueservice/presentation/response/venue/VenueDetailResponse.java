@@ -16,6 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class VenueDetailResponse {
     private UUID venueId;
+    private UUID ownerId;
     private String name;
     private String description;
     private LocalTime openTime;
