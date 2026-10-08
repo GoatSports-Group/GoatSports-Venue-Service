@@ -81,6 +81,12 @@ class BookingPaymentEventServiceImplTest {
         verify(timeSlotLifecycleService, org.mockito.Mockito.times(2)).confirmBookingSlot(booking);
         // Tiền cọc tính vào doanh thu chủ sân (gọi lặp ở sự kiện trùng là vô hại: payment-service bỏ qua).
         verify(paymentRefundPort, org.mockito.Mockito.times(2)).assignPayee(paymentId, ownerId);
+        // Chủ sân nhận đúng một thông báo "đơn mới" (sự kiện trùng không báo lại).
+        verify(bookingNotificationPort, org.mockito.Mockito.times(1)).notifyOwner(
+                org.mockito.ArgumentMatchers.eq(ownerId), org.mockito.ArgumentMatchers.eq(bookingId),
+                org.mockito.ArgumentMatchers.eq("booking-confirmed-owner:" + bookingId),
+                org.mockito.ArgumentMatchers.eq("Đơn đặt sân mới"),
+                org.mockito.ArgumentMatchers.contains("lúc 08:00 ngày 01/09/2026 đã đóng cọc"));
     }
 
     @Test
@@ -267,7 +273,12 @@ class BookingPaymentEventServiceImplTest {
         verify(paymentRefundPort, never()).createRefund(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any());
-        org.mockito.Mockito.verifyNoInteractions(bookingNotificationPort);
+        // Khong co thong bao "hoan tien muon" cho nguoi tra; chu san nhan thong bao don moi.
+        verify(bookingNotificationPort, never()).notifyPayer(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(bookingNotificationPort).notifyOwner(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(bookingId),
+                org.mockito.ArgumentMatchers.eq("booking-confirmed-owner:" + bookingId), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any());
     }
 
     @Test

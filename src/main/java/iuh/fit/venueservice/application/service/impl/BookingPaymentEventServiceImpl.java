@@ -153,10 +153,12 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                         "là khoản trùng: lượt đặt đã được đóng cọc bằng giao dịch khác, sân của bạn vẫn giữ nguyên.");
             }
             // Gọi trước khi commit: lỗi thì cả sự kiện được Kafka xử lý lại; gọi lặp thì payment-service bỏ qua.
-            paymentRefundPort.assignPayee(command.paymentId(), venueOwnerId(booking));
+            UUID ownerId = venueOwnerId(booking);
+            paymentRefundPort.assignPayee(command.paymentId(), ownerId);
             boolean changed = !command.paymentId().equals(booking.getDepositPaymentId());
             booking.setDepositPaymentId(command.paymentId());
-            if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            boolean confirmedNow = booking.getStatus() == BookingStatus.PENDING_PAYMENT;
+            if (confirmedNow) {
                 booking.setStatus(BookingStatus.CONFIRMED);
                 changed = true;
             }
@@ -175,6 +177,12 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 matchmakingLifecycleSyncPort.syncBookingLifecycle(
                         saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name()
                 );
+            }
+            // Don moi giu cho chac chan: bao chu san (dashboard lam moi tinh trang san qua WebSocket thong bao).
+            if (confirmedNow) {
+                bookingNotificationPort.notifyOwner(ownerId, booking.getBookingId(),
+                        "booking-confirmed-owner:" + booking.getBookingId(), "Đơn đặt sân mới",
+                        "Lượt " + booking.getBookingCode() + " " + slotLabel(booking) + " đã đóng cọc.");
             }
             return changed;
         }
@@ -247,6 +255,12 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             return booking.getPlayerId() != null && booking.getPlayerId().equals(payerId);
         }
         return payerId.equals(venueOwnerId(booking));
+    }
+
+    /** "lúc 19:00 ngày 11/10/2026" cho nội dung thông báo. */
+    static String slotLabel(Booking booking) {
+        return "lúc " + booking.getStartTime().toString().substring(0, 5) + " ngày "
+                + booking.getPlayDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     private UUID venueOwnerId(Booking booking) throws ServiceException {

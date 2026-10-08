@@ -133,12 +133,13 @@ public class ApplicationServiceConfig {
             TimeSlotLifecycleService timeSlotLifecycleService,
             PaymentRefundPort paymentRefundPort,
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            BookingNotificationPort bookingNotificationPort,
             Clock clock,
             @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow
     ) {
         return new BookingCancellationServiceImpl(
                 bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository,
-                timeSlotLifecycleService, paymentRefundPort, matchmakingLifecycleSyncPort, clock,
+                timeSlotLifecycleService, paymentRefundPort, matchmakingLifecycleSyncPort, bookingNotificationPort, clock,
                 cancellationAutoApprovalWindow
         );
     }

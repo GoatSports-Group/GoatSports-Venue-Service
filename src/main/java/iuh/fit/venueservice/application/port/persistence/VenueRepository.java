@@ -16,6 +16,9 @@ public interface VenueRepository {
 
     List<Venue> findByUserId(UUID userId);
 
+    /** Chủ của ít nhất một cơ sở (report-service tạo báo cáo định kỳ cho từng người). */
+    List<UUID> findOwnerIds();
+
     PageResult<Venue> search(SearchVenueCommand command);
 
     PageResult<Venue> findAll(AdminVenueFilter filter);

@@ -63,6 +63,11 @@ public class VenueRepositoryImpl implements VenueRepository {
     }
 
     @Override
+    public List<UUID> findOwnerIds() {
+        return jpaRepository.findDistinctOwnerIds();
+    }
+
+    @Override
     public PageResult<Venue> search(SearchVenueCommand command) {
         Specification<VenueEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();

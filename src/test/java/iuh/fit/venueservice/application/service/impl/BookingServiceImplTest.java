@@ -58,6 +58,7 @@ class BookingServiceImplTest {
     @Mock VenueRepository venueRepository;
     @Mock BookingQrPort bookingQrPort;
     @Mock PaymentRefundPort paymentRefundPort;
+    @Mock iuh.fit.venueservice.application.port.BookingNotificationPort bookingNotificationPort;
     @Mock iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
     @Mock(answer = org.mockito.Answers.CALLS_REAL_METHODS) iuh.fit.venueservice.application.port.persistence.CourtHoldRepository courtHoldRepository;
 
@@ -296,6 +297,12 @@ class BookingServiceImplTest {
 
         assertThat(result.getReviewMode()).isEqualTo(CancellationReviewMode.AUTOMATIC);
         assertThat(result.getRefundPercentage()).isEqualTo(100.0);
+        // Tu duyet: chu san duoc bao "khach da huy" de lich va tinh trang san tren dashboard khop ngay.
+        verify(bookingNotificationPort).notifyOwner(
+                org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.eq(bookingId),
+                org.mockito.ArgumentMatchers.eq("cancellation-auto-owner:" + cancellationId),
+                org.mockito.ArgumentMatchers.eq("Khách đã hủy lượt đặt"),
+                org.mockito.ArgumentMatchers.contains("GS-AUTO"));
         assertThat(result.getRefundAmount()).isEqualTo(200_000.0);
         assertThat(result.getStatus()).isEqualTo(CancellationStatus.REFUND_AWAITING_CLAIM);
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUND_PENDING);
@@ -366,7 +373,7 @@ class BookingServiceImplTest {
         return new BookingCancellationServiceImpl(
                 bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository,
                 new TimeSlotLifecycleService(timeSlotRepository, clock), paymentRefundPort, matchmakingLifecycleSyncPort,
-                clock, Duration.ofHours(1)
+                bookingNotificationPort, clock, Duration.ofHours(1)
         );
     }
 

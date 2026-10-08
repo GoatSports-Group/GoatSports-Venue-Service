@@ -17,6 +17,11 @@ public class BookingNotificationAdapter implements BookingNotificationPort {
     private final NotificationClient notificationClient;
 
     @Override
+    public void notifyOwner(UUID ownerId, UUID bookingId, String dedupeKey, String title, String content) {
+        notifyPayer(ownerId, bookingId, dedupeKey, title, content);
+    }
+
+    @Override
     public void notifyPayer(UUID receiverId, UUID bookingId, String dedupeKey, String title, String content) {
         UUID eventId = UUID.nameUUIDFromBytes(dedupeKey.getBytes(StandardCharsets.UTF_8));
         try {

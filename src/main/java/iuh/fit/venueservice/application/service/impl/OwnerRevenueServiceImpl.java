@@ -55,6 +55,11 @@ public class OwnerRevenueServiceImpl implements OwnerRevenueService {
     }
 
     @Override
+    public List<UUID> findOwnerIds() {
+        return venueRepository.findOwnerIds();
+    }
+
+    @Override
     public OwnerRevenueView getRevenue(OwnerRevenueQuery query) throws ServiceException {
         query.validate();
         ensureVenueScope(query.venueId(), query.ownerId());

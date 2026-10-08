@@ -6,8 +6,13 @@ import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsV
 import iuh.fit.venueservice.application.dto.response.venue.OwnerRevenueView;
 import iuh.fit.venueservice.application.exception.ServiceException;
 
+import java.util.List;
+import java.util.UUID;
+
 public interface OwnerRevenueService {
     OwnerRevenueView getRevenue(OwnerRevenueQuery query) throws ServiceException;
+
+    List<UUID> findOwnerIds();
 
     OwnerCustomerMetricsView getCustomerMetrics(OwnerCustomerMetricsQuery query) throws ServiceException;
 }

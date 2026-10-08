@@ -38,6 +38,7 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
     private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final PaymentRefundPort paymentRefundPort;
     private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    private final iuh.fit.venueservice.application.port.BookingNotificationPort bookingNotificationPort;
     private final Clock clock;
     private final Duration autoApprovalWindow;
 
@@ -49,6 +50,7 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
             TimeSlotLifecycleService timeSlotLifecycleService,
             PaymentRefundPort paymentRefundPort,
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
+            iuh.fit.venueservice.application.port.BookingNotificationPort bookingNotificationPort,
             Clock clock,
             Duration autoApprovalWindow
     ) {
@@ -59,6 +61,7 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.paymentRefundPort = paymentRefundPort;
         this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
+        this.bookingNotificationPort = bookingNotificationPort;
         this.clock = clock;
         this.autoApprovalWindow = autoApprovalWindow;
     }
@@ -105,7 +108,17 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
                 .status(CancellationStatus.PENDING)
                 .reviewMode(automatic ? CancellationReviewMode.AUTOMATIC : CancellationReviewMode.OWNER_REVIEW)
                 .build());
-        if (!automatic) return saved;
+        String slot = BookingPaymentEventServiceImpl.slotLabel(booking);
+        if (!automatic) {
+            bookingNotificationPort.notifyOwner(venue.getOwnerId(), booking.getBookingId(),
+                    "cancellation-requested-owner:" + saved.getCancellationId(), "Yêu cầu hủy cần bạn duyệt",
+                    "Khách xin hủy lượt " + booking.getBookingCode() + " " + slot + ". Lý do: " + command.reason().trim());
+            return saved;
+        }
+        // Tu duyet: san duoc tra ngay, bao chu san de lich / tinh trang san khop.
+        bookingNotificationPort.notifyOwner(venue.getOwnerId(), booking.getBookingId(),
+                "cancellation-auto-owner:" + saved.getCancellationId(), "Khách đã hủy lượt đặt",
+                "Lượt " + booking.getBookingCode() + " " + slot + " đã được hủy, sân được trả lại.");
 
         String automaticReason = unpaidBooking
                 ? "Tự động hủy booking chưa thanh toán."
