@@ -232,10 +232,7 @@ public class BookingRepositoryImpl implements BookingRepository {
             UUID venueId, LocalDate fromDate, LocalDate toDate,
             java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses
     ) {
-        return jpaRepository.findVenueDemand(venueId, fromDate, toDate, statuses).stream()
-                .map(entity -> new iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord(
-                        entity.getPlayDate(), entity.getStartTime(), entity.getEndTime()))
-                .toList();
+        return jpaRepository.findVenueDemand(venueId, fromDate, toDate, statuses);
     }
 
     @Override
@@ -243,11 +240,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     public List<RevenueBookingRecord> findOwnedRevenueBookings(
             UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
     ) {
-        return jpaRepository.findOwnedForRevenue(ownerId, venueId, fromDate, toDate).stream()
-                .map(entity -> new RevenueBookingRecord(
-                        entity.getBookingId(), entity.getPlayDate(), entity.getStartTime()
-                ))
-                .toList();
+        return jpaRepository.findOwnedForRevenue(ownerId, venueId, fromDate, toDate);
     }
 
     @Override

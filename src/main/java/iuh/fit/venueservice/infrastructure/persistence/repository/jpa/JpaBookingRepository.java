@@ -103,27 +103,34 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             Pageable pageable
     );
 
+    // Hai truy vấn dưới đọc hàng nghìn lượt nhưng chỉ cần vài cột: chọn thẳng cột (projection) thay vì nạp
+    // BookingEntity, vì 3 quan hệ @OneToOne(mappedBy) của nó (hủy / check-in / đánh giá) không lazy được và
+    // sinh thêm 3 truy vấn cho MỖI lượt (N+1: ~1.300 lượt từng mất 40–60 giây).
     @Query("""
-            select booking from BookingEntity booking
+            select new iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord(
+                booking.playDate, booking.startTime, booking.endTime)
+            from BookingEntity booking
             join booking.venueCourt court
             where court.venue.venueId = :venueId
               and booking.playDate between :fromDate and :toDate
               and booking.status in :statuses
             """)
-    List<BookingEntity> findVenueDemand(
+    List<iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord> findVenueDemand(
             UUID venueId, LocalDate fromDate, LocalDate toDate,
             java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses);
 
     @Query("""
-            select booking from BookingEntity booking
-            join fetch booking.venueCourt court
-            join fetch court.venue venue
+            select new iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord(
+                booking.bookingId, booking.playDate, booking.startTime)
+            from BookingEntity booking
+            join booking.venueCourt court
+            join court.venue venue
             where venue.ownerId = :ownerId
               and (:venueId is null or venue.venueId = :venueId)
               and booking.playDate between :fromDate and :toDate
             order by booking.playDate, booking.startTime, booking.bookingId
             """)
-    List<BookingEntity> findOwnedForRevenue(
+    List<iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord> findOwnedForRevenue(
             @Param("ownerId") UUID ownerId,
             @Param("venueId") UUID venueId,
             @Param("fromDate") LocalDate fromDate,
