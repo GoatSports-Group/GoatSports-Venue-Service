@@ -24,7 +24,8 @@ public interface JpaReviewRepository extends JpaRepository<ReviewEntity, UUID>,
     Optional<ReviewEntity> findByBooking_BookingId(UUID bookingId);
 
     @Override
-    @EntityGraph(attributePaths = {"venue", "booking", "booking.venueCourt"})
+    @EntityGraph(attributePaths = {"venue", "venue.cancellationPolicy", "booking", "booking.venueCourt",
+            "booking.cancellation", "booking.checkInRecord"})
     Page<ReviewEntity> findAll(Specification<ReviewEntity> specification, Pageable pageable);
 
     long countByVenue_VenueIdAndStatus(UUID venueId, ReviewStatus status);

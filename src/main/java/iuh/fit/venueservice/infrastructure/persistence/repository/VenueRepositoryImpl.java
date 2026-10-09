@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -68,6 +69,7 @@ public class VenueRepositoryImpl implements VenueRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResult<Venue> search(SearchVenueCommand command) {
         Specification<VenueEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -245,6 +247,7 @@ public class VenueRepositoryImpl implements VenueRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResult<Venue> findAll(AdminVenueFilter filter) {
         Specification<VenueEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();

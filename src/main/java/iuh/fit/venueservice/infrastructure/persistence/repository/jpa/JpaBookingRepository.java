@@ -6,6 +6,8 @@ import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -23,12 +25,25 @@ import java.util.UUID;
 
 @Repository
 public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpecificationExecutor<BookingEntity> {
+    // Danh sách lượt đặt: lấy luôn hủy / check-in / đánh giá (và sân, cơ sở cho danh sách chủ sân / admin) bằng
+    // left join trong cùng truy vấn. Ba quan hệ @OneToOne(mappedBy) của BookingEntity không lazy được: thiếu
+    // entity graph thì mỗi lượt sinh thêm 3 truy vấn (N+1). Truy vấn ...ForUpdate không dùng: PostgreSQL không
+    // cho FOR UPDATE trên phía nullable của outer join. Venue.cancellationPolicy cũng là @OneToOne(mappedBy).
+    @Override
+    @EntityGraph(attributePaths = {"venueCourt", "venueCourt.venue", "venueCourt.venue.cancellationPolicy",
+            "cancellation", "checkInRecord", "review"})
+    Page<BookingEntity> findAll(Specification<BookingEntity> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findByPlayerIdOrderByCreatedAtDesc(UUID playerId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findByPlayerIdAndStatusOrderByCreatedAtDesc(UUID playerId, BookingStatus status, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findByPlayerId(UUID playerId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findByPlayerIdAndStatus(UUID playerId, BookingStatus status, Pageable pageable);
 
     Optional<BookingEntity> findByBookingCode(String bookingCode);
@@ -95,6 +110,7 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
               and booking.status in :statuses
               and (booking.playDate > :today or (booking.playDate = :today and booking.endTime > :nowTime))
             """)
+    @EntityGraph(attributePaths = {"cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findPlayerUpcoming(
             @Param("playerId") UUID playerId,
             @Param("statuses") Collection<BookingStatus> statuses,
