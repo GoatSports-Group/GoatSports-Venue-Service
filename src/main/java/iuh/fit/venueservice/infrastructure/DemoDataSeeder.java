@@ -148,6 +148,15 @@ public class DemoDataSeeder implements CommandLineRunner {
     /** Số ngày mở khung giờ tính từ hôm nay. */
     private static final int SLOT_DAYS = 7;
 
+    /**
+     * Lịch sử đặt sân mô phỏng cho dự báo nhu cầu (ai-service, Chronos-Bolt): một cơ sở demo có {@value #DEMAND_DAYS}
+     * ngày lượt đặt đã xong, theo nhịp thật của sân bóng (tối 17–21h đông, cuối tuần đông cả ngày, trưa vừa, sáng
+     * sớm ít). Đánh dấu rõ: khách vãng lai "Dữ liệu mô phỏng", mã bắt đầu bằng "DM", created_by 'demo-demand-seed'.
+     */
+    private static final String DEMAND_VENUE = "Sân Thể Thao Bình Thạnh";
+    private static final int DEMAND_DAYS = 70;
+    private static final String DEMAND_CUSTOMER = "Dữ liệu mô phỏng (dự báo nhu cầu)";
+
     @Override
     @Transactional
     public void run(String... args) {
@@ -165,6 +174,12 @@ public class DemoDataSeeder implements CommandLineRunner {
         for (VenueSeed venue : VENUES) {
             policies += insertCancellationPolicy(venue);
         }
+        // Dashboard chủ sân chỉ mở khu vận hành (lịch, dự báo nhu cầu, báo cáo...) khi có hồ sơ đã duyệt.
+        int applications = 0;
+        for (String ownerEmail : VENUES.stream().map(VenueSeed::ownerEmail).distinct().toList()) {
+            applications += insertApprovedApplication(ownerEmail);
+        }
+        log.info("Dữ liệu mẫu: {} hồ sơ chủ sân đã duyệt (bỏ qua bản ghi đã có)", applications);
         int bookings = 0;
         int reviews = 0;
         for (BookingSeed booking : BOOKINGS) {
@@ -172,6 +187,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             reviews += insertReview(booking);
         }
         refreshVenueRatings();
+        int demand = seedDemandHistory();
+        log.info("Dữ liệu mẫu: {} lượt đặt mô phỏng cho dự báo nhu cầu ở {} (bỏ qua bản ghi đã có)", demand, DEMAND_VENUE);
         int holds = 0;
         for (CourtHoldSeed hold : COURT_HOLDS) {
             for (String courtName : hold.courtNames()) holds += insertCourtHold(hold, courtName);
@@ -258,6 +275,112 @@ public class DemoDataSeeder implements CommandLineRunner {
         }
         if ("CONFIRMED".equals(seed.status())) {
             markSlotBooked(seed, playDate);
+        }
+        return inserted;
+    }
+
+    /** Hồ sơ đăng ký đã duyệt cho chủ sân demo, gắn với cơ sở đầu tiên của họ (bản sao địa chỉ riêng của hồ sơ). */
+    private int insertApprovedApplication(String ownerEmail) {
+        VenueSeed venue = VENUES.stream().filter(item -> item.ownerEmail().equals(ownerEmail)).findFirst().orElseThrow();
+        UUID applicationId = id("owner-application", ownerEmail);
+        UUID addressId = id("owner-application-address", ownerEmail);
+        entityManager.createNativeQuery("""
+                        insert into addresses (address_id, address, ward, district, city, latitude, longitude,
+                                               created_at, created_by, updated_at, updated_by)
+                        select :addressId, address, ward, district, city, latitude, longitude,
+                               now(), 'demo-seed', now(), 'demo-seed'
+                        from addresses where address_id = :venueAddressId
+                          and not exists (select 1 from addresses where address_id = :addressId)
+                        """)
+                .setParameter("addressId", addressId)
+                .setParameter("venueAddressId", id("address", venue.name()))
+                .executeUpdate();
+        return entityManager.createNativeQuery("""
+                        insert into owner_applications (owner_application_id, user_id, full_name, phone, email,
+                                                        business_name, business_type, status, address_id, venue_id,
+                                                        reviewed_at, received_at, viewed_at,
+                                                        created_at, created_by, updated_at, updated_by)
+                        select :applicationId, :userId, :fullName, :phone, :email,
+                               :businessName, 'INDIVIDUAL', 'APPROVED', :addressId, :venueId,
+                               now(), now(), now(),
+                               now(), 'demo-seed', now(), 'demo-seed'
+                        where not exists (select 1 from owner_applications where owner_application_id = :applicationId)
+                          and not exists (select 1 from owner_applications where user_id = :userId and status = 'APPROVED')
+                        """)
+                .setParameter("applicationId", applicationId)
+                .setParameter("userId", userId(ownerEmail))
+                .setParameter("fullName", "Chủ sân demo · " + venue.name())
+                .setParameter("phone", venue.phone())
+                .setParameter("email", ownerEmail)
+                .setParameter("businessName", venue.name())
+                .setParameter("addressId", addressId)
+                .setParameter("venueId", id("venue", venue.name()))
+                .executeUpdate();
+    }
+
+    /** Xác suất một sân có người đặt ở khung giờ bắt đầu {@code hour} trong ngày {@code date}. */
+    static double demandProbability(LocalDate date, int hour) {
+        boolean weekend = date.getDayOfWeek().getValue() >= 6;
+        if (hour >= 17 && hour <= 20) return weekend ? 0.9 : 0.78;
+        if (hour == 21) return weekend ? 0.6 : 0.45;
+        if (weekend && hour >= 7 && hour <= 16) return 0.5;
+        if (hour >= 11 && hour <= 13) return 0.3;
+        if (hour >= 6 && hour <= 7) return 0.35;
+        return 0.08;
+    }
+
+    /**
+     * Số trong [0, 1) suy ra từ id: chạy lại ra đúng cùng một bộ lượt đặt, ngày mới tự được bổ sung. Bỏ 2 bit
+     * "variant" luôn là 10 ở đầu nửa sau của UUID (nếu giữ, kết quả chỉ nằm trong [0.5, 0.75)).
+     */
+    static double unitFromId(UUID id) {
+        return ((id.getLeastSignificantBits() << 2) >>> 11) * 0x1.0p-53;
+    }
+
+    private int seedDemandHistory() {
+        VenueSeed venue = VENUES.stream().filter(item -> item.name().equals(DEMAND_VENUE)).findFirst().orElseThrow();
+        LocalDate today = LocalDate.now();
+        LocalDate first = today.minusDays(DEMAND_DAYS);
+        // Giờ trước ngày tạo cơ sở được coi là "chưa có dữ liệu": cơ sở demo này đã hoạt động từ trước kỳ lịch sử.
+        entityManager.createNativeQuery("""
+                        update venues set created_at = :since
+                        where venue_id = :venueId and (created_at is null or created_at > :since)
+                        """)
+                .setParameter("since", first.atStartOfDay())
+                .setParameter("venueId", id("venue", DEMAND_VENUE))
+                .executeUpdate();
+
+        int inserted = 0;
+        for (LocalDate date = first; date.isBefore(today); date = date.plusDays(1)) {
+            for (CourtSeed court : venue.courts()) {
+                for (int hour = 6; hour <= 21; hour++) {
+                    UUID bookingId = id("demand-booking", DEMAND_VENUE + "|" + court.name() + "|" + date + "|" + hour);
+                    if (unitFromId(bookingId) >= demandProbability(date, hour)) continue;
+                    boolean peak = hour >= 17 && hour < 21;
+                    double total = Math.round((peak ? court.pricePerHour() * 1.4 : court.pricePerHour()) / 1000d) * 1000d;
+                    inserted += entityManager.createNativeQuery("""
+                                    insert into bookings (booking_id, play_date, start_time, end_time,
+                                                          status, source, total_price, deposit_amount, remaining_amount,
+                                                          booking_code, walk_in_customer_name, venue_court_id,
+                                                          created_at, created_by, updated_at, updated_by)
+                                    select :bookingId, :playDate, :startTime, :endTime,
+                                           'COMPLETED', 'WALK_IN', :total, 0, :total,
+                                           :bookingCode, :customer, :courtId,
+                                           :createdAt, 'demo-demand-seed', :createdAt, 'demo-demand-seed'
+                                    where not exists (select 1 from bookings where booking_id = :bookingId)
+                                    """)
+                            .setParameter("bookingId", bookingId)
+                            .setParameter("playDate", date)
+                            .setParameter("startTime", LocalTime.of(hour, 0))
+                            .setParameter("endTime", LocalTime.of(hour + 1, 0))
+                            .setParameter("total", total)
+                            .setParameter("bookingCode", "DM" + Math.abs(bookingId.getMostSignificantBits() % 1_000_000_000_000L))
+                            .setParameter("customer", DEMAND_CUSTOMER)
+                            .setParameter("courtId", id("court", DEMAND_VENUE + "|" + court.name()))
+                            .setParameter("createdAt", date.atTime(hour, 0).minusHours(3))
+                            .executeUpdate();
+                }
+            }
         }
         return inserted;
     }
