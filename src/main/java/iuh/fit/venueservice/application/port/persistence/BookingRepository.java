@@ -57,6 +57,11 @@ public interface BookingRepository {
 
     Optional<OwnerBookingRecord> findOwnedBookingByIdForUpdate(UUID bookingId, UUID ownerId);
 
+    /** Khung giờ các lượt của một cơ sở trong khoảng ngày, theo trạng thái (dữ liệu dự báo nhu cầu). */
+    List<iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord> findVenueDemandBookings(
+            UUID venueId, java.time.LocalDate fromDate, java.time.LocalDate toDate,
+            java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses);
+
     List<RevenueBookingRecord> findOwnedRevenueBookings(
             UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
     );

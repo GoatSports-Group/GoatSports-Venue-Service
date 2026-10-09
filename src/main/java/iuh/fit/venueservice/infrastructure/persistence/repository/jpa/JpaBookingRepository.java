@@ -105,6 +105,17 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
 
     @Query("""
             select booking from BookingEntity booking
+            join booking.venueCourt court
+            where court.venue.venueId = :venueId
+              and booking.playDate between :fromDate and :toDate
+              and booking.status in :statuses
+            """)
+    List<BookingEntity> findVenueDemand(
+            UUID venueId, LocalDate fromDate, LocalDate toDate,
+            java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses);
+
+    @Query("""
+            select booking from BookingEntity booking
             join fetch booking.venueCourt court
             join fetch court.venue venue
             where venue.ownerId = :ownerId

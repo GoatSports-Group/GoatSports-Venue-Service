@@ -228,6 +228,18 @@ public class BookingRepositoryImpl implements BookingRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public List<iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord> findVenueDemandBookings(
+            UUID venueId, LocalDate fromDate, LocalDate toDate,
+            java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses
+    ) {
+        return jpaRepository.findVenueDemand(venueId, fromDate, toDate, statuses).stream()
+                .map(entity -> new iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord(
+                        entity.getPlayDate(), entity.getStartTime(), entity.getEndTime()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<RevenueBookingRecord> findOwnedRevenueBookings(
             UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
     ) {

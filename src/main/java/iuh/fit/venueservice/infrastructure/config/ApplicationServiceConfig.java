@@ -184,6 +184,17 @@ public class ApplicationServiceConfig {
     }
 
     @Bean
+    public iuh.fit.venueservice.application.service.impl.OwnerDemandHistoryServiceImpl ownerDemandHistoryService(
+            BookingRepository bookingRepository,
+            VenueRepository venueRepository,
+            VenueCourtRepository venueCourtRepository,
+            Clock clock
+    ) {
+        return new iuh.fit.venueservice.application.service.impl.OwnerDemandHistoryServiceImpl(
+                bookingRepository, venueRepository, venueCourtRepository, clock);
+    }
+
+    @Bean
     public OwnerRevenueServiceImpl ownerRevenueService(
             BookingRepository bookingRepository,
             VenueRepository venueRepository,
