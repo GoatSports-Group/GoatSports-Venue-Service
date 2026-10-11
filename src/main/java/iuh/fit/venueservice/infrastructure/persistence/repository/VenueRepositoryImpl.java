@@ -258,6 +258,9 @@ public class VenueRepositoryImpl implements VenueRepository {
                     case SUSPENDED -> cb.isNotNull(root.get("suspendedAt"));
                 });
             }
+            if (filter.ids() != null && !filter.ids().isEmpty()) {
+                predicates.add(root.get("venueId").in(filter.ids()));
+            }
             if (filter.query() != null && !filter.query().isBlank()) {
                 String like = "%" + filter.query().trim().toLowerCase(Locale.ROOT) + "%";
                 var address = root.join("address", JoinType.LEFT);

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -36,10 +37,11 @@ public class VenueAdminController {
     public ResponseEntity<PageResult<VenueDetailResponse>> getVenues(
             @RequestParam(required = false) AdminVenueFilter.Status status,
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) Set<UUID> ids,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) throws ServiceException {
-        PageResult<Venue> result = venueService.getVenues(new AdminVenueFilter(status, query, page, size));
+        PageResult<Venue> result = venueService.getVenues(new AdminVenueFilter(status, query, ids, page, size));
         return ResponseEntity.ok(new PageResult<>(
                 result.items().stream().map(venueSearchConverter::toDetailResponse).toList(),
                 result.total(), result.page(), result.pageSize(), result.totalPages()

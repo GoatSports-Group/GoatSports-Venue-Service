@@ -116,7 +116,7 @@ class BookingListQueryCountTest {
         queries.put("đánh giá công khai của cơ sở", statistics.getPrepareStatementCount());
 
         statistics.clear();
-        assertThat(venueRepository.findAll(new AdminVenueFilter(null, "QC venue", 0, 20)).items()).hasSize(5);
+        assertThat(venueRepository.findAll(new AdminVenueFilter(null, "QC venue", null, 0, 20)).items()).hasSize(5);
         queries.put("cơ sở (admin)", statistics.getPrepareStatementCount());
 
         statistics.clear();
