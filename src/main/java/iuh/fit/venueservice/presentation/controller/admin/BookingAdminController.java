@@ -34,6 +34,7 @@ public class BookingAdminController {
     public ResponseEntity<BaseListResponse> getBookings(
             @RequestParam(required = false) UUID ownerId,
             @RequestParam(required = false) UUID venueId,
+            @RequestParam(required = false) UUID venueCourtId,
             @RequestParam(required = false) BookingStatus status,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) LocalDate fromDate,
@@ -42,7 +43,7 @@ public class BookingAdminController {
             @RequestParam(defaultValue = "20") int size
     ) throws ServiceException {
         PageResult<OwnerBookingView> result = adminBookingService.getBookings(
-                new AdminBookingFilter(ownerId, venueId, status, query, fromDate, toDate, page, size));
+                new AdminBookingFilter(ownerId, venueId, venueCourtId, status, query, fromDate, toDate, page, size));
         BaseListResponse.Meta meta = new BaseListResponse.Meta(
                 result.page(), result.pageSize(), result.totalPages(), result.total());
         return ResponseEntity.ok(new BaseListResponse(meta, result.items().stream().map(responseMapper::toResponse).toList()));

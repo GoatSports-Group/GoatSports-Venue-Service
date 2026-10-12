@@ -165,7 +165,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     @Transactional(readOnly = true)
     public PageResult<OwnerBookingRecord> findAllBookings(AdminBookingFilter filter) {
-        return searchBookings(filter.ownerId(), filter.venueId(), null, filter.status(),
+        return searchBookings(filter.ownerId(), filter.venueId(), filter.venueCourtId(), filter.status(),
                 filter.query(), filter.fromDate(), filter.toDate(), filter.page(), filter.size());
     }
 

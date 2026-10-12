@@ -49,7 +49,7 @@ class AdminBookingServiceImplTest {
 
     @Test
     void listsBookingsOfEveryVenueWithTheirPaymentsAndNoOwnerActions() throws ServiceException {
-        AdminBookingFilter filter = new AdminBookingFilter(null, null, BookingStatus.CONFIRMED, "arena", null, null, 0, 50);
+        AdminBookingFilter filter = new AdminBookingFilter(null, null, null, BookingStatus.CONFIRMED, "arena", null, null, 0, 50);
         when(bookingRepository.findAllBookings(filter)).thenReturn(new PageResult<>(List.of(record()), 1, 0, 50, 1));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(payment()));
         when(bookingCancellationRepository.findByBookingIds(Set.of(bookingId))).thenReturn(Map.of());
@@ -66,7 +66,7 @@ class AdminBookingServiceImplTest {
 
     @Test
     void rejectsOversizedPagesBeforeQuerying() {
-        assertThatThrownBy(() -> service.getBookings(new AdminBookingFilter(null, null, null, null, null, null, 0, 200)))
+        assertThatThrownBy(() -> service.getBookings(new AdminBookingFilter(null, null, null, null, null, null, null, 0, 200)))
                 .isInstanceOf(ServiceException.class);
         verify(bookingRepository, never()).findAllBookings(any());
     }

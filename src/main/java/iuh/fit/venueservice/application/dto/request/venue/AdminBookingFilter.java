@@ -11,6 +11,7 @@ import java.util.UUID;
 public record AdminBookingFilter(
         UUID ownerId,
         UUID venueId,
+        UUID venueCourtId,
         BookingStatus status,
         String query,
         LocalDate fromDate,
@@ -18,12 +19,13 @@ public record AdminBookingFilter(
         int page,
         int size
 ) {
-    private static final int MAX_PAGE_SIZE = 200;
+    // Payment-service nhận tối đa 100 reference ID mỗi truy vấn (venue hỏi thanh toán của cả trang một lần).
+    private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_DATE_RANGE_DAYS = 366;
 
     public void validate() throws ServiceException {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 200.");
+            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 100.");
         }
         if (fromDate != null && toDate != null) {
             if (fromDate.isAfter(toDate)) throw new ServiceException("Khoảng ngày không hợp lệ.");
