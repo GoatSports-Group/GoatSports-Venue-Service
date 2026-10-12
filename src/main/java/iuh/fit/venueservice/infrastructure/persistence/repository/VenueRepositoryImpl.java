@@ -258,6 +258,9 @@ public class VenueRepositoryImpl implements VenueRepository {
                     case SUSPENDED -> cb.isNotNull(root.get("suspendedAt"));
                 });
             }
+            if (filter.ownerId() != null) {
+                predicates.add(cb.equal(root.get("ownerId"), filter.ownerId()));
+            }
             if (filter.ids() != null && !filter.ids().isEmpty()) {
                 predicates.add(root.get("venueId").in(filter.ids()));
             }

@@ -38,10 +38,11 @@ public class VenueAdminController {
             @RequestParam(required = false) AdminVenueFilter.Status status,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Set<UUID> ids,
+            @RequestParam(required = false) UUID ownerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) throws ServiceException {
-        PageResult<Venue> result = venueService.getVenues(new AdminVenueFilter(status, query, ids, page, size));
+        PageResult<Venue> result = venueService.getVenues(new AdminVenueFilter(status, query, ids, ownerId, page, size));
         return ResponseEntity.ok(new PageResult<>(
                 result.items().stream().map(venueSearchConverter::toDetailResponse).toList(),
                 result.total(), result.page(), result.pageSize(), result.totalPages()

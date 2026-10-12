@@ -7,9 +7,10 @@ import java.util.UUID;
 
 /**
  * Bộ lọc danh sách cơ sở cho admin. {@code status} null là tất cả. {@code ids}: chỉ lấy các cơ sở này
- * (trang khác của admin, vd. Giải đấu, tra tên cơ sở theo lô); null = không lọc.
+ * (trang khác của admin, vd. Giải đấu, tra tên cơ sở theo lô); null = không lọc. {@code ownerId}: cơ sở của một chủ sân
+ * (từ Tin nhắn: email của cơ sở và email tài khoản chủ sân thường khác nhau nên không tìm theo email được).
  */
-public record AdminVenueFilter(Status status, String query, Set<UUID> ids, int page, int size) {
+public record AdminVenueFilter(Status status, String query, Set<UUID> ids, UUID ownerId, int page, int size) {
     /** ACTIVE: đang mở; INACTIVE: chủ sân tự tắt; SUSPENDED: admin đình chỉ. */
     public enum Status { ACTIVE, INACTIVE, SUSPENDED }
 
