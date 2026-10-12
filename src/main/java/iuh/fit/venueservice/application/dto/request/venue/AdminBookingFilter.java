@@ -18,12 +18,12 @@ public record AdminBookingFilter(
         int page,
         int size
 ) {
-    private static final int MAX_PAGE_SIZE = 50;
+    private static final int MAX_PAGE_SIZE = 200;
     private static final int MAX_DATE_RANGE_DAYS = 366;
 
     public void validate() throws ServiceException {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 50.");
+            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 200.");
         }
         if (fromDate != null && toDate != null) {
             if (fromDate.isAfter(toDate)) throw new ServiceException("Khoảng ngày không hợp lệ.");
