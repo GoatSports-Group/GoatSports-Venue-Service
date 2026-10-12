@@ -14,7 +14,10 @@ import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +27,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AdminBookingServiceImpl implements AdminBookingService {
+    private static final int PAYMENT_BATCH = 100;
+    private static final int CANCELLATION_BATCH = 1_000;
     private final BookingRepository bookingRepository;
     private final BookingCancellationRepository bookingCancellationRepository;
     private final PaymentQueryPort paymentQueryPort;
@@ -43,6 +48,38 @@ public class AdminBookingServiceImpl implements AdminBookingService {
                         payments.getOrDefault(item.booking().getBookingId(), List.of())))
                 .toList();
         return new PageResult<>(items, page.total(), page.page(), page.pageSize(), page.totalPages());
+    }
+
+    @Override
+    public List<OwnerBookingView> exportBookings(AdminBookingFilter filter, int maxRows) throws ServiceException {
+        filter.validateCriteria();
+        PageResult<OwnerBookingRecord> page = bookingRepository.findAllBookings(filter.forExport(maxRows));
+        if (page.total() > maxRows) {
+            throw new ServiceException("Báo cáo vượt quá " + String.format("%,d", maxRows).replace(',', '.')
+                    + " đơn. Hãy thu hẹp khoảng ngày hoặc chọn một cơ sở.");
+        }
+        List<UUID> bookingIds = page.items().stream().map(item -> item.booking().getBookingId()).toList();
+        Map<UUID, List<PaymentSnapshot>> payments = new HashMap<>();
+        for (List<UUID> batch : batches(bookingIds, PAYMENT_BATCH)) {
+            paymentQueryPort.findByBookingIds(new HashSet<>(batch))
+                    .forEach(payment -> payments.computeIfAbsent(payment.referenceId(), id -> new ArrayList<>()).add(payment));
+        }
+        Map<UUID, BookingCancellation> cancellations = new HashMap<>();
+        for (List<UUID> batch : batches(bookingIds, CANCELLATION_BATCH)) {
+            cancellations.putAll(bookingCancellationRepository.findByBookingIds(new HashSet<>(batch)));
+        }
+        return page.items().stream()
+                .map(item -> view(item, cancellations.get(item.booking().getBookingId()),
+                        payments.getOrDefault(item.booking().getBookingId(), List.of())))
+                .toList();
+    }
+
+    private static <T> List<List<T>> batches(List<T> items, int size) {
+        List<List<T>> result = new ArrayList<>();
+        for (int start = 0; start < items.size(); start += size) {
+            result.add(items.subList(start, Math.min(items.size(), start + size)));
+        }
+        return result;
     }
 
     @Override

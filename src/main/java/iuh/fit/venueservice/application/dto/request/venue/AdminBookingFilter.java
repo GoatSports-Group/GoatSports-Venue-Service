@@ -19,14 +19,23 @@ public record AdminBookingFilter(
         int page,
         int size
 ) {
-    // Payment-service nhận tối đa 100 reference ID mỗi truy vấn (venue hỏi thanh toán của cả trang một lần).
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_PAGE_SIZE = 50;
     private static final int MAX_DATE_RANGE_DAYS = 366;
 
     public void validate() throws ServiceException {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 100.");
+            throw new ServiceException("Trang phải từ 0 và kích thước trang từ 1 đến 50.");
         }
+        validateCriteria();
+    }
+
+    /** Cùng tiêu chí lọc, một trang chứa tối đa {@code limit} dòng (xuất báo cáo, không qua giới hạn trang của màn hình). */
+    public AdminBookingFilter forExport(int limit) {
+        return new AdminBookingFilter(ownerId, venueId, venueCourtId, status, query, fromDate, toDate, 0, limit);
+    }
+
+    /** Kiểm tra khoảng ngày và từ khóa (dùng cả cho xuất báo cáo). */
+    public void validateCriteria() throws ServiceException {
         if (fromDate != null && toDate != null) {
             if (fromDate.isAfter(toDate)) throw new ServiceException("Khoảng ngày không hợp lệ.");
             if (ChronoUnit.DAYS.between(fromDate, toDate) > MAX_DATE_RANGE_DAYS) {

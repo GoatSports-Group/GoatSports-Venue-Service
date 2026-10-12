@@ -80,7 +80,42 @@ class AdminBookingServiceImplTest {
         assertThat(service.getBooking(bookingId).booking().getBookingCode()).isEqualTo("GS123456");
     }
 
+    @Test
+    void exportsEveryMatchingBookingWithPaymentsFetchedInBatchesOf100() throws ServiceException {
+        List<OwnerBookingRecord> records = java.util.stream.IntStream.range(0, 150)
+                .mapToObj(index -> record(UUID.randomUUID())).toList();
+        AdminBookingFilter filter = new AdminBookingFilter(null, null, null, BookingStatus.COMPLETED, null, null, null, 0, 1);
+        when(bookingRepository.findAllBookings(filter.forExport(10_000)))
+                .thenReturn(new PageResult<>(records, 150, 0, 10_000, 1));
+        when(paymentQueryPort.findByBookingIds(any())).thenReturn(List.of());
+        when(bookingCancellationRepository.findByBookingIds(any())).thenReturn(Map.of());
+
+        var views = service.exportBookings(filter, 10_000);
+
+        assertThat(views).hasSize(150);
+        // 150 đơn = 2 lần hỏi payment-service (100 + 50), không bao giờ vượt giới hạn 100 reference ID.
+        org.mockito.ArgumentCaptor<Set<UUID>> batches = org.mockito.ArgumentCaptor.forClass(Set.class);
+        verify(paymentQueryPort, org.mockito.Mockito.times(2)).findByBookingIds(batches.capture());
+        assertThat(batches.getAllValues()).extracting(Set::size).containsExactly(100, 50);
+    }
+
+    @Test
+    void refusesExportsLargerThanTheLimit() {
+        AdminBookingFilter filter = new AdminBookingFilter(null, null, null, null, null, null, null, 0, 1);
+        when(bookingRepository.findAllBookings(filter.forExport(10_000)))
+                .thenReturn(new PageResult<>(List.of(record()), 10_001, 0, 10_000, 2));
+
+        assertThatThrownBy(() -> service.exportBookings(filter, 10_000))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("10.000");
+        verify(paymentQueryPort, never()).findByBookingIds(any());
+    }
+
     private OwnerBookingRecord record() {
+        return record(bookingId);
+    }
+
+    private OwnerBookingRecord record(UUID bookingId) {
         Booking booking = Booking.builder()
                 .bookingId(bookingId).playerId(UUID.randomUUID()).venueCourtId(UUID.randomUUID())
                 .playDate(LocalDate.now()).startTime(LocalTime.of(8, 0)).endTime(LocalTime.of(9, 0))
