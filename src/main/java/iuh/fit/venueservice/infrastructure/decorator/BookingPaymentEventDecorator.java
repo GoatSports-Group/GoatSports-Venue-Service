@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @Primary
 @RequiredArgsConstructor
@@ -33,5 +35,11 @@ public class BookingPaymentEventDecorator implements BookingPaymentEventService 
     @Transactional(rollbackFor = ServiceException.class)
     public boolean applyRefundResult(RefundResultCommand command) throws ServiceException {
         return delegate.applyRefundResult(command);
+    }
+
+    @Override
+    @Transactional(rollbackFor = ServiceException.class)
+    public boolean remindOwnerOfManualRefund(UUID refundId, UUID reminderId, double amount) throws ServiceException {
+        return delegate.remindOwnerOfManualRefund(refundId, reminderId, amount);
     }
 }

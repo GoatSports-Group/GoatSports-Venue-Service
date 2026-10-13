@@ -38,6 +38,13 @@ public class PaymentEventConsumer {
             JsonNode envelope = objectMapper.readTree(message);
             String eventType = envelope.path("eventType").asText();
             JsonNode payload = envelope.path("payload");
+            if ("reminder.refund-pending.v1".equals(eventType)) {
+                if ("MANUAL_REVIEW".equals(payload.path("status").asText())) {
+                    bookingPaymentEventService.remindOwnerOfManualRefund(uuid(payload, "refundId"),
+                            uuid(envelope, "eventId"), payload.path("amount").asDouble());
+                }
+                return;
+            }
             if (eventType.startsWith("refund.")) {
                 bookingPaymentEventService.applyRefundResult(new RefundResultCommand(
                         uuid(payload, "refundId"),

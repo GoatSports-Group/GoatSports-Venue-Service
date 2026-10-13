@@ -124,6 +124,20 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     }
 
     @Override
+    public boolean remindOwnerOfManualRefund(UUID refundId, UUID reminderId, double amount) throws ServiceException {
+        var cancellation = bookingCancellationRepository.findByRefundIdForUpdate(refundId).orElse(null);
+        if (cancellation == null || cancellation.getStatus() != CancellationStatus.REFUND_MANUAL_REVIEW) return false;
+        Booking booking = bookingRepository.findById(cancellation.getBookingId()).orElse(null);
+        if (booking == null) return false;
+        bookingNotificationPort.notifyOwner(venueOwnerId(booking), booking.getBookingId(),
+                "refund-reminder-owner:" + reminderId, "Còn khoản hoàn tiền mặt chưa xác nhận",
+                "Lượt " + booking.getBookingCode() + " đã hủy, khách đang chờ hoàn "
+                        + NumberFormat.getIntegerInstance(VI).format(amount)
+                        + " đ. Hoàn tiền cho khách rồi nhập mã giao dịch trong Quản lý đặt sân.");
+        return true;
+    }
+
+    @Override
     public boolean applySucceededPayment(PaymentSucceededCommand command) throws ServiceException {
         if (command == null || !command.isBookingPaymentSucceeded()) {
             return false;

@@ -129,6 +129,26 @@ class PaymentEventConsumerTest {
     }
 
     @Test
+    void refundReminderIsNotMistakenForARefundResultAndOnlyCashRefundsRemindTheOwner() throws Exception {
+        UUID eventId = UUID.randomUUID();
+        UUID refundId = UUID.randomUUID();
+        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+        String reminder = """
+                {
+                  "eventId": "%s",
+                  "eventType": "reminder.refund-pending.v1",
+                  "payload": { "refundId": "%s", "amount": 60000.0, "status": "%s" }
+                }
+                """;
+
+        consumer.consume(reminder.formatted(eventId, refundId, "MANUAL_REVIEW"));
+        consumer.consume(reminder.formatted(UUID.randomUUID(), refundId, "AWAITING_CLAIM"));
+
+        verify(bookingPaymentEventService).remindOwnerOfManualRefund(refundId, eventId, 60_000.0);
+        verify(bookingPaymentEventService, never()).applyRefundResult(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void rejectsMalformedSucceededEventsSoKafkaCanRetryThem() {
         var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 

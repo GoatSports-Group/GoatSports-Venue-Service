@@ -184,6 +184,44 @@ class BookingPaymentEventServiceImplTest {
     }
 
     @Test
+    void remindsTheVenueOwnerOnlyWhileTheCashRefundIsStillUnconfirmed() throws Exception {
+        UUID refundId = UUID.randomUUID();
+        UUID reminderId = UUID.randomUUID();
+        UUID bookingId = UUID.randomUUID();
+        UUID courtId = UUID.randomUUID();
+        UUID venueId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        BookingCancellation cancellation = BookingCancellation.builder()
+                .refundId(refundId).bookingId(bookingId).status(CancellationStatus.REFUND_MANUAL_REVIEW).build();
+        when(bookingCancellationRepository.findByRefundIdForUpdate(refundId)).thenReturn(Optional.of(cancellation));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(Booking.builder()
+                .bookingId(bookingId).bookingCode("GSCASH01").venueCourtId(courtId).build()));
+        when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
+                VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).ownerId(ownerId).build()));
+        var service = new BookingPaymentEventServiceImpl(
+                bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
+                timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
+                bookingNotificationPort
+        );
+
+        assertThat(service.remindOwnerOfManualRefund(refundId, reminderId, 60_000)).isTrue();
+        verify(bookingNotificationPort).notifyOwner(org.mockito.ArgumentMatchers.eq(ownerId),
+                org.mockito.ArgumentMatchers.eq(bookingId),
+                org.mockito.ArgumentMatchers.eq("refund-reminder-owner:" + reminderId),
+                org.mockito.ArgumentMatchers.eq("Còn khoản hoàn tiền mặt chưa xác nhận"),
+                org.mockito.ArgumentMatchers.contains("GSCASH01 đã hủy, khách đang chờ hoàn 60.000 đ"));
+
+        // Chủ sân xác nhận xong trước khi sự kiện tới: không nhắc nữa.
+        cancellation.setStatus(CancellationStatus.REFUNDED);
+        assertThat(service.remindOwnerOfManualRefund(refundId, UUID.randomUUID(), 60_000)).isFalse();
+        verify(bookingNotificationPort, org.mockito.Mockito.times(1)).notifyOwner(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void expiresUnpaidBookingAndReleasesSlotForTerminalPayment() throws Exception {
         UUID bookingId = UUID.randomUUID();
         UUID payerId = UUID.randomUUID();
