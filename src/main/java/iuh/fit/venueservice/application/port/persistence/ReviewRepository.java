@@ -4,8 +4,10 @@ import iuh.fit.venueservice.application.dto.request.venue.AdminReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewRecord;
+import iuh.fit.venueservice.domain.entity.AiVerdict;
 import iuh.fit.venueservice.domain.entity.Review;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,4 +27,10 @@ public interface ReviewRepository {
     long countPublishedByVenueId(UUID venueId);
 
     Double averagePublishedRatingByVenueId(UUID venueId);
+
+    List<UUID> findAwaitingAiVerdict(int maxAttempts, int limit);
+
+    void saveAiVerdict(UUID reviewId, AiVerdict verdict);
+
+    void addAiAttempts(UUID reviewId, int attempts);
 }

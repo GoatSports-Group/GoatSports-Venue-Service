@@ -83,7 +83,7 @@ public class ReviewServiceImpl implements ReviewService {
         ensureRequestedScope(filter);
         PageResult<OwnerReviewRecord> page = reviewRepository.findOwnedReviews(filter);
         return new PageResult<>(
-                page.items().stream().map(this::toOwnerView).toList(),
+                page.items().stream().map(record -> toOwnerView(record, false)).toList(),
                 page.total(), page.page(), page.pageSize(), page.totalPages()
         );
     }
@@ -94,7 +94,7 @@ public class ReviewServiceImpl implements ReviewService {
         filter.validate();
         PageResult<OwnerReviewRecord> page = reviewRepository.findAllReviews(filter);
         return new PageResult<>(
-                page.items().stream().map(this::toOwnerView).toList(),
+                page.items().stream().map(record -> toOwnerView(record, true)).toList(),
                 page.total(), page.page(), page.pageSize(), page.totalPages()
         );
     }
@@ -195,13 +195,15 @@ public class ReviewServiceImpl implements ReviewService {
         );
     }
 
-    private OwnerReviewView toOwnerView(OwnerReviewRecord record) {
+    /** Gợi ý AI chỉ dành cho admin: chủ sân không thấy AI nghĩ gì về đánh giá của khách. */
+    private OwnerReviewView toOwnerView(OwnerReviewRecord record, boolean includeAi) {
         Review review = record.review();
         return new OwnerReviewView(
                 review.getReviewId(), review.getVenueId(), record.venueName(),
                 record.venueCourtId(), record.courtName(), review.getBookingId(),
                 record.bookingCode(), record.playDate(), record.startTime(), record.endTime(),
-                review.getRating(), review.getContent(), review.getStatus(), review.getCreatedAt()
+                review.getRating(), review.getContent(), review.getStatus(), review.getCreatedAt(),
+                includeAi ? review.getAiVerdict() : null
         );
     }
 }

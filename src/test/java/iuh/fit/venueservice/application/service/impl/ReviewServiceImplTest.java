@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.request.venue.AdminReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.CreatePlayerReviewCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
@@ -11,6 +12,7 @@ import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.ReviewRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.domain.entity.AiVerdict;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.Review;
 import iuh.fit.venueservice.domain.entity.Venue;
@@ -148,6 +150,24 @@ class ReviewServiceImplTest {
             assertThat(view.bookingCode()).isEqualTo("GS123456");
             assertThat(view.rating()).isEqualTo(5);
         });
+    }
+
+    @Test
+    void aiVerdictReachesAdminButNeverTheOwner() throws Exception {
+        Review flagged = review();
+        flagged.setAiVerdict(new AiVerdict("HARASSMENT", 2, "Chửi nhân viên.", LocalDateTime.now()));
+        OwnerReviewRecord record = new OwnerReviewRecord(
+                flagged, "Goat Arena", courtId, "Court 1", "GS123456",
+                LocalDate.of(2026, 8, 20), LocalTime.of(18, 0), LocalTime.of(19, 0)
+        );
+        PageResult<OwnerReviewRecord> page = new PageResult<>(List.of(record), 1, 0, 20, 1);
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue(ownerId)));
+        when(reviewRepository.findOwnedReviews(any())).thenReturn(page);
+        when(reviewRepository.findAllReviews(any())).thenReturn(page);
+
+        assertThat(service.getOwnerReviews(filter(venueId, null)).items().get(0).ai()).isNull();
+        assertThat(service.getAllReviews(new AdminReviewFilter(null, null, null, true, 0, 20)).items().get(0).ai())
+                .extracting(AiVerdict::label).isEqualTo("HARASSMENT");
     }
 
     @Test

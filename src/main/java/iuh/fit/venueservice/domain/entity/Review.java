@@ -22,4 +22,5 @@ public class Review extends BaseEntity {
     private Integer rating;
     private String content;
     private ReviewStatus status;
+    private AiVerdict aiVerdict;
 }

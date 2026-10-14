@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewRecord;
 import iuh.fit.venueservice.application.port.persistence.ReviewRepository;
+import iuh.fit.venueservice.domain.entity.AiVerdict;
 import iuh.fit.venueservice.domain.entity.Review;
 import iuh.fit.venueservice.domain.enums.ReviewStatus;
 import iuh.fit.venueservice.infrastructure.persistence.entity.ReviewEntity;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -64,7 +66,8 @@ public class ReviewRepositoryImpl implements ReviewRepository {
         LocalDateTime toTime = filter.toDate() == null
                 ? null : filter.toDate().plusDays(1).atStartOfDay();
         return findRecords(reviewsSpecification(
-                filter.ownerId(), filter.venueId(), filter.venueCourtId(), filter.rating(), null, fromTime, toTime
+                filter.ownerId(), filter.venueId(), filter.venueCourtId(), filter.rating(), null, fromTime, toTime,
+                false
         ), filter.page(), filter.size());
     }
 
@@ -72,7 +75,7 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Transactional(readOnly = true)
     public PageResult<OwnerReviewRecord> findAllReviews(AdminReviewFilter filter) {
         return findRecords(reviewsSpecification(
-                null, filter.venueId(), null, filter.rating(), filter.status(), null, null
+                null, filter.venueId(), null, filter.rating(), filter.status(), null, null, filter.aiFlagged()
         ), filter.page(), filter.size());
     }
 
@@ -104,7 +107,7 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     /** ownerId null là toàn nền tảng (admin); status null là mọi trạng thái trừ DELETED. */
     private Specification<ReviewEntity> reviewsSpecification(
             UUID ownerId, UUID venueId, UUID venueCourtId, Integer rating, ReviewStatus status,
-            LocalDateTime fromTime, LocalDateTime toTime
+            LocalDateTime fromTime, LocalDateTime toTime, boolean aiFlagged
     ) {
         return (root, query, criteriaBuilder) -> {
             var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
@@ -132,6 +135,10 @@ public class ReviewRepositoryImpl implements ReviewRepository {
             if (toTime != null) {
                 predicates.add(criteriaBuilder.lessThan(root.get("createdAt"), toTime));
             }
+            if (aiFlagged) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+                        root.get("aiSeverity"), AiVerdict.FLAG_SEVERITY));
+            }
 
             return criteriaBuilder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
@@ -145,6 +152,24 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Override
     public Double averagePublishedRatingByVenueId(UUID venueId) {
         return jpaRepository.averageRating(venueId, ReviewStatus.PUBLISHED);
+    }
+
+    @Override
+    public List<UUID> findAwaitingAiVerdict(int maxAttempts, int limit) {
+        return jpaRepository.findAwaitingAiVerdict(maxAttempts, limit);
+    }
+
+    @Override
+    @Transactional
+    public void saveAiVerdict(UUID reviewId, AiVerdict verdict) {
+        jpaRepository.saveAiVerdict(
+                reviewId, verdict.label(), verdict.severity(), verdict.reason(), verdict.checkedAt());
+    }
+
+    @Override
+    @Transactional
+    public void addAiAttempts(UUID reviewId, int attempts) {
+        jpaRepository.addAiAttempts(reviewId, attempts);
     }
 
     private OwnerReviewRecord toOwnerRecord(ReviewEntity entity) {
@@ -166,6 +191,8 @@ public class ReviewRepositoryImpl implements ReviewRepository {
                 .rating(entity.getRating())
                 .content(entity.getContent())
                 .status(entity.getStatus())
+                .aiVerdict(entity.getAiCheckedAt() == null ? null : new AiVerdict(
+                        entity.getAiLabel(), entity.getAiSeverity(), entity.getAiReason(), entity.getAiCheckedAt()))
                 .createdAt(entity.getCreatedAt())
                 .createdBy(entity.getCreatedBy())
                 .updatedAt(entity.getUpdatedAt())

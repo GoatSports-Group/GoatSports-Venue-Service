@@ -22,4 +22,5 @@
     <include file="/db/changelog/schema/24-09-2026/add-tournament-court-holds.xml"/>
     <include file="/db/changelog/schema/27-09-2026/add-booking-late-refund.xml"/>
     <include file="/db/changelog/schema/29-09-2026/add-venue-suspension.xml"/>
+    <include file="/db/changelog/schema/14-10-2026/add-review-ai-verdict.xml"/>
 </databaseChangeLog>

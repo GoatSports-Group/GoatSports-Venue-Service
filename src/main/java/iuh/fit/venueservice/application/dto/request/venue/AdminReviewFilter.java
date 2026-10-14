@@ -5,8 +5,13 @@ import iuh.fit.venueservice.domain.enums.ReviewStatus;
 
 import java.util.UUID;
 
-/** Bộ lọc đánh giá toàn nền tảng cho admin kiểm duyệt. Không bao giờ trả đánh giá người chơi đã tự xóa. */
-public record AdminReviewFilter(UUID venueId, ReviewStatus status, Integer rating, int page, int size) {
+/**
+ * Bộ lọc đánh giá toàn nền tảng cho admin kiểm duyệt. Không bao giờ trả đánh giá người chơi đã tự xóa.
+ * {@code aiFlagged}: chỉ đánh giá AI nghi vi phạm (mức từ {@code AiVerdict.FLAG_SEVERITY}).
+ */
+public record AdminReviewFilter(
+        UUID venueId, ReviewStatus status, Integer rating, boolean aiFlagged, int page, int size
+) {
     private static final int MAX_PAGE_SIZE = 50;
 
     public void validate() throws ServiceException {

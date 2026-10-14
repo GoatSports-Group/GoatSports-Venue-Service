@@ -37,11 +37,12 @@ public class ReviewAdminController {
             @RequestParam(required = false) UUID venueId,
             @RequestParam(required = false) ReviewStatus status,
             @RequestParam(required = false) Integer rating,
+            @RequestParam(defaultValue = "false") boolean aiFlagged,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) throws ServiceException {
         PageResult<OwnerReviewView> result = reviewService.getAllReviews(
-                new AdminReviewFilter(venueId, status, rating, page, size)
+                new AdminReviewFilter(venueId, status, rating, aiFlagged, page, size)
         );
         return ResponseEntity.ok(new BaseListResponse(
                 new BaseListResponse.Meta(result.page(), result.pageSize(), result.totalPages(), result.total()),
