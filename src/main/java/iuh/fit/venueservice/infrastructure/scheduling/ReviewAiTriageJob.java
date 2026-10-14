@@ -11,6 +11,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,20 +34,41 @@ public class ReviewAiTriageJob {
     @Value("${moderation.ai.batch-size:2}")
     private int batchSize = 2;
 
+    static final Duration FIRST_BACKOFF = Duration.ofMinutes(1);
+    static final Duration MAX_BACKOFF = Duration.ofMinutes(30);
+    private Duration backoff = Duration.ZERO;
+    private Instant pausedUntil = Instant.EPOCH;
+
     @Scheduled(initialDelayString = "${moderation.ai.initial-delay-ms:60000}",
             fixedDelayString = "${moderation.ai.scan-ms:30000}")
     public void triagePending() {
+        if (isPaused()) return;
         for (UUID reviewId : reviewRepository.findAwaitingAiVerdict(MAX_ATTEMPTS, batchSize)) {
             Optional<Review> review = reviewRepository.findById(reviewId);
             if (review.isEmpty() || review.get().getContent() == null) continue;
             try {
                 Optional<AiVerdict> verdict = classifier.classify("REVIEW", review.get().getContent());
-                if (verdict.isEmpty()) return;
+                if (verdict.isEmpty()) {
+                    backOff();
+                    return;
+                }
+                backoff = Duration.ZERO;
                 reviewRepository.saveAiVerdict(reviewId, verdict.get());
             } catch (ContentClassifierPort.Unclassifiable exception) {
                 log.warn("AI could not classify review {}: {}", reviewId, exception.getMessage());
                 reviewRepository.addAiAttempts(reviewId, 1);
             }
         }
+    }
+
+    private void backOff() {
+        backoff = backoff.isZero() ? FIRST_BACKOFF : backoff.multipliedBy(2);
+        if (backoff.compareTo(MAX_BACKOFF) > 0) backoff = MAX_BACKOFF;
+        pausedUntil = Instant.now().plus(backoff);
+        log.info("AI moderation unavailable, pausing for {} min", backoff.toMinutes());
+    }
+
+    boolean isPaused() {
+        return Instant.now().isBefore(pausedUntil);
     }
 }

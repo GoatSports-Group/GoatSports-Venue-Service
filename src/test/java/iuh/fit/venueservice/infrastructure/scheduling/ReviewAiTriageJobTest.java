@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,9 +49,12 @@ class ReviewAiTriageJobTest {
     void stopsWithoutCountingAttemptsWhenAiIsUnavailable() {
         when(classifier.classify(any(), any())).thenReturn(Optional.empty());
 
-        new ReviewAiTriageJob(reviews, classifier).triagePending();
+        ReviewAiTriageJob job = new ReviewAiTriageJob(reviews, classifier);
+        job.triagePending();
+        job.triagePending();
 
-        verify(classifier).classify("REVIEW", "Sân bẩn");
+        // Lần hai đang trong thời gian lùi nên không gọi AI lần nữa.
+        verify(classifier, times(1)).classify("REVIEW", "Sân bẩn");
         verify(reviews, never()).findById(second);
         verify(reviews, never()).saveAiVerdict(any(), any());
         verify(reviews, never()).addAiAttempts(any(), anyInt());
