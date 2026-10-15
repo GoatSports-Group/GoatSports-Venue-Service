@@ -58,6 +58,8 @@ public class PublicVenueController {
             @RequestParam(required = false) Double minRating,
             /** Chi lay cac san nay (vd. trang "Sân đã lưu"), toi da MAX_VENUE_IDS id moi lan. */
             @RequestParam(required = false) List<UUID> ids,
+            /** price | rating; bỏ trống = mặc định (gần nhất khi tìm theo bán kính). */
+            @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) throws ServiceException {
@@ -70,6 +72,8 @@ public class PublicVenueController {
                 minPrice, maxPrice, minRating, page, size
         );
         if (ids != null) command = command.withVenueIds(ids.stream().distinct().toList());
+        if ("price".equalsIgnoreCase(sort)) command = command.withSort(SearchVenueCommand.Sort.PRICE);
+        if ("rating".equalsIgnoreCase(sort)) command = command.withSort(SearchVenueCommand.Sort.RATING);
         PageResult<VenueSearchResponseCommand> result = venueSearchService.searchVenues(command);
         List<VenueSearchResponse> items = result.items().stream()
                 .map(venueSearchConverter::toResponse)

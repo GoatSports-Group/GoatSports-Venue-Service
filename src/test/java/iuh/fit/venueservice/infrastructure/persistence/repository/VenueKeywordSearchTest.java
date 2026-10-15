@@ -45,6 +45,19 @@ class VenueKeywordSearchTest {
     }
 
     @Test
+    void cheapestFirstPutsVenuesWithoutAPriceLast() {
+        String tag = UUID.randomUUID().toString().substring(0, 8);
+        UUID pricey = insertVenue("Gia " + tag + " A", "TENNIS");
+        UUID cheap = insertVenue("Gia " + tag + " B", "TENNIS");
+        UUID unpriced = insertVenue("Gia " + tag + " C", "TENNIS");
+        jdbc.update("update venues set min_price = ? where venue_id = ?", 300_000, pricey);
+        jdbc.update("update venues set min_price = ? where venue_id = ?", 90_000, cheap);
+
+        assertThat(ids(keyword("Gia " + tag).withSort(SearchVenueCommand.Sort.PRICE)))
+                .containsExactly(cheap, pricey, unpriced);
+    }
+
+    @Test
     void sportKeywordNeedsWholeWords() {
         assertThat(VenueRepositoryImpl.resolveSportTypeKeyword("Sân bóng đá quận 7"))
                 .contains(iuh.fit.venueservice.domain.enums.SportType.FOOTBALL);

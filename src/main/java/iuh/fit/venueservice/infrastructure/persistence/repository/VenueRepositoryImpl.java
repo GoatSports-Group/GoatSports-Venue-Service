@@ -152,7 +152,7 @@ public class VenueRepositoryImpl implements VenueRepository {
 
         int page = Math.max(0, command.page());
         int size = command.size() > 0 ? Math.min(command.size(), 100) : 10;
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, sortOf(command.sort()));
 
         if (hasRadiusFilter(command)) {
             List<VenueEntity> nearbyVenues = jpaRepository.findAll(spec).stream()
@@ -161,10 +161,11 @@ public class VenueRepositoryImpl implements VenueRepository {
                                     command.latitude(), command.longitude(),
                                     entity.getAddress().getLatitude(), entity.getAddress().getLongitude()
                             ) <= command.radiusKm())
-                    .sorted(Comparator.comparingDouble(entity -> calculateDistance(
-                            command.latitude(), command.longitude(),
-                            entity.getAddress().getLatitude(), entity.getAddress().getLongitude()
-                    )))
+                    .sorted(command.sort() == null
+                            ? Comparator.comparingDouble(entity -> calculateDistance(
+                                    command.latitude(), command.longitude(),
+                                    entity.getAddress().getLatitude(), entity.getAddress().getLongitude()))
+                            : entityOrder(command.sort()))
                     .toList();
 
             int fromIndex = Math.min(page * size, nearbyVenues.size());
@@ -190,6 +191,25 @@ public class VenueRepositoryImpl implements VenueRepository {
                 pagedResult.getSize(),
                 pagedResult.getTotalPages()
         );
+    }
+
+    /** Sân chưa có giá / chưa có đánh giá xếp cuối, không chen lên đầu như giá 0 hay 0 sao. */
+    private static Sort sortOf(SearchVenueCommand.Sort order) {
+        if (order == null) return Sort.unsorted();
+        return switch (order) {
+            case PRICE -> Sort.by(Sort.Order.asc("minPrice").nullsLast(), Sort.Order.asc("name"));
+            case RATING -> Sort.by(Sort.Order.desc("averageRating").nullsLast(),
+                    Sort.Order.desc("totalReviews").nullsLast(), Sort.Order.asc("name"));
+        };
+    }
+
+    private static Comparator<VenueEntity> entityOrder(SearchVenueCommand.Sort order) {
+        return switch (order) {
+            case PRICE -> Comparator.comparing(VenueEntity::getMinPrice, Comparator.nullsLast(Comparator.naturalOrder()));
+            case RATING -> Comparator.comparing(VenueEntity::getAverageRating,
+                            Comparator.nullsLast(Comparator.<Double>reverseOrder()))
+                    .thenComparing(VenueEntity::getTotalReviews, Comparator.nullsLast(Comparator.<Integer>reverseOrder()));
+        };
     }
 
     private boolean hasRadiusFilter(SearchVenueCommand command) {

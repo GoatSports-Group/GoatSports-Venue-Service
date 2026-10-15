@@ -25,8 +25,13 @@ public record SearchVenueCommand(
         /** Ket qua semantic search: GOP voi keyword LIKE (OR), khong thay the. null = khong dung semantic. */
         List<UUID> semanticVenueIds,
         /** Chi lay cac san nay (vd. trang "Sân đã lưu"): gioi han cung, AND voi moi bo loc. null = khong gioi han. */
-        List<UUID> venueIds
+        List<UUID> venueIds,
+        /** Thứ tự kết quả; null = mặc định (gần nhất khi tìm theo bán kính). */
+        Sort sort
 ) {
+    /** PRICE: giá thấp nhất trước; RATING: đánh giá cao trước, cùng điểm thì nhiều đánh giá hơn trước. */
+    public enum Sort { PRICE, RATING }
+
     public SearchVenueCommand(
             String keyword, SportType sportType, String district, String city,
             Double latitude, Double longitude, Double radiusKm,
@@ -35,19 +40,25 @@ public record SearchVenueCommand(
     ) {
         this(keyword, sportType, district, city, latitude, longitude, radiusKm,
                 northLatitude, southLatitude, eastLongitude, westLongitude,
-                minPrice, maxPrice, minRating, page, size, null, null);
+                minPrice, maxPrice, minRating, page, size, null, null, null);
     }
 
     public SearchVenueCommand withSemanticVenueIds(List<UUID> venueIds) {
         return new SearchVenueCommand(keyword, sportType, district, city, latitude, longitude, radiusKm,
                 northLatitude, southLatitude, eastLongitude, westLongitude,
-                minPrice, maxPrice, minRating, page, size, venueIds, this.venueIds);
+                minPrice, maxPrice, minRating, page, size, venueIds, this.venueIds, sort);
     }
 
     public SearchVenueCommand withVenueIds(List<UUID> ids) {
         return new SearchVenueCommand(keyword, sportType, district, city, latitude, longitude, radiusKm,
                 northLatitude, southLatitude, eastLongitude, westLongitude,
-                minPrice, maxPrice, minRating, page, size, semanticVenueIds, ids);
+                minPrice, maxPrice, minRating, page, size, semanticVenueIds, ids, sort);
+    }
+
+    public SearchVenueCommand withSort(Sort order) {
+        return new SearchVenueCommand(keyword, sportType, district, city, latitude, longitude, radiusKm,
+                northLatitude, southLatitude, eastLongitude, westLongitude,
+                minPrice, maxPrice, minRating, page, size, semanticVenueIds, venueIds, order);
     }
 
     public boolean usesSemanticSearch() {
