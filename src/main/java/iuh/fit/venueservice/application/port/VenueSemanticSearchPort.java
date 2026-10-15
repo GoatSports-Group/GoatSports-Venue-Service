@@ -17,5 +17,6 @@ import java.util.UUID;
 public interface VenueSemanticSearchPort {
     Optional<List<UUID>> findVenueIds(String query, int maxResults);
 
-    void index(Venue venue, List<String> sportTypes);
+    /** @return false khi ai-service khong nhan (tat, hong); loi da duoc ghi log. */
+    boolean index(Venue venue, List<String> sportTypes);
 }

@@ -6,14 +6,13 @@ import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
-import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
-import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.CancellationPolicy;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import iuh.fit.venueservice.infrastructure.external.client.NotificationClient;
+import iuh.fit.venueservice.infrastructure.scheduling.VenueSemanticIndexJob;
 import iuh.fit.venueservice.infrastructure.external.client.dto.CreateNotificationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -34,8 +33,7 @@ import java.util.UUID;
 @Slf4j
 public class VenueDecorator implements VenueService {
     private final VenueServiceImpl venueServiceImpl;
-    private final VenueSemanticSearchPort semanticSearchPort;
-    private final VenueCourtRepository venueCourtRepository;
+    private final VenueSemanticIndexJob semanticIndex;
     private final NotificationClient notificationClient;
 
     @Override
@@ -137,7 +135,7 @@ public class VenueDecorator implements VenueService {
      */
     private void reindexAfterCommit(Venue venue) {
         if (venue == null || venue.getVenueId() == null) return;
-        afterCommit(() -> index(venue));
+        afterCommit(() -> semanticIndex.index(venue));
     }
 
     private void afterCommit(Runnable action) {
@@ -162,20 +160,6 @@ public class VenueDecorator implements VenueService {
             ));
         } catch (RuntimeException exception) {
             log.warn("Khong gui duoc thong bao dinh chi venue {}: {}", venue.getVenueId(), exception.getMessage());
-        }
-    }
-
-    private void index(Venue venue) {
-        try {
-            List<String> sportTypes = venueCourtRepository.findByVenueId(venue.getVenueId()).stream()
-                    .filter(court -> Boolean.TRUE.equals(court.getActive()))
-                    .map(court -> court.getSportType() == null ? null : court.getSportType().name())
-                    .filter(java.util.Objects::nonNull)
-                    .distinct()
-                    .toList();
-            semanticSearchPort.index(venue, sportTypes);
-        } catch (Exception exception) {
-            log.warn("Khong lap chi muc duoc venue {}: {}", venue.getVenueId(), exception.getMessage());
         }
     }
 }

@@ -3,8 +3,7 @@ package iuh.fit.venueservice.infrastructure.decorator;
 import iuh.fit.venueservice.application.service.OwnerApplicationDocumentService;
 import iuh.fit.venueservice.application.port.OwnerApplicationNotificationPort;
 import iuh.fit.venueservice.application.port.OwnerApplicationBackgroundPort;
-import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
-import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
+import iuh.fit.venueservice.infrastructure.scheduling.VenueSemanticIndexJob;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.service.OwnerCheckInService;
 import iuh.fit.venueservice.application.service.VenueCourtService;
@@ -38,8 +37,7 @@ class DecoratorBeanSelectionTest {
                     OwnerApplicationDocumentServiceImpl.class,
                     () -> mock(OwnerApplicationDocumentServiceImpl.class)
             );
-            context.registerBean(VenueSemanticSearchPort.class, () -> mock(VenueSemanticSearchPort.class));
-            context.registerBean(VenueCourtRepository.class, () -> mock(VenueCourtRepository.class));
+            context.registerBean(VenueSemanticIndexJob.class, () -> mock(VenueSemanticIndexJob.class));
             context.registerBean(
                     iuh.fit.venueservice.infrastructure.external.client.NotificationClient.class,
                     () -> mock(iuh.fit.venueservice.infrastructure.external.client.NotificationClient.class)

@@ -123,7 +123,7 @@ class BookingListQueryCountTest {
 
         statistics.clear();
         assertThat(venueRepository.search(new SearchVenueCommand("QC venue", null, null, null, null, null, null,
-                null, null, null, null, null, null, null, 0, 20, null)).items()).isNotEmpty();
+                null, null, null, null, null, null, null, 0, 20)).items()).isNotEmpty();
         queries.put("tìm cơ sở", statistics.getPrepareStatementCount());
 
         // Trang dữ liệu + đếm tổng (nếu cần) + vài truy vấn nạp theo lô — không phụ thuộc số dòng (10 dòng

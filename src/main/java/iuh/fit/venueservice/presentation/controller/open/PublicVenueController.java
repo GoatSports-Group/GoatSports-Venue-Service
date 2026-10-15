@@ -67,7 +67,7 @@ public class PublicVenueController {
                 northLatitude, southLatitude, eastLongitude, westLongitude,
                 minPrice, maxPrice, minRating, page, size
         );
-        if (ids != null) command = command.withSemanticVenueIds(ids.stream().distinct().toList());
+        if (ids != null) command = command.withVenueIds(ids.stream().distinct().toList());
         PageResult<VenueSearchResponseCommand> result = venueSearchService.searchVenues(command);
         List<VenueSearchResponse> items = result.items().stream()
                 .map(venueSearchConverter::toResponse)

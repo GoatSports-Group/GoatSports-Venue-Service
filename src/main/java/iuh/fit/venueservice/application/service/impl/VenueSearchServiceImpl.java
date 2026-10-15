@@ -143,11 +143,10 @@ public class VenueSearchServiceImpl implements VenueSearchService {
     }
 
     /**
-     * Khi co keyword, thu hoi semantic search truoc. AI hong hoac tat thi tra ve
-     * command nguyen ban de repository dung lai keyword LIKE nhu cu.
+     * Khi co keyword, hoi them semantic search; repository GOP id tim theo nghia voi keyword LIKE,
+     * nen san chua lap chi muc van tim ra theo ten. AI hong hoac tat thi chi con LIKE.
      */
     private SearchVenueCommand applySemanticSearch(SearchVenueCommand command) {
-        // Ben goi da gioi han theo danh sach id (vd. san da luu): giu nguyen, khong de semantic ghi de.
         if (command.usesSemanticSearch() || command.keyword() == null || command.keyword().trim().isEmpty()) {
             return command;
         }

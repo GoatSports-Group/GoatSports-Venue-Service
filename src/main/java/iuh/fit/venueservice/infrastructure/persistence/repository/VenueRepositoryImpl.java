@@ -82,31 +82,31 @@ public class VenueRepositoryImpl implements VenueRepository {
                 query.distinct(true);
             }
 
-            if (command.usesSemanticSearch()) {
-                // Semantic THAY THE keyword LIKE chu khong AND them: neu AND thi ket qua
-                // bi thu ve dung tap ma LIKE tim duoc, tuc mat sach gia tri cua semantic.
-                List<UUID> semanticIds = command.semanticVenueIds();
-                if (semanticIds.isEmpty()) {
-                    predicates.add(cb.disjunction());
-                } else {
-                    predicates.add(root.get("venueId").in(semanticIds));
-                }
-            } else if (command.keyword() != null && !command.keyword().trim().isEmpty()) {
+            if (command.venueIds() != null) {
+                predicates.add(command.venueIds().isEmpty()
+                        ? cb.disjunction()
+                        : root.get("venueId").in(command.venueIds()));
+            }
+
+            if (command.keyword() != null && !command.keyword().trim().isEmpty()) {
+                // Semantic GOP (OR) voi LIKE: chi muc ai-service co the thieu san (moi tao, AI hong luc luu),
+                // thay the thi go dung ten san van ra 0 ket qua.
                 String kw = "%" + command.keyword().trim().toLowerCase() + "%";
-                Predicate nameMatch = cb.like(cb.lower(root.get("name")), kw);
-                Predicate descMatch = cb.like(cb.lower(root.get("description")), kw);
+                List<Predicate> matches = new ArrayList<>();
+                matches.add(cb.like(cb.lower(root.get("name")), kw));
+                matches.add(cb.like(cb.lower(root.get("description")), kw));
                 var address = root.join("address", JoinType.INNER);
-                Predicate addressMatch = cb.like(cb.lower(address.get("address")), kw);
+                matches.add(cb.like(cb.lower(address.get("address")), kw));
+                if (command.semanticVenueIds() != null && !command.semanticVenueIds().isEmpty()) {
+                    matches.add(root.get("venueId").in(command.semanticVenueIds()));
+                }
                 Optional<SportType> keywordSportType = resolveSportTypeKeyword(command.keyword());
                 if (keywordSportType.isPresent()) {
                     var court = root.join("venueCourts", JoinType.LEFT);
-                    Predicate activeCourt = cb.isTrue(court.get("active"));
-                    Predicate sportMatch = cb.equal(court.get("sportType"), keywordSportType.get());
-                    predicates.add(cb.or(nameMatch, descMatch, addressMatch, cb.and(activeCourt, sportMatch)));
+                    matches.add(cb.and(cb.isTrue(court.get("active")), cb.equal(court.get("sportType"), keywordSportType.get())));
                     query.distinct(true);
-                } else {
-                    predicates.add(cb.or(nameMatch, descMatch, addressMatch));
                 }
+                predicates.add(cb.or(matches.toArray(new Predicate[0])));
             }
 
             if (command.city() != null && !command.city().trim().isEmpty()) {
@@ -213,10 +213,11 @@ public class VenueRepositoryImpl implements VenueRepository {
             return Optional.empty();
         }
 
-        String normalizedKeyword = normalizeSearchText(keyword);
+        // So tron tu: "sân bóng đá" -> FOOTBALL, nhung "bóng" (thieu chu) khong khop mon nao.
+        String normalizedKeyword = " " + normalizeSearchText(keyword) + " ";
         return List.of(SportType.values()).stream()
-                .filter(sportType -> normalizedKeyword.equals(normalizeSearchText(sportType.getValue()))
-                        || normalizedKeyword.equals(normalizeSearchText(sportType.name())))
+                .filter(sportType -> normalizedKeyword.contains(" " + normalizeSearchText(sportType.getValue()) + " ")
+                        || normalizedKeyword.contains(" " + normalizeSearchText(sportType.name()) + " "))
                 .findFirst();
     }
 

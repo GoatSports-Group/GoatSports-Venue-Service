@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.external.adapter;
 import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
 import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.infrastructure.external.client.AiSemanticSearchClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,9 +60,9 @@ public class VenueSemanticSearchAdapter implements VenueSemanticSearchPort {
     }
 
     @Override
-    public void index(Venue venue, List<String> sportTypes) {
+    public boolean index(Venue venue, List<String> sportTypes) {
         if (!enabled || venue == null || venue.getVenueId() == null) {
-            return;
+            return false;
         }
         try {
             client.index(new AiSemanticSearchClient.SemanticDocumentRequest(
@@ -71,8 +72,10 @@ public class VenueSemanticSearchAdapter implements VenueSemanticSearchPort {
                     buildMetadata(venue, sportTypes),
                     OffsetDateTime.now()
             ));
+            return true;
         } catch (Exception exception) {
             log.warn("Không lập chỉ mục được venue {}: {}", venue.getVenueId(), exception.getMessage());
+            return false;
         }
     }
 
@@ -80,7 +83,11 @@ public class VenueSemanticSearchAdapter implements VenueSemanticSearchPort {
         List<String> parts = new ArrayList<>();
         parts.add(venue.getName());
         parts.add(venue.getDescription());
-        if (sportTypes != null) parts.addAll(sportTypes);
+        // Ca ma lan ten tieng Viet: nguoi dung go "bóng đá", khong ai go "FOOTBALL".
+        if (sportTypes != null) sportTypes.forEach(type -> {
+            parts.add(type);
+            parts.add(sportLabel(type));
+        });
         if (venue.getAmenities() != null) parts.addAll(venue.getAmenities());
         Address address = venue.getAddress();
         if (address != null) {
@@ -97,6 +104,14 @@ public class VenueSemanticSearchAdapter implements VenueSemanticSearchPort {
                 .reduce((a, b) -> a + " " + b)
                 .orElse("");
         return content.isBlank() ? venue.getVenueId().toString() : content;
+    }
+
+    private static String sportLabel(String type) {
+        try {
+            return SportType.valueOf(type).getValue();
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     private Map<String, Object> buildMetadata(Venue venue, List<String> sportTypes) {

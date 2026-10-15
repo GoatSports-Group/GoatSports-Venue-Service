@@ -22,8 +22,10 @@ public record SearchVenueCommand(
         Double minRating,
         int page,
         int size,
-        /** Ket qua semantic search, da sap theo do lien quan. null = khong dung semantic. */
-        List<UUID> semanticVenueIds
+        /** Ket qua semantic search: GOP voi keyword LIKE (OR), khong thay the. null = khong dung semantic. */
+        List<UUID> semanticVenueIds,
+        /** Chi lay cac san nay (vd. trang "Sân đã lưu"): gioi han cung, AND voi moi bo loc. null = khong gioi han. */
+        List<UUID> venueIds
 ) {
     public SearchVenueCommand(
             String keyword, SportType sportType, String district, String city,
@@ -33,13 +35,19 @@ public record SearchVenueCommand(
     ) {
         this(keyword, sportType, district, city, latitude, longitude, radiusKm,
                 northLatitude, southLatitude, eastLongitude, westLongitude,
-                minPrice, maxPrice, minRating, page, size, null);
+                minPrice, maxPrice, minRating, page, size, null, null);
     }
 
     public SearchVenueCommand withSemanticVenueIds(List<UUID> venueIds) {
         return new SearchVenueCommand(keyword, sportType, district, city, latitude, longitude, radiusKm,
                 northLatitude, southLatitude, eastLongitude, westLongitude,
-                minPrice, maxPrice, minRating, page, size, venueIds);
+                minPrice, maxPrice, minRating, page, size, venueIds, this.venueIds);
+    }
+
+    public SearchVenueCommand withVenueIds(List<UUID> ids) {
+        return new SearchVenueCommand(keyword, sportType, district, city, latitude, longitude, radiusKm,
+                northLatitude, southLatitude, eastLongitude, westLongitude,
+                minPrice, maxPrice, minRating, page, size, semanticVenueIds, ids);
     }
 
     public boolean usesSemanticSearch() {

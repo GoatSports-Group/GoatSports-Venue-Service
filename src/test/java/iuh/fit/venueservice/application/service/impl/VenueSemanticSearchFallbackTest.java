@@ -51,7 +51,7 @@ class VenueSemanticSearchFallbackTest {
     }
 
     @Test
-    void semanticHitsNarrowTheQueryAndKeepRelevanceOrder() {
+    void semanticHitsArePassedOnInRelevanceOrder() {
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
         when(semanticSearchPort.findVenueIds(anyString(), anyInt()))
@@ -97,13 +97,15 @@ class VenueSemanticSearchFallbackTest {
     }
 
     @Test
-    void callerIdsAreKeptAndSemanticSearchIsSkipped() {
+    void savedVenueIdsStayARestrictionAlongsideSemanticHits() {
         UUID saved = UUID.randomUUID();
+        UUID hit = UUID.randomUUID();
+        when(semanticSearchPort.findVenueIds(anyString(), anyInt())).thenReturn(Optional.of(List.of(hit)));
 
-        service.searchVenues(commandWithKeyword("sân").withSemanticVenueIds(List.of(saved)));
+        service.searchVenues(commandWithKeyword("sân").withVenueIds(List.of(saved)));
 
         SearchVenueCommand used = captureSearchCommand();
-        assertThat(used.semanticVenueIds()).containsExactly(saved);
-        verify(semanticSearchPort, never()).findVenueIds(anyString(), anyInt());
+        assertThat(used.venueIds()).containsExactly(saved);
+        assertThat(used.semanticVenueIds()).containsExactly(hit);
     }
 }
