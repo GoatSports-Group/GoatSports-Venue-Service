@@ -30,6 +30,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -121,7 +122,7 @@ class VenueRepositoryImplTest {
 
     @Test
     @SuppressWarnings({"rawtypes", "unchecked"})
-    void areaFilterMatchesDistrictOrWardAndAppliesViewportBounds() {
+    void areaFilterMatchesDistrictOrWardAndAppliesViewportBounds() /* tỉnh, địa chỉ: VenueKeywordSearchTest */ {
         when(jpaRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(Page.empty());
         SearchVenueCommand command = new SearchVenueCommand(
@@ -159,10 +160,17 @@ class VenueRepositoryImplTest {
         when(addressJoin.<Double>get("longitude")).thenReturn(longitudePath);
         when(criteriaBuilder.lower(districtPath)).thenReturn(lowerDistrict);
         when(criteriaBuilder.lower(wardPath)).thenReturn(lowerWard);
+        Path<String> cityPath = mock(Path.class);
+        Path<String> streetPath = mock(Path.class);
+        when(addressJoin.<String>get("city")).thenReturn(cityPath);
+        when(addressJoin.<String>get("address")).thenReturn(streetPath);
+        when(criteriaBuilder.lower(cityPath)).thenReturn(mock(Expression.class));
+        when(criteriaBuilder.lower(streetPath)).thenReturn(mock(Expression.class));
+        when(criteriaBuilder.like(any(Expression.class), eq("%phường ninh%"))).thenReturn(mock(Predicate.class));
         when(criteriaBuilder.isTrue(activePath)).thenReturn(mock(Predicate.class));
         when(criteriaBuilder.like(lowerDistrict, "%phường ninh%")).thenReturn(districtMatch);
         when(criteriaBuilder.like(lowerWard, "%phường ninh%")).thenReturn(wardMatch);
-        when(criteriaBuilder.or(districtMatch, wardMatch)).thenReturn(mock(Predicate.class));
+        when(criteriaBuilder.or(any(Predicate[].class))).thenReturn(mock(Predicate.class));
         when(criteriaBuilder.between(latitudePath, 12.0, 13.0)).thenReturn(mock(Predicate.class));
         when(criteriaBuilder.between(longitudePath, 109.0, 110.0)).thenReturn(mock(Predicate.class));
         when(criteriaBuilder.and(any(Predicate[].class))).thenReturn(mock(Predicate.class));

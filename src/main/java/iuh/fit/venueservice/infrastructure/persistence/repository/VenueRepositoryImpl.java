@@ -116,9 +116,12 @@ public class VenueRepositoryImpl implements VenueRepository {
             if (command.district() != null && !command.district().trim().isEmpty()) {
                 String area = "%" + command.district().trim().toLowerCase() + "%";
                 var address = root.join("address", JoinType.INNER);
-                Predicate districtMatch = cb.like(cb.lower(address.get("district")), area);
-                Predicate wardMatch = cb.like(cb.lower(address.get("ward")), area);
-                predicates.add(cb.or(districtMatch, wardMatch));
+                // Khu vực ở bất kỳ cấp nào: "Khánh Hòa" là tỉnh (city), "Nha Trang" nằm trong tên phường / địa chỉ.
+                predicates.add(cb.or(
+                        cb.like(cb.lower(address.get("district")), area),
+                        cb.like(cb.lower(address.get("ward")), area),
+                        cb.like(cb.lower(address.get("city")), area),
+                        cb.like(cb.lower(address.get("address")), area)));
             }
 
             if (hasViewportBounds(command)) {

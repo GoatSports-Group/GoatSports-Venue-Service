@@ -58,6 +58,22 @@ class VenueKeywordSearchTest {
     }
 
     @Test
+    void areaMatchesTheProvinceAndTheWardNotOnlyTheDistrict() {
+        String tag = UUID.randomUUID().toString().substring(0, 8);
+        UUID venue = insertVenue("Khu " + tag, "FOOTBALL");
+        jdbc.update("update addresses set city = ?, ward = ? where address_id = (select address_id from venues where venue_id = ?)",
+                "Khánh Hòa " + tag, "Phường Nam Nha Trang " + tag, venue);
+
+        assertThat(ids(area("Khánh Hòa " + tag))).containsExactly(venue);
+        assertThat(ids(area("nha trang " + tag))).containsExactly(venue);
+    }
+
+    private SearchVenueCommand area(String area) {
+        return new SearchVenueCommand(null, null, area, null, null, null, null,
+                null, null, null, null, null, null, null, 0, 20);
+    }
+
+    @Test
     void sportKeywordNeedsWholeWords() {
         assertThat(VenueRepositoryImpl.resolveSportTypeKeyword("Sân bóng đá quận 7"))
                 .contains(iuh.fit.venueservice.domain.enums.SportType.FOOTBALL);
