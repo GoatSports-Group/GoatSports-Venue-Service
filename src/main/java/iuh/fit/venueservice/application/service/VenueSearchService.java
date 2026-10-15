@@ -15,6 +15,9 @@ public interface VenueSearchService {
 
     Venue getVenueDetails(UUID venueId) throws ServiceException;
 
+    /** Như {@link #getVenueDetails} và ghi một lượt xem cho gợi ý cá nhân hóa khi người xem đã đăng nhập. */
+    Venue viewVenueDetails(UUID venueId, UUID viewerId) throws ServiceException;
+
     List<VenueCourt> getVenueCourts(UUID venueId) throws ServiceException;
 
     VenueCourt getVenueCourt(UUID venueCourtId) throws ServiceException;

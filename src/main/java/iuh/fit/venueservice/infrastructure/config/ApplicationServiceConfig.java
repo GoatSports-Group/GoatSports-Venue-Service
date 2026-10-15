@@ -88,10 +88,11 @@ public class ApplicationServiceConfig {
     public VenueSearchServiceImpl venueSearchService(
             VenueRepository venueRepository,
             VenueCourtRepository venueCourtRepository,
-            VenueSemanticSearchPort semanticSearchPort
+            VenueSemanticSearchPort semanticSearchPort,
+            ActivityEventPublisher activityEventPublisher
     ) {
         return new VenueSearchServiceImpl(
-                venueRepository, venueCourtRepository, semanticSearchPort
+                venueRepository, venueCourtRepository, semanticSearchPort, activityEventPublisher
         );
     }
 

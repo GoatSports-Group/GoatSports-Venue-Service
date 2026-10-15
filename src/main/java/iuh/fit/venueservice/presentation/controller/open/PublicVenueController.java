@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.dto.response.venue.VenueSearchResponseCo
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.VenueCourtMapper;
 import iuh.fit.venueservice.application.service.ReviewService;
+import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.VenueSearchService;
 import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.presentation.converter.VenueCourtConverter;
@@ -37,6 +38,7 @@ public class PublicVenueController {
     private final VenueCourtMapper venueCourtMapper;
     private final VenueCourtConverter venueCourtConverter;
     private final ReviewService reviewService;
+    private final CurrentUserProvider currentUserProvider;
 
     @GetMapping
     public ResponseEntity<PageResult<VenueSearchResponse>> getVenues(
@@ -80,8 +82,9 @@ public class PublicVenueController {
     @GetMapping("/{venueId}")
     public ResponseEntity<VenueDetailResponse> getVenue(@PathVariable UUID venueId)
             throws ServiceException {
+        UUID viewerId = currentUserProvider.getCurrentUserId().map(UUID::fromString).orElse(null);
         return ResponseEntity.ok(venueSearchConverter.toDetailResponse(
-                venueSearchService.getVenueDetails(venueId)
+                venueSearchService.viewVenueDetails(venueId, viewerId)
         ));
     }
 

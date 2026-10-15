@@ -34,6 +34,8 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             "cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findAll(Specification<BookingEntity> spec, Pageable pageable);
 
+    Page<BookingEntity> findByStatusIn(java.util.Collection<BookingStatus> statuses, Pageable pageable);
+
     @EntityGraph(attributePaths = {"cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findByPlayerIdOrderByCreatedAtDesc(UUID playerId, Pageable pageable);
 

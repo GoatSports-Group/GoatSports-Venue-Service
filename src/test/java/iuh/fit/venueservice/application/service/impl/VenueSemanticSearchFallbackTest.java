@@ -2,6 +2,7 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.port.ActivityEventPublisher;
 import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -20,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,7 +36,8 @@ class VenueSemanticSearchFallbackTest {
 
     @BeforeEach
     void setUp() {
-        service = new VenueSearchServiceImpl(venueRepository, venueCourtRepository, semanticSearchPort);
+        service = new VenueSearchServiceImpl(venueRepository, venueCourtRepository, semanticSearchPort,
+                mock(ActivityEventPublisher.class));
         when(venueRepository.search(any(SearchVenueCommand.class)))
                 .thenReturn(new PageResult<>(List.of(), 0, 0, 10, 0));
     }

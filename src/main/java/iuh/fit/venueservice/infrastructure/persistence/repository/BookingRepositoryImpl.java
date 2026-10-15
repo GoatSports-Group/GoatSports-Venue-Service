@@ -10,6 +10,7 @@ import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.infrastructure.activity.BookingActivityRecorder;
 import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.BookingEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
@@ -34,6 +35,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     private final JpaBookingRepository jpaRepository;
     private final BookingEntityMapper mapper;
     private final JpaVenueCourtRepository jpaVenueCourtRepository;
+    private final BookingActivityRecorder activityRecorder;
 
     @Override
     public Booking save(Booking booking) {
@@ -44,8 +46,9 @@ public class BookingRepositoryImpl implements BookingRepository {
                     return existing;
                 }).orElseGet(() -> mapper.toEntity(booking));
         entity.setVenueCourt(jpaVenueCourtRepository.getReferenceById(booking.getVenueCourtId()));
-        var saved = jpaRepository.save(entity);
-        return mapper.toDomain(saved);
+        var saved = mapper.toDomain(jpaRepository.save(entity));
+        activityRecorder.bookingSaved(saved);
+        return saved;
     }
 
     @Override

@@ -3,23 +3,33 @@ package iuh.fit.venueservice.application.service.impl;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
+import iuh.fit.venueservice.application.port.ActivityEventPublisher;
 import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
+import iuh.fit.venueservice.domain.enums.SportType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,12 +40,14 @@ class VenuePublicAccessTest {
     private VenueCourtRepository venueCourtRepository;
     @Mock
     private VenueSemanticSearchPort semanticSearchPort;
+    @Mock
+    private ActivityEventPublisher activityEventPublisher;
 
     private VenueSearchServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new VenueSearchServiceImpl(venueRepository, venueCourtRepository, semanticSearchPort);
+        service = new VenueSearchServiceImpl(venueRepository, venueCourtRepository, semanticSearchPort, activityEventPublisher);
     }
 
     @Test
@@ -104,5 +116,32 @@ class VenuePublicAccessTest {
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().getFirst().averageRating()).isZero();
         assertThat(result.items().getFirst().totalReviews()).isZero();
+    }
+
+    @Test
+    void signedInViewIsRecordedButOwnerAndGuestViewsAreNot() throws Exception {
+        UUID venueId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID viewerId = UUID.randomUUID();
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(
+                Venue.builder().venueId(venueId).ownerId(ownerId).active(true).minPrice(120_000.0).build()
+        ));
+        when(venueCourtRepository.findByVenueId(venueId)).thenReturn(List.of(
+                VenueCourt.builder().venueCourtId(UUID.randomUUID()).venueId(venueId).active(true)
+                        .sportType(SportType.BADMINTON).build()
+        ));
+
+        service.viewVenueDetails(venueId, null);
+        service.viewVenueDetails(venueId, ownerId);
+        verify(activityEventPublisher, never()).publish(anyString(), any(), anyMap());
+
+        service.viewVenueDetails(venueId, viewerId);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> payload = ArgumentCaptor.forClass(Map.class);
+        verify(activityEventPublisher).publish(eq(ActivityEventPublisher.VENUE_VIEWED), eq(viewerId), payload.capture());
+        assertThat(payload.getValue())
+                .containsEntry("venueId", venueId.toString())
+                .containsEntry("sportTypes", List.of("BADMINTON"))
+                .containsEntry("minPrice", 120_000.0);
     }
 }

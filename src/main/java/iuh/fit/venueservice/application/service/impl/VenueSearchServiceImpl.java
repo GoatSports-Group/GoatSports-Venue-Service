@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.VenueSearchResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
+import iuh.fit.venueservice.application.port.ActivityEventPublisher;
 import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -14,6 +15,8 @@ import iuh.fit.venueservice.domain.entity.VenueCourt;
 import org.springframework.cache.annotation.Cacheable;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.HashSet;
 import java.util.List;
@@ -28,15 +31,18 @@ public class VenueSearchServiceImpl implements VenueSearchService {
     private final VenueRepository venueRepository;
     private final VenueCourtRepository venueCourtRepository;
     private final VenueSemanticSearchPort semanticSearchPort;
+    private final ActivityEventPublisher activityEventPublisher;
 
     public VenueSearchServiceImpl(
             VenueRepository venueRepository,
             VenueCourtRepository venueCourtRepository,
-            VenueSemanticSearchPort semanticSearchPort
+            VenueSemanticSearchPort semanticSearchPort,
+            ActivityEventPublisher activityEventPublisher
     ) {
         this.venueRepository = venueRepository;
         this.venueCourtRepository = venueCourtRepository;
         this.semanticSearchPort = semanticSearchPort;
+        this.activityEventPublisher = activityEventPublisher;
     }
 
     @Override
@@ -107,6 +113,25 @@ public class VenueSearchServiceImpl implements VenueSearchService {
         List<VenueCourt> courts = getVenueCourts(venueId);
         venue.setCourts(new HashSet<>(courts));
 
+        return venue;
+    }
+
+    @Override
+    public Venue viewVenueDetails(UUID venueId, UUID viewerId) throws ServiceException {
+        Venue venue = getVenueDetails(venueId);
+        // Chủ sân xem sân của mình không phải là "quan tâm" sân đó.
+        if (viewerId != null && !viewerId.equals(venue.getOwnerId())) {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("venueId", venueId.toString());
+            payload.put("sportTypes", venue.getCourts().stream()
+                    .filter(court -> Boolean.TRUE.equals(court.getActive()) && court.getSportType() != null)
+                    .map(court -> court.getSportType().name())
+                    .distinct()
+                    .toList());
+            payload.put("minPrice", venue.getMinPrice());
+            payload.put("rating", venue.getAverageRating());
+            activityEventPublisher.publish(ActivityEventPublisher.VENUE_VIEWED, viewerId, payload);
+        }
         return venue;
     }
 

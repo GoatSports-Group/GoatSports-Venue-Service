@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.config;
 
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.port.ActivityEventPublisher;
 import iuh.fit.venueservice.application.port.VenueSemanticSearchPort;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -59,7 +60,8 @@ class VenueSearchCacheTest {
                 () -> new VenueSearchServiceImpl(
                         venueRepository,
                         courtRepository,
-                        semanticPort
+                        semanticPort,
+                        mock(ActivityEventPublisher.class)
                 )
         );
 
