@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.dto.response.address.GeocodingResultComm
 import iuh.fit.venueservice.application.port.GeocodingPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -26,6 +27,9 @@ import java.util.function.Supplier;
 @Slf4j
 public class NominatimGeocodingAdapter implements GeocodingPort {
     private static final Duration MIN_REQUEST_INTERVAL = Duration.ofSeconds(1);
+    // Cuộc gọi đi tuần tự dưới providerLock: không có timeout thì một request treo chặn mọi tra cứu địa chỉ khác.
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(8);
 
     private final RestClient restClient;
     private final Duration cacheTtl;
@@ -41,7 +45,11 @@ public class NominatimGeocodingAdapter implements GeocodingPort {
             @Value("${geocoding.cache.ttl}") Duration cacheTtl,
             @Value("${geocoding.cache.max-entries}") int maxCacheEntries
     ) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+        requestFactory.setReadTimeout(READ_TIMEOUT);
         this.restClient = RestClient.builder()
+                .requestFactory(requestFactory)
                 .baseUrl(baseUrl)
                 .defaultHeader("User-Agent", userAgent)
                 .defaultHeader("Accept-Language", "vi-VN,vi;q=0.9")
@@ -78,7 +86,10 @@ public class NominatimGeocodingAdapter implements GeocodingPort {
                 map(item).ifPresent(mapped::add);
             }
             return List.copyOf(mapped);
-        }, List.of());
+        });
+        if (results == null) {
+            return List.of();
+        }
         putCached(searchCache, cacheKey, results);
         return results;
     }
@@ -104,12 +115,19 @@ public class NominatimGeocodingAdapter implements GeocodingPort {
                     .retrieve()
                     .body(NominatimResult.class);
             return map(response);
-        }, Optional.empty());
+        });
+        if (result == null) {
+            return Optional.empty();
+        }
         putCached(reverseCache, cacheKey, result);
         return result;
     }
 
-    private <T> T callProvider(Supplier<T> request, T fallback) {
+    /**
+     * null khi Nominatim lỗi / quá hạn: người gọi trả kết quả rỗng nhưng KHÔNG lưu cache. Trước đây lỗi bị nhớ 24 giờ,
+     * nên một lần Nominatim khởi động lại làm ô "Vị trí hiện tại" trống suốt một ngày dù dịch vụ đã chạy lại.
+     */
+    private <T> T callProvider(Supplier<T> request) {
         synchronized (providerLock) {
             waitForProviderWindow();
             nextProviderRequestAtNanos = System.nanoTime() + MIN_REQUEST_INTERVAL.toNanos();
@@ -117,7 +135,7 @@ public class NominatimGeocodingAdapter implements GeocodingPort {
                 return request.get();
             } catch (RestClientException exception) {
                 log.warn("Nominatim geocoding request failed: {}", exception.getMessage());
-                return fallback;
+                return null;
             }
         }
     }
