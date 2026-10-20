@@ -3,7 +3,6 @@ package iuh.fit.venueservice.infrastructure.external.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
-import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +16,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentEventConsumerTest {
@@ -101,9 +102,7 @@ class PaymentEventConsumerTest {
     }
 
     @Test
-    void mapsRefundFailureReasonToTheVenueUseCase() throws Exception {
-        UUID refundId = UUID.randomUUID();
-        UUID paymentId = UUID.randomUUID();
+    void leavesRefundEventsToTheCancellationWorkflow() throws Exception {
         var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 
         consumer.consume("""
@@ -116,16 +115,9 @@ class PaymentEventConsumerTest {
                     "failureReason": "Không tìm thấy tài khoản nhận chi"
                   }
                 }
-                """.formatted(refundId, paymentId));
+                """.formatted(UUID.randomUUID(), UUID.randomUUID()));
 
-        ArgumentCaptor<RefundResultCommand> command = ArgumentCaptor.forClass(RefundResultCommand.class);
-        verify(bookingPaymentEventService).applyRefundResult(command.capture());
-        assertThat(command.getValue()).isEqualTo(new RefundResultCommand(
-                refundId,
-                paymentId,
-                "FAILED",
-                "Không tìm thấy tài khoản nhận chi"
-        ));
+        verifyNoInteractions(bookingPaymentEventService);
     }
 
     @Test
@@ -145,7 +137,7 @@ class PaymentEventConsumerTest {
         consumer.consume(reminder.formatted(UUID.randomUUID(), refundId, "AWAITING_CLAIM"));
 
         verify(bookingPaymentEventService).remindOwnerOfManualRefund(refundId, eventId, 60_000.0);
-        verify(bookingPaymentEventService, never()).applyRefundResult(org.mockito.ArgumentMatchers.any());
+        verifyNoMoreInteractions(bookingPaymentEventService);
     }
 
     @Test

@@ -71,4 +71,10 @@ public class BookingCancellationRepositoryImpl implements BookingCancellationRep
                 .map(mapper::toDomain)
                 .collect(Collectors.toMap(BookingCancellation::getBookingId, cancellation -> cancellation));
     }
+
+    @Override
+    public List<BookingCancellation> findWithoutWorkflow(Set<CancellationStatus> statuses, int limit) {
+        return jpaRepository.findWithoutWorkflow(statuses, PageRequest.of(0, limit)).stream()
+                .map(mapper::toDomain).toList();
+    }
 }

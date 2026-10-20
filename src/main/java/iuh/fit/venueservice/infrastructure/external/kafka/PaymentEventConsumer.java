@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
-import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import lombok.RequiredArgsConstructor;
@@ -45,15 +44,8 @@ public class PaymentEventConsumer {
                 }
                 return;
             }
-            if (eventType.startsWith("refund.")) {
-                bookingPaymentEventService.applyRefundResult(new RefundResultCommand(
-                        uuid(payload, "refundId"),
-                        uuid(payload, "paymentId"),
-                        payload.path("status").asText(),
-                        nullableText(payload, "failureReason")
-                ));
-                return;
-            }
+            // refund.*: workflow-service đưa vào process hủy đặt sân trên Camunda; trạng thái yêu cầu hủy chỉ đổi
+            // khi process ghi lại (BookingCancellationService.applyWorkflowState), venue-service không tự đọc nữa.
             if ("payment.succeeded.v1".equals(eventType)) {
                 bookingPaymentEventService.applySucceededPayment(new PaymentSucceededCommand(
                         uuid(payload, "paymentId"), uuid(payload, "payerId"),

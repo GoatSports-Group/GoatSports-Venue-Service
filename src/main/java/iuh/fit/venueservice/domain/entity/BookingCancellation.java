@@ -30,4 +30,6 @@ public class BookingCancellation extends BaseEntity {
     private String decisionReason;
     private String refundFailureReason;
     private LocalDateTime processedAt;
+    private Long workflowInstanceKey;
+    private Long workflowVersion;
 }

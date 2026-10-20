@@ -52,6 +52,12 @@ public class BookingCancellationEntity extends BaseEntity {
 
     private LocalDateTime processedAt;
 
+    @Column(name = "workflow_instance_key")
+    private Long workflowInstanceKey;
+
+    @Column(name = "workflow_version")
+    private Long workflowVersion;
+
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "booking_id", nullable = false, unique = true)
     private BookingEntity booking;

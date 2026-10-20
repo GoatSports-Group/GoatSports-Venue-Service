@@ -31,4 +31,9 @@ public interface JpaBookingCancellationRepository extends JpaRepository<BookingC
     Page<BookingCancellationEntity> findByStatusOrderByCreatedAtDesc(CancellationStatus status, Pageable pageable);
 
     List<BookingCancellationEntity> findByBooking_BookingIdIn(Set<UUID> bookingIds);
+
+    @Query("select cancellation from BookingCancellationEntity cancellation "
+            + "where cancellation.workflowInstanceKey is null and cancellation.status in :statuses "
+            + "order by cancellation.createdAt")
+    List<BookingCancellationEntity> findWithoutWorkflow(Set<CancellationStatus> statuses, Pageable pageable);
 }

@@ -2,7 +2,6 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
-import iuh.fit.venueservice.application.dto.request.payment.RefundResultCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.BookingQrPort;
@@ -83,43 +82,6 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(),
                 paymentCancelled ? "PAYMENT_CANCELLED" : "PAYMENT_EXPIRED"
         );
-        return true;
-    }
-
-    @Override
-    public boolean applyRefundResult(RefundResultCommand command) throws ServiceException {
-        command.validateIdentity();
-        var cancellation = bookingCancellationRepository.findByRefundIdForUpdate(command.refundId()).orElse(null);
-        if (cancellation == null) return false;
-        Booking booking = bookingRepository.findByIdForUpdate(cancellation.getBookingId())
-                .orElseThrow(() -> new ServiceException("Không tìm thấy booking của refund."));
-        if (!command.paymentId().equals(booking.getDepositPaymentId())) {
-            throw new ServiceException("Payment của refund event không khớp booking.");
-        }
-        CancellationStatus status = switch (command.status()) {
-            case "SUCCEEDED" -> CancellationStatus.REFUNDED;
-            case "FAILED" -> CancellationStatus.REFUND_FAILED;
-            case "AWAITING_BANK_ACCOUNT" -> CancellationStatus.REFUND_AWAITING_BANK_ACCOUNT;
-            case "AWAITING_CLAIM" -> CancellationStatus.REFUND_AWAITING_CLAIM;
-            case "MANUAL_REVIEW" -> CancellationStatus.REFUND_MANUAL_REVIEW;
-            default -> CancellationStatus.REFUND_PROCESSING;
-        };
-        cancellation.setStatus(status);
-        cancellation.setRefundFailureReason(
-                status == CancellationStatus.REFUND_FAILED
-                        || status == CancellationStatus.REFUND_AWAITING_BANK_ACCOUNT
-                        ? command.failureReason()
-                        : null
-        );
-        booking.setStatus(status == CancellationStatus.REFUNDED
-                ? BookingStatus.REFUNDED : BookingStatus.REFUND_PENDING);
-        bookingCancellationRepository.save(cancellation);
-        Booking saved = bookingRepository.save(booking);
-        if (status == CancellationStatus.REFUNDED) {
-            matchmakingLifecycleSyncPort.syncBookingLifecycle(
-                    saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(), "REFUNDED"
-            );
-        }
         return true;
     }
 
