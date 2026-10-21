@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(
         name = "GOATSPORTS-NOTIFICATION-SERVICE",
         url = "${notification.service.url}",
-        path = "/internal/notifications"
+        path = "/internal/notifications",
+        configuration = StorageClientConfig.class
 )
 public interface NotificationClient {
     /** Tạo và đẩy realtime một thông báo; cùng eventId chỉ tạo một lần. */
