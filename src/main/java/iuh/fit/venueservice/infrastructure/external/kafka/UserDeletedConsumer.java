@@ -15,13 +15,12 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "user-deleted.consumer-enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "user-deleted.consumer-enabled", havingValue = "true")
 public class UserDeletedConsumer {
     private final ObjectMapper objectMapper;
     private final AccountDataService accountDataService;
 
-    @KafkaListener(topics = "${user-deleted.topic:user-deleted-topic}", groupId = "venue-service-user-deleted",
-            properties = "value.deserializer=org.apache.kafka.common.serialization.StringDeserializer")
+    @KafkaListener(topics = "${user-deleted.topic}", groupId = "${user-deleted.venue-group-id}")
     @Transactional
     public void consume(String message) throws Exception {
         UUID userId = UUID.fromString(objectMapper.readTree(message).path("userId").asText());
