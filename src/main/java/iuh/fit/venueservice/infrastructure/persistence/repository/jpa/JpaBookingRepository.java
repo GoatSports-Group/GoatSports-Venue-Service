@@ -226,4 +226,6 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
                                  @Param("paidStatuses") Collection<BookingStatus> paidStatuses,
                                  @Param("noShow") BookingStatus noShow,
                                  Pageable pageable);
+
+    boolean existsByPlayerIdAndStatusIn(UUID playerId, java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses);
 }

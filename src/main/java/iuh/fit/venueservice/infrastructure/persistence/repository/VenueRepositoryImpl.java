@@ -309,4 +309,9 @@ public class VenueRepositoryImpl implements VenueRepository {
                 result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalPages()
         );
     }
+
+    @Override
+    public boolean existsByOwnerId(UUID ownerId) {
+        return jpaRepository.existsByOwnerId(ownerId);
+    }
 }

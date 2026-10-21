@@ -261,4 +261,15 @@ public class ApplicationServiceConfig {
                 bookingNotificationPort
         );
     }
+
+    @Bean
+    public iuh.fit.venueservice.application.service.impl.AccountDataServiceImpl accountDataService(
+            iuh.fit.venueservice.application.port.persistence.BookingRepository bookingRepository,
+            iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository cancellationRepository,
+            iuh.fit.venueservice.application.port.persistence.VenueRepository venueRepository,
+            iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository ownerApplicationRepository,
+            iuh.fit.venueservice.application.port.StoragePort storagePort) {
+        return new iuh.fit.venueservice.application.service.impl.AccountDataServiceImpl(
+                bookingRepository, cancellationRepository, venueRepository, ownerApplicationRepository, storagePort);
+    }
 }

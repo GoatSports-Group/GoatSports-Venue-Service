@@ -282,4 +282,9 @@ public class BookingRepositoryImpl implements BookingRepository {
                 mapper.toDomain(entity), venue.getVenueId(), venue.getName(), court.getName()
         );
     }
+
+    @Override
+    public boolean existsByPlayerIdAndStatusIn(UUID playerId, java.util.Collection<BookingStatus> statuses) {
+        return jpaRepository.existsByPlayerIdAndStatusIn(playerId, statuses);
+    }
 }

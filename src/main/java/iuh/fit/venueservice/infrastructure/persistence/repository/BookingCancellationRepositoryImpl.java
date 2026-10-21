@@ -77,4 +77,9 @@ public class BookingCancellationRepositoryImpl implements BookingCancellationRep
         return jpaRepository.findWithoutWorkflow(statuses, PageRequest.of(0, limit)).stream()
                 .map(mapper::toDomain).toList();
     }
+
+    @Override
+    public boolean existsByRequesterAndStatusIn(UUID userId, java.util.Collection<CancellationStatus> statuses) {
+        return jpaRepository.existsByRequestedByUserIdAndStatusIn(userId, statuses);
+    }
 }

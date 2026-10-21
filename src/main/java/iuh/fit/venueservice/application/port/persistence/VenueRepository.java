@@ -22,4 +22,6 @@ public interface VenueRepository {
     PageResult<Venue> search(SearchVenueCommand command);
 
     PageResult<Venue> findAll(AdminVenueFilter filter);
+
+    boolean existsByOwnerId(UUID ownerId);
 }

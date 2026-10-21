@@ -26,4 +26,7 @@ public interface OwnerApplicationRepository {
     List<OwnerApplication> findWithTemporaryDocuments(int limit);
 
     PageResult<OwnerApplication> findAll(PageFilter filter);
+
+    /** Xóa họ tên, SĐT, email, số CCCD và giấy tờ trong mọi hồ sơ của người dùng; trả về khóa file giấy tờ để xóa khỏi kho. */
+    List<String> eraseApplicantData(UUID userId);
 }

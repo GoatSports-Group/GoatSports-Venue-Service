@@ -157,4 +157,18 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
                 entityPage.getTotalPages()
         );
     }
+
+    @Override
+    public List<String> eraseApplicantData(UUID userId) {
+        List<String> fileKeys = new java.util.ArrayList<>();
+        for (var application : jpaRepository.findAllByUserId(userId)) {
+            application.getOwnerApplicationDocuments().forEach(document -> fileKeys.add(document.getFileUrl()));
+            application.getOwnerApplicationDocuments().clear();
+            application.setFullName(null);
+            application.setPhone(null);
+            application.setEmail(null);
+            application.setIdentityNumber(null);
+        }
+        return fileKeys;
+    }
 }

@@ -31,4 +31,6 @@ public interface JpaVenueRepository extends JpaRepository<VenueEntity, UUID>, Jp
 
     @Query("select distinct v.ownerId from VenueEntity v where v.ownerId is not null")
     List<UUID> findDistinctOwnerIds();
+
+    boolean existsByOwnerId(UUID ownerId);
 }

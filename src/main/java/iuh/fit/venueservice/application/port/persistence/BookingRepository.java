@@ -73,4 +73,6 @@ public interface BookingRepository {
             LocalDate currentFrom,
             LocalDate currentToExclusive
     );
+
+    boolean existsByPlayerIdAndStatusIn(UUID playerId, java.util.Collection<BookingStatus> statuses);
 }

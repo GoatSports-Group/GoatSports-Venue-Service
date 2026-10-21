@@ -36,4 +36,6 @@ public interface JpaBookingCancellationRepository extends JpaRepository<BookingC
             + "where cancellation.workflowInstanceKey is null and cancellation.status in :statuses "
             + "order by cancellation.createdAt")
     List<BookingCancellationEntity> findWithoutWorkflow(Set<CancellationStatus> statuses, Pageable pageable);
+
+    boolean existsByRequestedByUserIdAndStatusIn(UUID userId, java.util.Collection<iuh.fit.venueservice.domain.enums.CancellationStatus> statuses);
 }
