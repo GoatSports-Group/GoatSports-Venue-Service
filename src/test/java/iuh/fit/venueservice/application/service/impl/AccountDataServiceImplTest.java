@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -63,12 +64,22 @@ class AccountDataServiceImplTest {
     }
 
     @Test
-    void erasingScrubsOwnerApplicationsAndKeepsGoingWhenAFileCannotBeDeleted() throws ServiceException {
+    void erasingScrubsOwnerApplicationsAndDeletesTheirDocuments() throws ServiceException {
         when(ownerApplicationRepository.eraseApplicantData(userId)).thenReturn(List.of("identities/a.jpg", "licenses/b.pdf"));
-        doThrow(new ServiceException("storage down")).when(storagePort).delete("identities/a.jpg");
 
         service.eraseUserData(userId);
 
+        verify(storagePort).delete("identities/a.jpg");
         verify(storagePort).delete("licenses/b.pdf");
+    }
+
+    /** Ném ra để transaction rollback (key giấy tờ còn lại) và Kafka thử lại, không để file CCCD mồ côi. */
+    @Test
+    void aDocumentThatCannotBeDeletedFailsTheErasureSoItIsRetried() throws ServiceException {
+        when(ownerApplicationRepository.eraseApplicantData(userId)).thenReturn(List.of("identities/a.jpg", "licenses/b.pdf"));
+        doThrow(new ServiceException("storage down")).when(storagePort).delete("identities/a.jpg");
+
+        assertThatThrownBy(() -> service.eraseUserData(userId)).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("identities/a.jpg");
     }
 }

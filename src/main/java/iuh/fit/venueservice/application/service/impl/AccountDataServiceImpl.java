@@ -10,8 +10,6 @@ import iuh.fit.venueservice.application.service.AccountDataService;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -19,7 +17,6 @@ import java.util.List;
 import java.util.UUID;
 
 public class AccountDataServiceImpl implements AccountDataService {
-    private static final Logger log = LoggerFactory.getLogger(AccountDataServiceImpl.class);
 
     /** Vé còn hiệu lực hoặc còn tiền đang hoàn. */
     private static final EnumSet<BookingStatus> OPEN_BOOKINGS = EnumSet.of(
@@ -63,12 +60,13 @@ public class AccountDataServiceImpl implements AccountDataService {
     @Override
     public void eraseUserData(UUID userId) {
         // Đơn đặt sân và đánh giá giữ lại: chỉ còn userId, tên hiển thị lấy từ auth-service là "Người dùng đã xóa".
+        // Chạy trong transaction của consumer: storage lỗi thì ném ra, phần xóa dữ liệu rollback nên key giấy tờ vẫn còn,
+        // Kafka thử lại (hết lượt vào DLT) thay vì để lại file CCCD mồ côi. Xóa lại file đã xóa vẫn thành công.
         for (String key : ownerApplicationRepository.eraseApplicantData(userId)) {
             try {
                 storagePort.delete(key);
-            } catch (ServiceException | RuntimeException e) {
-                // ponytail: storage lỗi thì file giấy tờ mồ côi trong thư mục riêng tư; dọn tay nếu cần.
-                log.warn("Could not delete owner application document {} of user {}: {}", key, userId, e.getMessage());
+            } catch (ServiceException e) {
+                throw new IllegalStateException("Could not delete owner application document " + key, e);
             }
         }
     }
