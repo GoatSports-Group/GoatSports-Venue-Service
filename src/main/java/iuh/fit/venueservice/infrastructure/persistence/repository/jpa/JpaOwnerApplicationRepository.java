@@ -57,5 +57,5 @@ public interface JpaOwnerApplicationRepository extends JpaRepository<OwnerApplic
             """)
     List<OwnerApplicationEntity> findDetailedByIdIn(@Param("ids") List<UUID> ids);
 
-    java.util.List<iuh.fit.venueservice.infrastructure.persistence.entity.OwnerApplicationEntity> findAllByUserId(UUID userId);
+    List<OwnerApplicationEntity> findAllByUserId(UUID userId);
 }

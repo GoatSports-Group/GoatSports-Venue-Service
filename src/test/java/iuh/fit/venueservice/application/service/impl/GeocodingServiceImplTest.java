@@ -19,7 +19,7 @@ class GeocodingServiceImplTest {
 
     @Test
     void searchTrimsTheQueryBeforeDelegating() {
-        var expected = List.of(new GeocodingResultCommand(
+        List<GeocodingResultCommand> expected = List.of(new GeocodingResultCommand(
                 12.22076,
                 109.19745,
                 "Hoàng Diệu",

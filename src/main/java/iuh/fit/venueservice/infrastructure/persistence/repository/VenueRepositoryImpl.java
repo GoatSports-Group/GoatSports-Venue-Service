@@ -10,6 +10,7 @@ import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.AddressEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.VenueEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class VenueRepositoryImpl implements VenueRepository {
                     .orElseGet(() -> venueEntityMapper.createEntity(venue));
             venueEntityMapper.updateEntity(venue, entity, addressEntityMapper);
         }
-        var saved = jpaRepository.save(entity);
+        VenueEntity saved = jpaRepository.save(entity);
         return venueEntityMapper.toDomain(saved);
     }
 
@@ -76,7 +77,7 @@ public class VenueRepositoryImpl implements VenueRepository {
             predicates.add(cb.isTrue(root.get("active")));
 
             if (command.sportType() != null) {
-                var court = root.join("venueCourts", JoinType.INNER);
+                Join<Object, Object> court = root.join("venueCourts", JoinType.INNER);
                 predicates.add(cb.isTrue(court.get("active")));
                 predicates.add(cb.equal(court.get("sportType"), command.sportType()));
                 query.distinct(true);
@@ -95,14 +96,14 @@ public class VenueRepositoryImpl implements VenueRepository {
                 List<Predicate> matches = new ArrayList<>();
                 matches.add(cb.like(cb.lower(root.get("name")), kw));
                 matches.add(cb.like(cb.lower(root.get("description")), kw));
-                var address = root.join("address", JoinType.INNER);
+                Join<Object, Object> address = root.join("address", JoinType.INNER);
                 matches.add(cb.like(cb.lower(address.get("address")), kw));
                 if (command.semanticVenueIds() != null && !command.semanticVenueIds().isEmpty()) {
                     matches.add(root.get("venueId").in(command.semanticVenueIds()));
                 }
                 Optional<SportType> keywordSportType = resolveSportTypeKeyword(command.keyword());
                 if (keywordSportType.isPresent()) {
-                    var court = root.join("venueCourts", JoinType.LEFT);
+                    Join<Object, Object> court = root.join("venueCourts", JoinType.LEFT);
                     matches.add(cb.and(cb.isTrue(court.get("active")), cb.equal(court.get("sportType"), keywordSportType.get())));
                     query.distinct(true);
                 }
@@ -115,7 +116,7 @@ public class VenueRepositoryImpl implements VenueRepository {
 
             if (command.district() != null && !command.district().trim().isEmpty()) {
                 String area = "%" + command.district().trim().toLowerCase() + "%";
-                var address = root.join("address", JoinType.INNER);
+                Join<Object, Object> address = root.join("address", JoinType.INNER);
                 // Khu vực ở bất kỳ cấp nào: "Khánh Hòa" là tỉnh (city), "Nha Trang" nằm trong tên phường / địa chỉ.
                 predicates.add(cb.or(
                         cb.like(cb.lower(address.get("district")), area),
@@ -125,7 +126,7 @@ public class VenueRepositoryImpl implements VenueRepository {
             }
 
             if (hasViewportBounds(command)) {
-                var address = root.join("address", JoinType.INNER);
+                Join<Object, Object> address = root.join("address", JoinType.INNER);
                 predicates.add(cb.between(
                         address.get("latitude"),
                         command.southLatitude(),
@@ -290,7 +291,7 @@ public class VenueRepositoryImpl implements VenueRepository {
             }
             if (filter.query() != null && !filter.query().isBlank()) {
                 String like = "%" + filter.query().trim().toLowerCase(Locale.ROOT) + "%";
-                var address = root.join("address", JoinType.LEFT);
+                Join<Object, Object> address = root.join("address", JoinType.LEFT);
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("name")), like),
                         cb.like(cb.lower(root.get("email")), like),

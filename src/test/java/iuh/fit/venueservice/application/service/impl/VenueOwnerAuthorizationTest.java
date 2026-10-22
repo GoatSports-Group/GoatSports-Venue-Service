@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalTime;
@@ -179,7 +180,7 @@ class VenueOwnerAuthorizationTest {
         // Chủ sân bật lại cơ sở bị từ chối và không đụng tới ảnh.
         assertThatThrownBy(() -> venueService.updateVenue(updateVenueCommand(ownerId)))
                 .hasMessageContaining("đình chỉ");
-        org.mockito.Mockito.verifyNoInteractions(storagePort);
+        Mockito.verifyNoInteractions(storagePort);
 
         Venue reinstated = venueService.reinstateVenue(venueId);
         assertThat(reinstated.getActive()).isTrue();

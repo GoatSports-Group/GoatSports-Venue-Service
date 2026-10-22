@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,7 +29,7 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
     @Override
     public TimeSlot save(TimeSlot timeSlot) {
         TimeSlotEntity entity = entityForSave(timeSlot);
-        var saved = jpaRepository.save(entity);
+        TimeSlotEntity saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }
 
@@ -74,7 +75,7 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
 
     @Override
     public List<TimeSlot> findByCourtsAndDateRangeForUpdate(
-            java.util.Collection<UUID> venueCourtIds, LocalDate fromDate, LocalDate toDate
+            Collection<UUID> venueCourtIds, LocalDate fromDate, LocalDate toDate
     ) {
         if (venueCourtIds.isEmpty()) return List.of();
         return jpaRepository.findByCourtsAndDateRangeForUpdate(venueCourtIds, fromDate, toDate)
@@ -94,7 +95,7 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
 
     @Override
     public List<TimeSlot> saveAll(List<TimeSlot> timeSlots) {
-        var entities = timeSlots.stream().map(this::entityForSave).collect(Collectors.toList());
+        List<TimeSlotEntity> entities = timeSlots.stream().map(this::entityForSave).collect(Collectors.toList());
         return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).collect(Collectors.toList());
     }
 

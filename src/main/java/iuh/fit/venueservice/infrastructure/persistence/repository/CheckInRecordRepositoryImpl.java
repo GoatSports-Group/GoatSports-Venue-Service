@@ -2,11 +2,15 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 
 import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository;
 import iuh.fit.venueservice.domain.entity.CheckInRecord;
+import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.CheckInRecordEntity;
+import iuh.fit.venueservice.infrastructure.persistence.entity.VenueCourtEntity;
+import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.CheckInRecordEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaCheckInRecordRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerCheckInFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
@@ -18,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,7 +36,7 @@ public class CheckInRecordRepositoryImpl implements CheckInRecordRepository {
 
     @Override
     public CheckInRecord save(CheckInRecord checkInRecord) {
-        var entity = mapper.toEntity(checkInRecord);
+        CheckInRecordEntity entity = mapper.toEntity(checkInRecord);
         entity.setBooking(jpaBookingRepository.getReferenceById(checkInRecord.getBookingId()));
         return mapper.toDomain(jpaRepository.save(entity));
     }
@@ -63,13 +68,13 @@ public class CheckInRecordRepositoryImpl implements CheckInRecordRepository {
                     root.get("booking").get("playDate"), filter.date()
             ));
         }
-        var page = jpaRepository.findAll(spec, PageRequest.of(
+        Page<CheckInRecordEntity> page = jpaRepository.findAll(spec, PageRequest.of(
                 filter.page(), filter.size(), Sort.by(Sort.Direction.DESC, "checkedInAt")
         ));
-        var records = page.getContent().stream().map(entity -> {
-            var booking = entity.getBooking();
-            var court = booking.getVenueCourt();
-            var venue = court.getVenue();
+        List<OwnerCheckInHistoryRecord> records = page.getContent().stream().map(entity -> {
+            BookingEntity booking = entity.getBooking();
+            VenueCourtEntity court = booking.getVenueCourt();
+            VenueEntity venue = court.getVenue();
             return new OwnerCheckInHistoryRecord(
                     new OwnerBookingRecord(
                             bookingMapper.toDomain(booking), venue.getVenueId(), venue.getName(), court.getName()

@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.external.adapter;
 
+import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.OwnerApplicationNotificationPort;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
@@ -61,7 +62,7 @@ public class OwnerApplicationNotificationAdapter implements OwnerApplicationNoti
 
     @Override
     public void notifyProgressChanged(OwnerApplication application) throws ServiceException {
-        var response = notificationClient.publishOwnerApplicationProgress(
+        BaseResponse<Void> response = notificationClient.publishOwnerApplicationProgress(
                 OwnerApplicationProgressChangedEvent.changed(
                         application.getUserId(),
                         application.getOwnerApplicationId()
@@ -96,7 +97,7 @@ public class OwnerApplicationNotificationAdapter implements OwnerApplicationNoti
                         .rejectReason(rejectReason)
                         .build())
                 .build();
-        var createResponse = notificationClient.createOwnerApplicationNotification(event);
+        BaseResponse<NotificationResponseCommand> createResponse = notificationClient.createOwnerApplicationNotification(event);
         NotificationResponseCommand notification = createResponse == null ? null : createResponse.getData();
         if (notification == null) {
             throw new ServiceException("Notification Service không tạo được thông báo hồ sơ chủ sân.");

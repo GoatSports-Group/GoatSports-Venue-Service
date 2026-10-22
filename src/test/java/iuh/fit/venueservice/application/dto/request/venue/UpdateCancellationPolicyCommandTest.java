@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class UpdateCancellationPolicyCommandTest {
     @Test
     void acceptsDescendingRefundThresholds() {
-        var command = command(24, 12, 50.0, 0);
+        UpdateCancellationPolicyCommand command = command(24, 12, 50.0, 0);
 
         assertThatCode(command::validate).doesNotThrowAnyException();
     }

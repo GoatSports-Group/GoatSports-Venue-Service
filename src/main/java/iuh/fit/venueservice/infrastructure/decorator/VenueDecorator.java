@@ -23,6 +23,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import lombok.extern.slf4j.Slf4j;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -153,7 +154,7 @@ public class VenueDecorator implements VenueService {
 
     /** Best-effort: thông báo lỗi không làm hỏng thao tác đã commit. */
     private void notifyOwner(Venue venue, String dedupeKey, String title, String content) {
-        UUID eventId = UUID.nameUUIDFromBytes((venue.getVenueId() + dedupeKey).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        UUID eventId = UUID.nameUUIDFromBytes((venue.getVenueId() + dedupeKey).getBytes(StandardCharsets.UTF_8));
         try {
             notificationClient.createNotification(new CreateNotificationRequest(
                     eventId, venue.getOwnerId(), title, content, "CONTENT_MODERATION", "VENUE", "SYSTEM", venue.getVenueId()

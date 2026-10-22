@@ -8,6 +8,7 @@ import iuh.fit.venueservice.infrastructure.external.client.dto.OwnerApplicationP
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,7 +36,7 @@ class OwnerApplicationNotificationAdapterTest {
                 .userId(userId)
                 .build();
         when(notificationClient.publishOwnerApplicationProgress(
-                org.mockito.ArgumentMatchers.any(OwnerApplicationProgressChangedEvent.class)
+                ArgumentMatchers.any(OwnerApplicationProgressChangedEvent.class)
         )).thenReturn(new BaseResponse<>(200, null, null, ""));
 
         adapter.notifyProgressChanged(application);
@@ -55,7 +56,7 @@ class OwnerApplicationNotificationAdapterTest {
                 .userId(UUID.randomUUID())
                 .build();
         when(notificationClient.publishOwnerApplicationProgress(
-                org.mockito.ArgumentMatchers.any(OwnerApplicationProgressChangedEvent.class)
+                ArgumentMatchers.any(OwnerApplicationProgressChangedEvent.class)
         )).thenReturn(new BaseResponse<>(503, null, "Unavailable", "NOTIFICATION_UNAVAILABLE"));
 
         assertThrows(ServiceException.class, () -> adapter.notifyProgressChanged(application));

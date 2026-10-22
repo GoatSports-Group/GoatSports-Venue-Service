@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import iuh.fit.venueservice.infrastructure.external.config.PaymentFeignConfiguration;
 
+import java.util.Map;
 import java.util.UUID;
 
 import java.util.List;
@@ -53,7 +54,7 @@ public interface PaymentClient {
     );
 
     @PostMapping("/{paymentId}/payee")
-    void assignPayee(@PathVariable UUID paymentId, @RequestBody java.util.Map<String, UUID> request);
+    void assignPayee(@PathVariable UUID paymentId, @RequestBody Map<String, UUID> request);
 
     @PostMapping("/refunds/{refundId}/manual-completion")
     BaseResponse<RefundSnapshot> completeManualRefund(

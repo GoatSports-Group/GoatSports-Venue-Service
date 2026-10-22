@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,13 +40,13 @@ class VenueCourtAvailabilityServiceTest {
         Venue venue = Venue.builder().venueId(venueId).ownerId(ownerId).build();
         VenueCourt court = VenueCourt.builder()
                 .venueCourtId(courtId).venueId(venueId).active(true).build();
-        when(venueRepository.findById(venueId)).thenReturn(java.util.Optional.of(venue));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
         when(courtRepository.findByVenueId(venueId)).thenReturn(List.of(court));
         when(slotRepository.findBlockingSlotsAt(
                 Set.of(courtId), LocalDate.of(2026, 9, 1), LocalTime.of(8, 0)
         )).thenReturn(List.of());
 
-        var service = new VenueCourtServiceImpl(
+        VenueCourtServiceImpl service = new VenueCourtServiceImpl(
                 courtRepository, venueRepository, slotRepository, exactlyEight
         );
 
@@ -72,13 +73,13 @@ class VenueCourtAvailabilityServiceTest {
                 .venueCourtId(courtId).date(LocalDate.of(2026, 9, 1))
                 .startTime(LocalTime.of(7, 0)).endTime(LocalTime.of(8, 0))
                 .status(TimeSlotStatus.BOOKED).build();
-        when(venueRepository.findById(venueId)).thenReturn(java.util.Optional.of(venue));
+        when(venueRepository.findById(venueId)).thenReturn(Optional.of(venue));
         when(courtRepository.findByVenueId(venueId)).thenReturn(List.of(court));
         when(slotRepository.findBlockingSlotsAt(
                 Set.of(courtId), LocalDate.of(2026, 9, 1), LocalTime.of(7, 59)
         )).thenReturn(List.of(slot));
 
-        var service = new VenueCourtServiceImpl(
+        VenueCourtServiceImpl service = new VenueCourtServiceImpl(
                 courtRepository, venueRepository, slotRepository, beforeEight
         );
         VenueCourt result = service.getVenueCourts(venueId, ownerId).getFirst();

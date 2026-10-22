@@ -1,8 +1,10 @@
 package iuh.fit.venueservice.presentation.controller.internal;
 
 import iuh.fit.venueservice.application.dto.request.venue.WorkflowCancellationStateCommand;
+import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingCancellationService;
+import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -26,7 +28,7 @@ public class BookingCancellationWorkflowInternalController {
     @PutMapping("/{cancellationId}/state")
     public Map<String, String> applyState(@PathVariable UUID cancellationId, @Valid @RequestBody StateRequest request)
             throws ServiceException {
-        var cancellation = bookingCancellationService.applyWorkflowState(new WorkflowCancellationStateCommand(
+        BookingCancellation cancellation = bookingCancellationService.applyWorkflowState(new WorkflowCancellationStateCommand(
                 cancellationId, request.bookingId(), request.status(), request.version(), request.processedBy(),
                 request.decisionNote(), request.refundFailureReason()));
         return Map.of("status", cancellation.getStatus().name());
@@ -35,7 +37,7 @@ public class BookingCancellationWorkflowInternalController {
     @PostMapping("/{cancellationId}/refund")
     public RefundResponse createRefund(@PathVariable UUID cancellationId, @Valid @RequestBody RefundRequest request)
             throws ServiceException {
-        var refund = bookingCancellationService.createWorkflowRefund(cancellationId, request.bookingId(),
+        RefundSnapshot refund = bookingCancellationService.createWorkflowRefund(cancellationId, request.bookingId(),
                 request.processedBy());
         return new RefundResponse(refund.refundId(), refund.status(), refund.failureReason());
     }

@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.enums.SportType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -76,7 +77,7 @@ class VenueKeywordSearchTest {
     @Test
     void sportKeywordNeedsWholeWords() {
         assertThat(VenueRepositoryImpl.resolveSportTypeKeyword("Sân bóng đá quận 7"))
-                .contains(iuh.fit.venueservice.domain.enums.SportType.FOOTBALL);
+                .contains(SportType.FOOTBALL);
         assertThat(VenueRepositoryImpl.resolveSportTypeKeyword("bóng")).isEmpty();
     }
 

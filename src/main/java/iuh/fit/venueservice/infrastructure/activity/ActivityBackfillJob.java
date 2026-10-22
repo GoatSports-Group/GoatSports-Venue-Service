@@ -1,7 +1,9 @@
 package iuh.fit.venueservice.infrastructure.activity;
 
 import iuh.fit.venueservice.application.port.ActivityEventPublisher;
+import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.BookingEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
 import lombok.RequiredArgsConstructor;
@@ -56,10 +58,10 @@ public class ActivityBackfillJob {
                 int index = page;
                 List<CompletableFuture<?>> pending = new ArrayList<>();
                 Page<?> batch = transactionTemplate.execute(status -> {
-                    var rows = bookingRepository.findByStatusIn(BOOKED,
+                    Page<BookingEntity> rows = bookingRepository.findByStatusIn(BOOKED,
                             PageRequest.of(index, PAGE_SIZE, Sort.by("bookingId")));
                     rows.forEach(entity -> {
-                        var booking = bookingMapper.toDomain(entity);
+                        Booking booking = bookingMapper.toDomain(entity);
                         recorder.payloadFor(booking).ifPresent(payload -> pending.add(
                                 publisher.send(ActivityEventPublisher.BOOKING_STATE, booking.getPlayerId(), payload,
                                         booking.getCreatedAt() == null ? Instant.now()

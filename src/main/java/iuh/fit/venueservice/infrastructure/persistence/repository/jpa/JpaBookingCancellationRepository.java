@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.List;
 import java.util.Set;
@@ -37,5 +38,5 @@ public interface JpaBookingCancellationRepository extends JpaRepository<BookingC
             + "order by cancellation.createdAt")
     List<BookingCancellationEntity> findWithoutWorkflow(Set<CancellationStatus> statuses, Pageable pageable);
 
-    boolean existsByRequestedByUserIdAndStatusIn(UUID userId, java.util.Collection<iuh.fit.venueservice.domain.enums.CancellationStatus> statuses);
+    boolean existsByRequestedByUserIdAndStatusIn(UUID userId, Collection<CancellationStatus> statuses);
 }

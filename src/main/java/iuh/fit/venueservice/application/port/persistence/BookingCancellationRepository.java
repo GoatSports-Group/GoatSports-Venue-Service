@@ -3,6 +3,7 @@ package iuh.fit.venueservice.application.port.persistence;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,5 +28,5 @@ public interface BookingCancellationRepository {
     /** Yêu cầu hủy ở các trạng thái cho trước mà chưa có process Camunda, cũ nhất trước. */
     List<BookingCancellation> findWithoutWorkflow(Set<CancellationStatus> statuses, int limit);
 
-    boolean existsByRequesterAndStatusIn(UUID userId, java.util.Collection<CancellationStatus> statuses);
+    boolean existsByRequesterAndStatusIn(UUID userId, Collection<CancellationStatus> statuses);
 }

@@ -6,6 +6,9 @@ import iuh.fit.venueservice.application.dto.request.venue.OwnerReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerReviewView;
+import iuh.fit.venueservice.application.dto.response.venue.PlayerReviewView;
+import iuh.fit.venueservice.application.dto.response.venue.PublicReviewView;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
@@ -81,7 +84,7 @@ class ReviewServiceImplTest {
         when(reviewRepository.countPublishedByVenueId(venueId)).thenReturn(2L);
         when(reviewRepository.averagePublishedRatingByVenueId(venueId)).thenReturn(4.5);
 
-        var result = service.createPlayerReview(new CreatePlayerReviewCommand(
+        PlayerReviewView result = service.createPlayerReview(new CreatePlayerReviewCommand(
                 playerId, bookingId, 5, "  Sân tốt  "
         ));
 
@@ -141,7 +144,7 @@ class ReviewServiceImplTest {
                 new PageResult<>(List.of(record), 1, 0, 20, 1)
         );
 
-        var page = service.getOwnerReviews(filter(venueId, null));
+        PageResult<OwnerReviewView> page = service.getOwnerReviews(filter(venueId, null));
 
         assertThat(page.total()).isEqualTo(1);
         assertThat(page.items()).singleElement().satisfies(view -> {
@@ -213,7 +216,7 @@ class ReviewServiceImplTest {
                 new PageResult<>(List.of(publishedReview), 1, 0, 10, 1)
         );
 
-        var result = service.getPublishedReviews(new PublicReviewFilter(venueId, 0, 10));
+        PageResult<PublicReviewView> result = service.getPublishedReviews(new PublicReviewFilter(venueId, 0, 10));
 
         assertThat(result.items()).singleElement().satisfies(view -> {
             assertThat(view.reviewId()).isEqualTo(publishedReview.getReviewId());

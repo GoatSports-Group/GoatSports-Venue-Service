@@ -78,7 +78,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         Set<UUID> bookingIds = page.items().stream()
                 .map(item -> item.booking().getBookingId()).collect(Collectors.toSet());
         Map<UUID, List<PaymentSnapshot>> payments = loadPayments(bookingIds);
-        var cancellations = bookingCancellationRepository.findByBookingIds(bookingIds);
+        Map<UUID, BookingCancellation> cancellations = bookingCancellationRepository.findByBookingIds(bookingIds);
         List<OwnerBookingView> items = page.items().stream()
                 .map(item -> toView(
                         item,

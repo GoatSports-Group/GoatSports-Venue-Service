@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.external.adapter;
 
 import feign.FeignException;
+import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.CancellationWorkflowPort;
 import iuh.fit.venueservice.infrastructure.external.client.WorkflowClient;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -21,7 +23,7 @@ public class CancellationWorkflowAdapter implements CancellationWorkflowPort {
     @Override
     public long start(StartCancellationWorkflow command) throws ServiceException {
         try {
-            var response = workflowClient.start(new WorkflowClient.StartRequest(
+            BaseResponse<Map<String, Long>> response = workflowClient.start(new WorkflowClient.StartRequest(
                     command.cancellationId(), command.bookingId(), command.reviewMode(), command.refundAmount(),
                     command.playStartAt(), command.decisionNote(), command.resumeStatus(), command.refundId()));
             Long key = response == null || response.getData() == null ? null : response.getData().get("processInstanceKey");

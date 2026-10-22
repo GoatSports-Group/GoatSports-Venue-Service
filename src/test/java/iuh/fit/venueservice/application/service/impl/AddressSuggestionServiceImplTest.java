@@ -19,7 +19,7 @@ class AddressSuggestionServiceImplTest {
 
     @Test
     void searchTrimsQueryBeforeCallingVietMap() {
-        var expected = List.of(new AddressSuggestionCommand(
+        List<AddressSuggestionCommand> expected = List.of(new AddressSuggestionCommand(
                 "auto:abc", "12 Nguyễn Văn Bảo", "12 Nguyễn Văn Bảo, Gò Vấp, Hồ Chí Minh",
                 "12 Nguyễn Văn Bảo", "Hạnh Thông", "Gò Vấp", "Hồ Chí Minh", null, null
         ));

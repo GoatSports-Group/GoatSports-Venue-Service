@@ -5,7 +5,9 @@ import iuh.fit.venueservice.application.dto.request.venue.CreateOwnerBookingPaym
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingPaymentMethod;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateOwnerBookingStatusCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingPaymentResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingView;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -83,7 +85,7 @@ class OwnerBookingServiceImplTest {
                 payment("BOOKING_DEPOSIT", "SUCCEEDED")
         ));
 
-        var result = service.getBookings(filter);
+        PageResult<OwnerBookingView> result = service.getBookings(filter);
 
         assertThat(result.total()).isEqualTo(1);
         assertThat(result.items().getFirst().venueId()).isEqualTo(venueId);
@@ -137,7 +139,7 @@ class OwnerBookingServiceImplTest {
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(payment));
         when(bookingRepository.save(booking)).thenReturn(booking);
 
-        var result = service.updateStatus(new UpdateOwnerBookingStatusCommand(
+        OwnerBookingView result = service.updateStatus(new UpdateOwnerBookingStatusCommand(
                 bookingId, BookingStatus.COMPLETED, ownerId
         ));
 
@@ -193,7 +195,7 @@ class OwnerBookingServiceImplTest {
         )).thenReturn(remainingPayment);
         when(bookingRepository.save(booking)).thenReturn(booking);
 
-        var result = service.createPayment(new CreateOwnerBookingPaymentCommand(
+        OwnerBookingPaymentResult result = service.createPayment(new CreateOwnerBookingPaymentCommand(
                 bookingId, ownerId, OwnerBookingPaymentMethod.CASH
         ));
 

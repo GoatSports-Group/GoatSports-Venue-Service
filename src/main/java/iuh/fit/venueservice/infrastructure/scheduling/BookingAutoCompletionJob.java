@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.scheduling;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +44,7 @@ public class BookingAutoCompletionJob {
     @Transactional
     public void completeEligibleBookings() {
         LocalDateTime now = LocalDateTime.now(clock);
-        var candidates = bookingRepository.findCompletionCandidatesForUpdate(now, batchSize);
+        List<Booking> candidates = bookingRepository.findCompletionCandidatesForUpdate(now, batchSize);
         if (candidates.isEmpty()) return;
 
         Set<UUID> bookingIds = candidates.stream()
@@ -53,7 +54,7 @@ public class BookingAutoCompletionJob {
                 .collect(Collectors.groupingBy(PaymentSnapshot::referenceId));
 
         int completed = 0;
-        for (var booking : candidates) {
+        for (Booking booking : candidates) {
             if (booking.getStatus() != BookingStatus.CHECKED_IN
                     || !isFullyPaid(booking, paymentsByBooking.getOrDefault(
                             booking.getBookingId(), Collections.emptyList()))) {

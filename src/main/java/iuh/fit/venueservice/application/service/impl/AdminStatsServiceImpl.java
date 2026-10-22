@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -36,12 +37,12 @@ public class AdminStatsServiceImpl implements AdminStatsService {
         if (ChronoUnit.DAYS.between(fromDate, toDate) > MAX_RANGE_DAYS) {
             throw new ServiceException("Khoảng ngày thống kê tối đa 366 ngày.");
         }
-        var from = fromDate.atStartOfDay();
-        var to = toDate.plusDays(1).atStartOfDay();
+        LocalDateTime from = fromDate.atStartOfDay();
+        LocalDateTime to = toDate.plusDays(1).atStartOfDay();
 
         // ponytail: gom theo ngày trong bộ nhớ trên 3 trường mỗi đơn; đủ cho kỳ tối đa 1 năm ở quy mô hiện tại,
         // chuyển sang GROUP BY theo ngày trong SQL (hoặc bảng tổng hợp theo ngày) nếu số đơn lên hàng triệu.
-        var rows = statsRepository.bookingRows(from, to);
+        List<PlatformStatsRepository.BookingRow> rows = statsRepository.bookingRows(from, to);
         Map<String, Long> byStatus = new LinkedHashMap<>();
         for (BookingStatus status : BookingStatus.values()) byStatus.put(status.name(), 0L);
         Map<LocalDate, Long> dayCounts = new TreeMap<>();
@@ -51,7 +52,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
             dayGmv.put(day, 0D);
         }
         double gmv = 0;
-        for (var row : rows) {
+        for (PlatformStatsRepository.BookingRow row : rows) {
             byStatus.merge(row.status().name(), 1L, Long::sum);
             LocalDate day = row.createdAt().toLocalDate();
             dayCounts.merge(day, 1L, Long::sum);

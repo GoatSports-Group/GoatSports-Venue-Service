@@ -24,6 +24,7 @@ import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import iuh.fit.venueservice.domain.enums.OwnerApplicationDocumentSlot;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.IntStream;
 
 public class OwnerApplicationRegistrationServiceImpl implements OwnerApplicationRegistrationService {
@@ -203,7 +204,7 @@ public class OwnerApplicationRegistrationServiceImpl implements OwnerApplication
         }
     }
 
-    private void ensureOwner(OwnerApplication application, java.util.UUID userId) throws ServiceException {
+    private void ensureOwner(OwnerApplication application, UUID userId) throws ServiceException {
         if (!application.getUserId().equals(userId)) {
             throw new ServiceException("Mã đơn đăng ký đã thuộc về người dùng khác.");
         }

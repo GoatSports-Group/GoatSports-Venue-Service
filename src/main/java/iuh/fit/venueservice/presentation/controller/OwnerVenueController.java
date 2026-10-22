@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.application.util.BaseUtil;
+import iuh.fit.venueservice.domain.entity.CancellationPolicy;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueFacilityLayout;
 import iuh.fit.venueservice.presentation.converter.VenueSearchConverter;
@@ -126,7 +127,7 @@ public class OwnerVenueController {
             @PathVariable UUID venueId,
             @Valid @RequestBody UpdateCancellationPolicyRequest request
     ) throws ServiceException {
-        var policy = venueService.updateCancellationPolicy(new UpdateCancellationPolicyCommand(
+        CancellationPolicy policy = venueService.updateCancellationPolicy(new UpdateCancellationPolicyCommand(
                 venueId,
                 currentUserId(),
                 request.fullRefundHoursBefore(),

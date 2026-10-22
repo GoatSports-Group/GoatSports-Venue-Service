@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.external.adapter;
 
+import iuh.fit.venueservice.application.dto.response.base.BaseResponse;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.infrastructure.external.client.PaymentClient;
@@ -18,7 +19,7 @@ public class PaymentQueryAdapter implements PaymentQueryPort {
 
     @Override
     public List<PaymentSnapshot> findByBookingIds(Set<UUID> bookingIds) {
-        var response = paymentClient.queryByReferences(
+        BaseResponse<List<PaymentSnapshot>> response = paymentClient.queryByReferences(
                 new PaymentReferenceQueryRequest("BOOKING", bookingIds)
         );
         return response == null || response.getData() == null ? List.of() : response.getData();

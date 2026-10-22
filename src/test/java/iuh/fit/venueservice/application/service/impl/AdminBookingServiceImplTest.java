@@ -3,6 +3,7 @@ package iuh.fit.venueservice.application.service.impl;
 import iuh.fit.venueservice.application.dto.request.venue.AdminBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingView;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
@@ -14,7 +15,9 @@ import iuh.fit.venueservice.domain.enums.BookingStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
@@ -25,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,7 +58,7 @@ class AdminBookingServiceImplTest {
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(payment()));
         when(bookingCancellationRepository.findByBookingIds(Set.of(bookingId))).thenReturn(Map.of());
 
-        var page = service.getBookings(filter);
+        PageResult<OwnerBookingView> page = service.getBookings(filter);
 
         assertThat(page.total()).isEqualTo(1);
         assertThat(page.items()).singleElement().satisfies(view -> {
@@ -82,7 +86,7 @@ class AdminBookingServiceImplTest {
 
     @Test
     void exportsEveryMatchingBookingWithPaymentsFetchedInBatchesOf100() throws ServiceException {
-        List<OwnerBookingRecord> records = java.util.stream.IntStream.range(0, 150)
+        List<OwnerBookingRecord> records = IntStream.range(0, 150)
                 .mapToObj(index -> record(UUID.randomUUID())).toList();
         AdminBookingFilter filter = new AdminBookingFilter(null, null, null, BookingStatus.COMPLETED, null, null, null, 0, 1);
         when(bookingRepository.findAllBookings(filter.forExport(10_000)))
@@ -90,12 +94,12 @@ class AdminBookingServiceImplTest {
         when(paymentQueryPort.findByBookingIds(any())).thenReturn(List.of());
         when(bookingCancellationRepository.findByBookingIds(any())).thenReturn(Map.of());
 
-        var views = service.exportBookings(filter, 10_000);
+        List<OwnerBookingView> views = service.exportBookings(filter, 10_000);
 
         assertThat(views).hasSize(150);
         // 150 đơn = 2 lần hỏi payment-service (100 + 50), không bao giờ vượt giới hạn 100 reference ID.
-        org.mockito.ArgumentCaptor<Set<UUID>> batches = org.mockito.ArgumentCaptor.forClass(Set.class);
-        verify(paymentQueryPort, org.mockito.Mockito.times(2)).findByBookingIds(batches.capture());
+        ArgumentCaptor<Set<UUID>> batches = ArgumentCaptor.forClass(Set.class);
+        verify(paymentQueryPort, Mockito.times(2)).findByBookingIds(batches.capture());
         assertThat(batches.getAllValues()).extracting(Set::size).containsExactly(100, 50);
     }
 

@@ -8,20 +8,24 @@ import iuh.fit.venueservice.application.dto.request.venue.OwnerCheckInFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerCheckInHistoryRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCheckInView;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository;
+import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.CheckInRecord;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
@@ -32,9 +36,11 @@ import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -65,10 +71,10 @@ class OwnerCheckInServiceImplTest {
     @Mock private PaymentCollectionPort paymentCollectionPort;
     @Mock private BookingQrPort bookingQrPort;
     @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
-    @Mock private iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    @Mock private MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
     // Goi that isHeld (default method) de test di qua dung phep so khung gio cua CourtHold.covers.
-    @Mock(answer = org.mockito.Answers.CALLS_REAL_METHODS)
-    private iuh.fit.venueservice.application.port.persistence.CourtHoldRepository courtHoldRepository;
+    @Mock(answer = Answers.CALLS_REAL_METHODS)
+    private CourtHoldRepository courtHoldRepository;
 
     private OwnerCheckInServiceImpl service;
     private UUID ownerId;
@@ -102,7 +108,7 @@ class OwnerCheckInServiceImplTest {
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(deposit()));
 
-        var result = service.lookup(new OwnerCheckInLookupCommand(
+        OwnerCheckInView result = service.lookup(new OwnerCheckInLookupCommand(
                 ownerId, null, booking.getQrCode(), null
         ));
 
@@ -128,13 +134,13 @@ class OwnerCheckInServiceImplTest {
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(early)));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
 
-        var earlyResult = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+        OwnerCheckInView earlyResult = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
 
         assertThat(earlyResult.checkInEligible()).isFalse();
         assertThat(earlyResult.checkInMessage()).contains("30 phút");
 
         early.setStatus(BookingStatus.CHECKED_IN);
-        var checkedInResult = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+        OwnerCheckInView checkedInResult = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
 
         assertThat(checkedInResult.checkInEligible()).isFalse();
         assertThat(checkedInResult.checkInMessage()).contains("trước đó");
@@ -146,7 +152,7 @@ class OwnerCheckInServiceImplTest {
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(deposit()));
 
-        var result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+        OwnerCheckInView result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
 
         assertThat(result.bookingRecord().booking().getBookingId()).isEqualTo(bookingId);
     }
@@ -158,7 +164,7 @@ class OwnerCheckInServiceImplTest {
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
 
-        var result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+        OwnerCheckInView result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
 
         assertThat(result.checkInEligible()).isFalse();
         assertThat(result.checkInMessage()).contains("tiền cọc");
@@ -172,7 +178,7 @@ class OwnerCheckInServiceImplTest {
         when(bookingRepository.findOwnedBookingById(bookingId, ownerId)).thenReturn(Optional.of(record(booking)));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
 
-        var result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
+        OwnerCheckInView result = service.lookup(new OwnerCheckInLookupCommand(ownerId, bookingId, null, null));
 
         assertThat(result.checkInEligible()).isFalse();
         assertThat(result.checkInMessage()).contains("Chưa đến");
@@ -191,7 +197,7 @@ class OwnerCheckInServiceImplTest {
         when(checkInRecordRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(bookingRepository.save(booking)).thenReturn(booking);
 
-        var result = service.confirm(new ConfirmOwnerCheckInCommand(
+        OwnerCheckInView result = service.confirm(new ConfirmOwnerCheckInCommand(
                 ownerId, bookingId, CheckInMethod.MANUAL, PaymentCollectionMode.NONE, null, null
         ));
 
@@ -233,7 +239,7 @@ class OwnerCheckInServiceImplTest {
         when(checkInRecordRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(bookingRepository.save(booking)).thenReturn(booking);
 
-        var result = service.confirm(new ConfirmOwnerCheckInCommand(
+        OwnerCheckInView result = service.confirm(new ConfirmOwnerCheckInCommand(
                 ownerId, bookingId, CheckInMethod.BOOKING_CODE, PaymentCollectionMode.CASH,
                 null, "gs123456"
         ));
@@ -303,7 +309,7 @@ class OwnerCheckInServiceImplTest {
         ))).thenReturn("GSQR.v1.walk-in");
         when(timeSlotRepository.save(slot)).thenReturn(slot);
 
-        var result = service.createWalkIn(new CreateWalkInBookingCommand(
+        OwnerCheckInView result = service.createWalkIn(new CreateWalkInBookingCommand(
                 ownerId, courtId, slotId, "Khách tại quầy", "0901 234 567"
         ));
 
@@ -335,8 +341,8 @@ class OwnerCheckInServiceImplTest {
                 Venue.builder().venueId(venueId).ownerId(ownerId).name("Goat Arena").build()
         ));
         when(timeSlotRepository.findByIdForUpdate(slotId)).thenReturn(Optional.of(slot));
-        when(courtHoldRepository.findOverlapping(java.util.List.of(courtId), day, day)).thenReturn(java.util.List.of(
-                iuh.fit.venueservice.domain.entity.CourtHold.builder().venueCourtId(courtId)
+        when(courtHoldRepository.findOverlapping(List.of(courtId), day, day)).thenReturn(List.of(
+                CourtHold.builder().venueCourtId(courtId)
                         .fromDate(day).toDate(day).dailyStart(LocalTime.of(17, 0)).dailyEnd(LocalTime.of(19, 0)).build()
         ));
 
@@ -353,7 +359,7 @@ class OwnerCheckInServiceImplTest {
         Booking booking = booking(BookingStatus.CHECKED_IN, LocalTime.of(8, 0), LocalTime.of(9, 0));
         CheckInRecord checkIn = CheckInRecord.builder()
                 .checkInId(UUID.randomUUID()).bookingId(bookingId).checkedInBy(ownerId)
-                .method(CheckInMethod.QR_CODE).remainingAmountCollected(java.math.BigDecimal.valueOf(140_000))
+                .method(CheckInMethod.QR_CODE).remainingAmountCollected(BigDecimal.valueOf(140_000))
                 .checkedInAt(LocalDateTime.of(2026, 8, 30, 8, 20)).build();
         OwnerCheckInFilter filter = new OwnerCheckInFilter(ownerId, null, null, null, 0, 20);
         when(checkInRecordRepository.findOwnedCheckIns(filter)).thenReturn(new PageResult<>(
@@ -361,7 +367,7 @@ class OwnerCheckInServiceImplTest {
         ));
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(deposit(), remaining()));
 
-        var result = service.history(filter);
+        PageResult<OwnerCheckInView> result = service.history(filter);
 
         assertThat(result.total()).isEqualTo(1);
         assertThat(result.items().getFirst().checkInRecord()).isEqualTo(checkIn);

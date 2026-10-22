@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.external.adapter;
 
+import iuh.fit.venueservice.application.dto.response.address.AddressSuggestionCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -7,6 +8,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -62,14 +64,14 @@ class VietMapAddressSuggestionAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        var suggestions = adapter.search("12 Nguyễn Văn Bảo");
+        List<AddressSuggestionCommand> suggestions = adapter.search("12 Nguyễn Văn Bảo");
         assertThat(suggestions).singleElement().satisfies(suggestion -> {
             assertThat(suggestion.ward()).isEqualTo("Hạnh Thông");
             assertThat(suggestion.district()).isEqualTo("Gò Vấp");
             assertThat(suggestion.city()).isEqualTo("Hồ Chí Minh");
         });
 
-        var resolved = adapter.resolve("geocode:abc").orElseThrow();
+        AddressSuggestionCommand resolved = adapter.resolve("geocode:abc").orElseThrow();
         assertThat(resolved.district()).isEqualTo("Gò Vấp");
         assertThat(resolved.latitude()).isEqualTo(10.8223582);
         assertThat(resolved.longitude()).isEqualTo(106.6875313);
@@ -78,7 +80,7 @@ class VietMapAddressSuggestionAdapterTest {
 
     @Test
     void refusesProviderCallsWhenServerKeyIsMissing() {
-        var adapterWithoutKey = new VietMapAddressSuggestionAdapter(
+        VietMapAddressSuggestionAdapter adapterWithoutKey = new VietMapAddressSuggestionAdapter(
                 RestClient.builder().baseUrl("https://maps.vietmap.vn/api").build(),
                 "", Duration.ofHours(1), 100
         );

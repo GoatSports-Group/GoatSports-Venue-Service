@@ -3,6 +3,7 @@ package iuh.fit.venueservice.presentation.controller.open;
 import iuh.fit.venueservice.application.dto.request.venue.PublicReviewFilter;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.PublicReviewView;
 import iuh.fit.venueservice.application.dto.response.venue.VenueSearchResponseCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.VenueCourtMapper;
@@ -108,7 +109,7 @@ public class PublicVenueController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) throws ServiceException {
-        var result = reviewService.getPublishedReviews(new PublicReviewFilter(venueId, page, size));
+        PageResult<PublicReviewView> result = reviewService.getPublishedReviews(new PublicReviewFilter(venueId, page, size));
         return ResponseEntity.ok(new PageResult<>(
                 result.items().stream().map(venueSearchConverter::toResponse).toList(),
                 result.total(), result.page(), result.pageSize(), result.totalPages()

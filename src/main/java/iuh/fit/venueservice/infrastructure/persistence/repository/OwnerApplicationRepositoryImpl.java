@@ -24,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -94,7 +95,7 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     public PageResult<OwnerApplication> findByUserId(PageFilter filter, UUID userId) {
         int pageNum = Math.max(0, filter.page() - 1);
         int pageSize = filter.size() > 0 ? filter.size() : 10;
-        Pageable pageable = PageRequest.of(pageNum, pageSize, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Specification<OwnerApplicationEntity> spec = (root, query, cb) ->
                 cb.equal(root.get("userId"), userId);
@@ -160,8 +161,8 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
 
     @Override
     public List<String> eraseApplicantData(UUID userId) {
-        List<String> fileKeys = new java.util.ArrayList<>();
-        for (var application : jpaRepository.findAllByUserId(userId)) {
+        List<String> fileKeys = new ArrayList<>();
+        for (OwnerApplicationEntity application : jpaRepository.findAllByUserId(userId)) {
             application.getOwnerApplicationDocuments().forEach(document -> fileKeys.add(document.getFileUrl()));
             application.getOwnerApplicationDocuments().clear();
             application.setFullName(null);

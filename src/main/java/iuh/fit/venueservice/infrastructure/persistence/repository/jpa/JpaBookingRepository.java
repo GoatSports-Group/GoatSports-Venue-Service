@@ -1,6 +1,8 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository.jpa;
 
 import java.util.Collection;
+import iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
@@ -34,7 +36,7 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             "cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findAll(Specification<BookingEntity> spec, Pageable pageable);
 
-    Page<BookingEntity> findByStatusIn(java.util.Collection<BookingStatus> statuses, Pageable pageable);
+    Page<BookingEntity> findByStatusIn(Collection<BookingStatus> statuses, Pageable pageable);
 
     @EntityGraph(attributePaths = {"cancellation", "checkInRecord", "review"})
     Page<BookingEntity> findByPlayerIdOrderByCreatedAtDesc(UUID playerId, Pageable pageable);
@@ -133,9 +135,9 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
               and booking.playDate between :fromDate and :toDate
               and booking.status in :statuses
             """)
-    List<iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord> findVenueDemand(
+    List<DemandBookingRecord> findVenueDemand(
             UUID venueId, LocalDate fromDate, LocalDate toDate,
-            java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses);
+            Collection<BookingStatus> statuses);
 
     @Query("""
             select new iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord(
@@ -148,7 +150,7 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
               and booking.playDate between :fromDate and :toDate
             order by booking.playDate, booking.startTime, booking.bookingId
             """)
-    List<iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord> findOwnedForRevenue(
+    List<RevenueBookingRecord> findOwnedForRevenue(
             @Param("ownerId") UUID ownerId,
             @Param("venueId") UUID venueId,
             @Param("fromDate") LocalDate fromDate,
@@ -227,5 +229,5 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
                                  @Param("noShow") BookingStatus noShow,
                                  Pageable pageable);
 
-    boolean existsByPlayerIdAndStatusIn(UUID playerId, java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses);
+    boolean existsByPlayerIdAndStatusIn(UUID playerId, Collection<BookingStatus> statuses);
 }

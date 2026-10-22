@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.port.PaymentQueryPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -47,7 +48,7 @@ class BookingAutoCompletionJobTest {
                 .completeEligibleBookings();
 
         verify(bookingRepository).save(booking);
-        org.assertj.core.api.Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.COMPLETED);
+        Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.COMPLETED);
     }
 
     @Test
@@ -64,7 +65,7 @@ class BookingAutoCompletionJobTest {
                 .completeEligibleBookings();
 
         verify(bookingRepository, never()).save(booking);
-        org.assertj.core.api.Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
+        Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
     }
 
     private Booking checkedInBooking() {

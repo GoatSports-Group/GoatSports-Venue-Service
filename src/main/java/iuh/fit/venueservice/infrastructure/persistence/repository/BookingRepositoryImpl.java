@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 import iuh.fit.venueservice.application.dto.request.venue.AdminBookingFilter;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
@@ -12,16 +13,21 @@ import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.infrastructure.activity.BookingActivityRecorder;
 import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
+import iuh.fit.venueservice.infrastructure.persistence.entity.VenueCourtEntity;
+import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.BookingEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueCourtRepository;
+import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.OwnerCustomerMetricsProjection;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,14 +45,14 @@ public class BookingRepositoryImpl implements BookingRepository {
 
     @Override
     public Booking save(Booking booking) {
-        var entity = booking.getBookingId() == null
+        BookingEntity entity = booking.getBookingId() == null
                 ? mapper.toEntity(booking)
                 : jpaRepository.findById(booking.getBookingId()).map(existing -> {
                     mapper.updateEntity(booking, existing);
                     return existing;
                 }).orElseGet(() -> mapper.toEntity(booking));
         entity.setVenueCourt(jpaVenueCourtRepository.getReferenceById(booking.getVenueCourtId()));
-        var saved = mapper.toDomain(jpaRepository.save(entity));
+        Booking saved = mapper.toDomain(jpaRepository.save(entity));
         activityRecorder.bookingSaved(saved);
         return saved;
     }
@@ -94,8 +100,8 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     @Transactional(readOnly = true)
     public PageResult<Booking> findPlayerPage(UUID playerId, BookingStatus status, int page, int size) {
-        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        var result = status == null
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<BookingEntity> result = status == null
                 ? jpaRepository.findByPlayerId(playerId, pageable)
                 : jpaRepository.findByPlayerIdAndStatus(playerId, status, pageable);
         return new PageResult<>(
@@ -148,7 +154,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     @Transactional(readOnly = true)
     public PageResult<Booking> findPlayerUpcomingPage(UUID playerId, LocalDateTime now, int page, int size) {
-        var result = jpaRepository.findPlayerUpcoming(
+        Page<BookingEntity> result = jpaRepository.findPlayerUpcoming(
                 playerId,
                 List.of(BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN),
                 now.toLocalDate(), now.toLocalTime(), PageRequest.of(page, size));
@@ -210,7 +216,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                     cb.like(cb.lower(root.get("venueCourt").get("venue").get("name")), term)
             ));
         }
-        var result = jpaRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<BookingEntity> result = jpaRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         List<OwnerBookingRecord> records = result.getContent().stream().map(this::toOwnerRecord).toList();
         return new PageResult<>(records, result.getTotalElements(), page, size, result.getTotalPages());
     }
@@ -231,9 +237,9 @@ public class BookingRepositoryImpl implements BookingRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public List<iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord> findVenueDemandBookings(
+    public List<DemandBookingRecord> findVenueDemandBookings(
             UUID venueId, LocalDate fromDate, LocalDate toDate,
-            java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses
+            Collection<BookingStatus> statuses
     ) {
         return jpaRepository.findVenueDemand(venueId, fromDate, toDate, statuses);
     }
@@ -255,7 +261,7 @@ public class BookingRepositoryImpl implements BookingRepository {
             LocalDate currentFrom,
             LocalDate currentToExclusive
     ) {
-        var row = jpaRepository.findOwnedCustomerMetrics(
+        OwnerCustomerMetricsProjection row = jpaRepository.findOwnedCustomerMetrics(
                 ownerId, venueId, previousFrom, currentFrom, currentToExclusive
         );
 
@@ -276,15 +282,15 @@ public class BookingRepositoryImpl implements BookingRepository {
     private OwnerBookingRecord toOwnerRecord(
             BookingEntity entity
     ) {
-        var court = entity.getVenueCourt();
-        var venue = court.getVenue();
+        VenueCourtEntity court = entity.getVenueCourt();
+        VenueEntity venue = court.getVenue();
         return new OwnerBookingRecord(
                 mapper.toDomain(entity), venue.getVenueId(), venue.getName(), court.getName()
         );
     }
 
     @Override
-    public boolean existsByPlayerIdAndStatusIn(UUID playerId, java.util.Collection<BookingStatus> statuses) {
+    public boolean existsByPlayerIdAndStatusIn(UUID playerId, Collection<BookingStatus> statuses) {
         return jpaRepository.existsByPlayerIdAndStatusIn(playerId, statuses);
     }
 }

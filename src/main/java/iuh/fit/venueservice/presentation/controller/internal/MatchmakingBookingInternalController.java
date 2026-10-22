@@ -2,6 +2,7 @@ package iuh.fit.venueservice.presentation.controller.internal;
 
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.BookingService;
+import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.presentation.response.internal.MatchmakingBookingResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,7 @@ public class MatchmakingBookingInternalController {
     public ResponseEntity<MatchmakingBookingResponse> getBySessionId(
             @PathVariable UUID sessionId
     ) throws ServiceException {
-        var booking = bookingService.getMatchmakingBooking(sessionId);
+        Booking booking = bookingService.getMatchmakingBooking(sessionId);
         return ResponseEntity.ok(new MatchmakingBookingResponse(
                 booking.getBookingId(),
                 booking.getMatchmakingSessionId(),

@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -28,7 +29,7 @@ class PaymentEventConsumerTest {
         UUID paymentId = UUID.randomUUID();
         UUID payerId = UUID.randomUUID();
         UUID bookingId = UUID.randomUUID();
-        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+        PaymentEventConsumer consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 
         consumer.consume("""
                 {
@@ -57,15 +58,15 @@ class PaymentEventConsumerTest {
 
     @Test
     void ignoresOtherEventTypes() throws Exception {
-        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+        PaymentEventConsumer consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 
         consumer.consume("{\"eventType\":\"payment.processing.v1\",\"payload\":{}}");
 
         verify(bookingPaymentEventService, never()).applySucceededPayment(
-                org.mockito.ArgumentMatchers.any()
+                ArgumentMatchers.any()
         );
         verify(bookingPaymentEventService, never()).applyTerminalPayment(
-                org.mockito.ArgumentMatchers.any()
+                ArgumentMatchers.any()
         );
     }
 
@@ -74,7 +75,7 @@ class PaymentEventConsumerTest {
         UUID paymentId = UUID.randomUUID();
         UUID payerId = UUID.randomUUID();
         UUID bookingId = UUID.randomUUID();
-        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+        PaymentEventConsumer consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 
         consumer.consume("""
                 {
@@ -103,7 +104,7 @@ class PaymentEventConsumerTest {
 
     @Test
     void leavesRefundEventsToTheCancellationWorkflow() throws Exception {
-        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+        PaymentEventConsumer consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 
         consumer.consume("""
                 {
@@ -124,7 +125,7 @@ class PaymentEventConsumerTest {
     void refundReminderIsNotMistakenForARefundResultAndOnlyCashRefundsRemindTheOwner() throws Exception {
         UUID eventId = UUID.randomUUID();
         UUID refundId = UUID.randomUUID();
-        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+        PaymentEventConsumer consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
         String reminder = """
                 {
                   "eventId": "%s",
@@ -142,7 +143,7 @@ class PaymentEventConsumerTest {
 
     @Test
     void rejectsMalformedSucceededEventsSoKafkaCanRetryThem() {
-        var consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
+        PaymentEventConsumer consumer = new PaymentEventConsumer(new ObjectMapper(), bookingPaymentEventService);
 
         assertThatThrownBy(() -> consumer.consume("""
                 {"eventType":"payment.succeeded.v1","payload":{"paymentId":"bad-uuid"}}

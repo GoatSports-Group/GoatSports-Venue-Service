@@ -2,13 +2,18 @@ package iuh.fit.venueservice.application.service.impl;
 
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
+import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
 import iuh.fit.venueservice.application.port.persistence.ReviewRepository;
 import iuh.fit.venueservice.application.port.persistence.TimeSlotRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
@@ -17,6 +22,7 @@ import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.CancellationPolicy;
+import iuh.fit.venueservice.domain.entity.CourtHold;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
@@ -27,7 +33,10 @@ import iuh.fit.venueservice.domain.enums.CancellationReviewMode;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
@@ -58,9 +67,9 @@ class BookingServiceImplTest {
     @Mock VenueRepository venueRepository;
     @Mock BookingQrPort bookingQrPort;
     @Mock PaymentRefundPort paymentRefundPort;
-    @Mock iuh.fit.venueservice.application.port.BookingNotificationPort bookingNotificationPort;
-    @Mock iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
-    @Mock(answer = org.mockito.Answers.CALLS_REAL_METHODS) iuh.fit.venueservice.application.port.persistence.CourtHoldRepository courtHoldRepository;
+    @Mock BookingNotificationPort bookingNotificationPort;
+    @Mock MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    @Mock(answer = Answers.CALLS_REAL_METHODS) CourtHoldRepository courtHoldRepository;
 
     @Test
     void createBookingStaysPendingPaymentWithoutFakeProviderSuccess() throws Exception {
@@ -229,7 +238,7 @@ class BookingServiceImplTest {
         when(timeSlotRepository.findByCourtAndTimeForUpdate(courtId, playDate, LocalTime.of(18, 0), LocalTime.of(19, 0)))
                 .thenReturn(Optional.of(slot));
         when(courtHoldRepository.findOverlapping(any(), any(), any())).thenReturn(List.of(
-                iuh.fit.venueservice.domain.entity.CourtHold.builder().tournamentId(UUID.randomUUID())
+                CourtHold.builder().tournamentId(UUID.randomUUID())
                         .venueCourtId(courtId).fromDate(playDate.minusDays(1)).toDate(playDate.plusDays(1))
                         .dailyStart(LocalTime.of(17, 0)).dailyEnd(LocalTime.of(22, 0)).build()));
 
@@ -256,11 +265,11 @@ class BookingServiceImplTest {
                         .startTime(LocalTime.of(18, 0)).endTime(LocalTime.of(19, 0))
                         .pricePerHour(100_000.0).status(TimeSlotStatus.AVAILABLE).build()));
         when(courtHoldRepository.findOverlapping(any(), any(), any())).thenReturn(List.of(
-                iuh.fit.venueservice.domain.entity.CourtHold.builder().tournamentId(UUID.randomUUID())
+                CourtHold.builder().tournamentId(UUID.randomUUID())
                         .venueCourtId(courtId).fromDate(playDate).toDate(playDate)
                         .dailyStart(LocalTime.of(17, 0)).dailyEnd(LocalTime.of(22, 0)).build()));
 
-        var slots = serviceAt(Instant.parse("2026-09-01T01:00:00Z")).getAvailableSlots(courtId, playDate);
+        List<TimeSlotResponseCommand> slots = serviceAt(Instant.parse("2026-09-01T01:00:00Z")).getAvailableSlots(courtId, playDate);
 
         assertThat(slots.get(0).status()).isEqualTo("AVAILABLE");
         assertThat(slots.get(1).status()).isEqualTo("TOURNAMENT");
@@ -268,7 +277,7 @@ class BookingServiceImplTest {
 
     /** Cơ sở của sân con đang mở (test không quan tâm tới cơ sở). */
     private void openVenue() {
-        org.mockito.Mockito.lenient().when(venueRepository.findById(any()))
+        Mockito.lenient().when(venueRepository.findById(any()))
                 .thenReturn(Optional.of(Venue.builder().active(true).build()));
     }
 
@@ -279,7 +288,7 @@ class BookingServiceImplTest {
         when(venueCourtRepository.findById(courtId)).thenReturn(Optional.of(
                 VenueCourt.builder().venueCourtId(courtId).venueId(venueId).active(true).build()));
         when(venueRepository.findById(venueId)).thenReturn(Optional.of(
-                Venue.builder().venueId(venueId).active(false).suspendedAt(java.time.LocalDateTime.now()).build()));
+                Venue.builder().venueId(venueId).active(false).suspendedAt(LocalDateTime.now()).build()));
 
         assertThatThrownBy(() -> serviceAt(Instant.parse("2026-09-01T01:00:00Z")).createBooking(new CreateBookingCommand(
                 UUID.randomUUID(), courtId, LocalDate.of(2026, 9, 3), LocalTime.of(18, 0), LocalTime.of(19, 0),
@@ -293,12 +302,12 @@ class BookingServiceImplTest {
     void upcomingHistoryFiltersByPlayTimeNotOnlyByStatus() throws Exception {
         UUID playerId = UUID.randomUUID();
         Instant now = Instant.parse("2026-10-06T05:00:00Z");
-        when(bookingRepository.findPlayerUpcomingPage(playerId, java.time.LocalDateTime.of(2026, 10, 6, 12, 0), 0, 12))
-                .thenReturn(new iuh.fit.venueservice.application.dto.response.base.PageResult<>(List.of(), 0, 0, 12, 0));
+        when(bookingRepository.findPlayerUpcomingPage(playerId, LocalDateTime.of(2026, 10, 6, 12, 0), 0, 12))
+                .thenReturn(new PageResult<>(List.of(), 0, 0, 12, 0));
 
         serviceAt(now).getPlayerBookingHistory(playerId, "UPCOMING", 0, 12);
 
-        org.mockito.Mockito.verify(bookingRepository).findPlayerUpcomingPage(playerId, java.time.LocalDateTime.of(2026, 10, 6, 12, 0), 0, 12);
-        org.mockito.Mockito.verify(bookingRepository, org.mockito.Mockito.never()).findPlayerPage(any(), any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        verify(bookingRepository).findPlayerUpcomingPage(playerId, LocalDateTime.of(2026, 10, 6, 12, 0), 0, 12);
+        verify(bookingRepository, never()).findPlayerPage(any(), any(), ArgumentMatchers.anyInt(), ArgumentMatchers.anyInt());
     }
 }

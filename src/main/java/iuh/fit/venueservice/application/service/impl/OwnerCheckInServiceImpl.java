@@ -7,6 +7,7 @@ import iuh.fit.venueservice.application.dto.request.venue.PaymentCollectionMode;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerCheckInFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCheckInHistoryRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerCheckInView;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
@@ -40,6 +41,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Map;
@@ -212,14 +214,14 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     public PageResult<OwnerCheckInView> history(OwnerCheckInFilter filter) throws ServiceException {
         filter.validate();
         ensureHistoryScope(filter);
-        var page = checkInRecordRepository.findOwnedCheckIns(filter);
+        PageResult<OwnerCheckInHistoryRecord> page = checkInRecordRepository.findOwnedCheckIns(filter);
         Set<UUID> bookingIds = page.items().stream()
                 .map(item -> item.bookingRecord().booking().getBookingId()).collect(Collectors.toSet());
         Map<UUID, List<PaymentSnapshot>> payments = bookingIds.isEmpty()
                 ? Collections.emptyMap()
                 : paymentQueryPort.findByBookingIds(bookingIds).stream()
                 .collect(Collectors.groupingBy(PaymentSnapshot::referenceId));
-        var items = page.items().stream().map(item -> view(
+        List<OwnerCheckInView> items = page.items().stream().map(item -> view(
                 item.bookingRecord(),
                 payments.getOrDefault(item.bookingRecord().booking().getBookingId(), List.of()),
                 item.checkInRecord()
@@ -318,7 +320,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
 
     private OwnerBookingRecord getOwnedBooking(UUID bookingId, UUID ownerId, boolean forUpdate)
             throws ServiceException {
-        var owned = forUpdate
+        Optional<OwnerBookingRecord> owned = forUpdate
                 ? bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId)
                 : bookingRepository.findOwnedBookingById(bookingId, ownerId);
         return owned.orElseThrow(() -> bookingRepository.findById(bookingId).isPresent()

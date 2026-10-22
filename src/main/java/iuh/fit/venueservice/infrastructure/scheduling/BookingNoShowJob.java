@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.scheduling;
 
 import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class BookingNoShowJob {
     public void markNoShows() {
         LocalDateTime now = LocalDateTime.now(clock);
         int marked = 0;
-        for (var booking : bookingRepository.findNoShowCandidatesForUpdate(now, batchSize)) {
+        for (Booking booking : bookingRepository.findNoShowCandidatesForUpdate(now, batchSize)) {
             if (booking.getStatus() != BookingStatus.CONFIRMED
                     || LocalDateTime.of(booking.getPlayDate(), booking.getEndTime()).isAfter(now)) {
                 continue;

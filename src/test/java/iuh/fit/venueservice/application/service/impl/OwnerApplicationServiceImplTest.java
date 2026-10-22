@@ -70,7 +70,7 @@ class OwnerApplicationServiceImplTest {
                 ))
                 .build();
 
-        when(ownerApplicationRepository.findByIdForUpdate(applicationId)).thenReturn(java.util.Optional.of(application));
+        when(ownerApplicationRepository.findByIdForUpdate(applicationId)).thenReturn(Optional.of(application));
         when(venueRepository.save(any(Venue.class))).thenAnswer(invocation -> {
             Venue venue = invocation.getArgument(0);
             venue.setVenueId(venueId);

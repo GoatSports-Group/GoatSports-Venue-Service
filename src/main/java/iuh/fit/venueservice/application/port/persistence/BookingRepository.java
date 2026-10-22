@@ -3,6 +3,7 @@ package iuh.fit.venueservice.application.port.persistence;
 import iuh.fit.venueservice.application.dto.request.venue.AdminBookingFilter;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
@@ -11,6 +12,7 @@ import iuh.fit.venueservice.domain.enums.BookingStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -58,9 +60,9 @@ public interface BookingRepository {
     Optional<OwnerBookingRecord> findOwnedBookingByIdForUpdate(UUID bookingId, UUID ownerId);
 
     /** Khung giờ các lượt của một cơ sở trong khoảng ngày, theo trạng thái (dữ liệu dự báo nhu cầu). */
-    List<iuh.fit.venueservice.application.dto.response.venue.DemandBookingRecord> findVenueDemandBookings(
-            UUID venueId, java.time.LocalDate fromDate, java.time.LocalDate toDate,
-            java.util.Collection<iuh.fit.venueservice.domain.enums.BookingStatus> statuses);
+    List<DemandBookingRecord> findVenueDemandBookings(
+            UUID venueId, LocalDate fromDate, LocalDate toDate,
+            Collection<BookingStatus> statuses);
 
     List<RevenueBookingRecord> findOwnedRevenueBookings(
             UUID ownerId, UUID venueId, LocalDate fromDate, LocalDate toDate
@@ -74,5 +76,5 @@ public interface BookingRepository {
             LocalDate currentToExclusive
     );
 
-    boolean existsByPlayerIdAndStatusIn(UUID playerId, java.util.Collection<BookingStatus> statuses);
+    boolean existsByPlayerIdAndStatusIn(UUID playerId, Collection<BookingStatus> statuses);
 }

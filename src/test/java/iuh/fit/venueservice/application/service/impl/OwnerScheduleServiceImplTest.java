@@ -18,6 +18,7 @@ import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -43,7 +44,7 @@ class OwnerScheduleServiceImplTest {
     @Mock private TimeSlotRepository timeSlotRepository;
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
-    @Mock(answer = org.mockito.Answers.CALLS_REAL_METHODS) private CourtHoldRepository courtHoldRepository;
+    @Mock(answer = Answers.CALLS_REAL_METHODS) private CourtHoldRepository courtHoldRepository;
 
     private OwnerScheduleServiceImpl service;
     private UUID ownerId;

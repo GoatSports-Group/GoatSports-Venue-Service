@@ -42,7 +42,7 @@ public class AdminBookingServiceImpl implements AdminBookingService {
         Map<UUID, List<PaymentSnapshot>> payments = bookingIds.isEmpty() ? Collections.emptyMap()
                 : paymentQueryPort.findByBookingIds(bookingIds).stream()
                 .collect(Collectors.groupingBy(PaymentSnapshot::referenceId));
-        var cancellations = bookingCancellationRepository.findByBookingIds(bookingIds);
+        Map<UUID, BookingCancellation> cancellations = bookingCancellationRepository.findByBookingIds(bookingIds);
         List<OwnerBookingView> items = page.items().stream()
                 .map(item -> view(item, cancellations.get(item.booking().getBookingId()),
                         payments.getOrDefault(item.booking().getBookingId(), List.of())))

@@ -3,6 +3,8 @@ package iuh.fit.venueservice.application.service.impl;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerCustomerMetricsQuery;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerRevenueQuery;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsRecord;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerCustomerMetricsView;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerRevenueView;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.dto.response.venue.RevenueBookingRecord;
 import iuh.fit.venueservice.application.exception.OwnershipException;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -83,7 +86,7 @@ class OwnerRevenueServiceImplTest {
         when(paymentQueryPort.findByBookingIds(Set.of(previousBooking)))
                 .thenReturn(List.of(payment(previousBooking, "SUCCEEDED", 100_000)));
 
-        var result = service.getRevenue(new OwnerRevenueQuery(ownerId, venueId, from, to));
+        OwnerRevenueView result = service.getRevenue(new OwnerRevenueQuery(ownerId, venueId, from, to));
 
         assertThat(result.periodBasis()).isEqualTo("BOOKING_PLAY_DATE");
         assertThat(result.currentPeriod().bookingCount()).isEqualTo(3);
@@ -123,7 +126,7 @@ class OwnerRevenueServiceImplTest {
         when(bookingRepository.findOwnedRevenueBookings(any(), any(), any(), any()))
                 .thenReturn(List.of());
 
-        var result = service.getRevenue(query(null));
+        OwnerRevenueView result = service.getRevenue(query(null));
 
         assertThat(result.currentPeriod().bookingCount()).isZero();
         assertThat(result.currentPeriod().totalRevenue()).isEqualByComparingTo("0.00");
@@ -153,7 +156,7 @@ class OwnerRevenueServiceImplTest {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Set<UUID>> captor = ArgumentCaptor.forClass(Set.class);
-        verify(paymentQueryPort, org.mockito.Mockito.times(2)).findByBookingIds(captor.capture());
+        verify(paymentQueryPort, Mockito.times(2)).findByBookingIds(captor.capture());
         assertThat(captor.getAllValues()).extracting(Set::size).containsExactly(100, 1);
     }
 
@@ -186,7 +189,7 @@ class OwnerRevenueServiceImplTest {
                 LocalDate.of(2026, 10, 1)
         )).thenReturn(new OwnerCustomerMetricsRecord(20, 13, 7, 10, 4, 6));
 
-        var result = service.getCustomerMetrics(new OwnerCustomerMetricsQuery(
+        OwnerCustomerMetricsView result = service.getCustomerMetrics(new OwnerCustomerMetricsQuery(
                 ownerId, venueId, YearMonth.of(2026, 9)
         ));
 

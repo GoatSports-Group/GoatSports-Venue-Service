@@ -4,6 +4,7 @@ import iuh.fit.venueservice.domain.entity.TimeSlot;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.Set;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,7 @@ public interface TimeSlotRepository {
     );
 
     List<TimeSlot> findByCourtsAndDateRangeForUpdate(
-            java.util.Collection<UUID> venueCourtIds, LocalDate fromDate, LocalDate toDate
+            Collection<UUID> venueCourtIds, LocalDate fromDate, LocalDate toDate
     );
 
     List<TimeSlot> saveAll(List<TimeSlot> timeSlots);

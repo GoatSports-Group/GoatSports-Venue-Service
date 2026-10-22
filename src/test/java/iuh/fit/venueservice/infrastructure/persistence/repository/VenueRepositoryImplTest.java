@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.infrastructure.persistence.entity.AddressEntity;
@@ -19,6 +20,8 @@ import jakarta.persistence.criteria.Root;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -58,7 +61,7 @@ class VenueRepositoryImplTest {
         VenueEntity far = venue(UUID.randomUUID(), 11.0, 106.0);
         VenueEntity withoutCoordinates = venue(UUID.randomUUID(), null, null);
         Venue nearDomain = Venue.builder().venueId(nearId).build();
-        when(jpaRepository.findAll(org.mockito.ArgumentMatchers.<Specification<VenueEntity>>any()))
+        when(jpaRepository.findAll(ArgumentMatchers.<Specification<VenueEntity>>any()))
                 .thenReturn(List.of(far, withoutCoordinates, near));
         when(venueEntityMapper.toDomain(near)).thenReturn(nearDomain);
         SearchVenueCommand command = new SearchVenueCommand(
@@ -69,7 +72,7 @@ class VenueRepositoryImplTest {
                 0, 10
         );
 
-        var result = repository.search(command);
+        PageResult<Venue> result = repository.search(command);
 
         assertThat(result.items()).containsExactly(nearDomain);
         assertThat(result.total()).isEqualTo(1);
@@ -91,7 +94,7 @@ class VenueRepositoryImplTest {
 
         repository.search(command);
 
-        var specificationCaptor = org.mockito.ArgumentCaptor.forClass(Specification.class);
+        ArgumentCaptor<Specification> specificationCaptor = ArgumentCaptor.forClass(Specification.class);
         verify(jpaRepository).findAll(specificationCaptor.capture(), any(Pageable.class));
 
         Root<VenueEntity> root = mock(Root.class);
@@ -135,7 +138,7 @@ class VenueRepositoryImplTest {
 
         repository.search(command);
 
-        var specificationCaptor = org.mockito.ArgumentCaptor.forClass(Specification.class);
+        ArgumentCaptor<Specification> specificationCaptor = ArgumentCaptor.forClass(Specification.class);
         verify(jpaRepository).findAll(specificationCaptor.capture(), any(Pageable.class));
 
         Root<VenueEntity> root = mock(Root.class);

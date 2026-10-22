@@ -8,11 +8,15 @@ import iuh.fit.venueservice.application.port.persistence.ReviewRepository;
 import iuh.fit.venueservice.domain.entity.AiVerdict;
 import iuh.fit.venueservice.domain.entity.Review;
 import iuh.fit.venueservice.domain.enums.ReviewStatus;
+import iuh.fit.venueservice.infrastructure.persistence.entity.BookingEntity;
 import iuh.fit.venueservice.infrastructure.persistence.entity.ReviewEntity;
+import iuh.fit.venueservice.infrastructure.persistence.entity.VenueCourtEntity;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaReviewRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaVenueRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -80,7 +84,7 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     }
 
     private PageResult<OwnerReviewRecord> findRecords(Specification<ReviewEntity> specification, int page, int size) {
-        var result = jpaRepository.findAll(
+        Page<ReviewEntity> result = jpaRepository.findAll(
                 specification,
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("reviewId")))
         );
@@ -93,7 +97,7 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Override
     @Transactional(readOnly = true)
     public PageResult<Review> findPublishedByVenueId(UUID venueId, int page, int size) {
-        var result = jpaRepository.findByVenue_VenueIdAndStatus(
+        Page<ReviewEntity> result = jpaRepository.findByVenue_VenueIdAndStatus(
                 venueId,
                 ReviewStatus.PUBLISHED,
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")))
@@ -110,7 +114,7 @@ public class ReviewRepositoryImpl implements ReviewRepository {
             LocalDateTime fromTime, LocalDateTime toTime, boolean aiFlagged
     ) {
         return (root, query, criteriaBuilder) -> {
-            var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+            ArrayList<Predicate> predicates = new ArrayList<Predicate>();
             if (ownerId != null) {
                 predicates.add(criteriaBuilder.equal(root.get("venue").get("ownerId"), ownerId));
             }
@@ -140,7 +144,7 @@ public class ReviewRepositoryImpl implements ReviewRepository {
                         root.get("aiSeverity"), AiVerdict.FLAG_SEVERITY));
             }
 
-            return criteriaBuilder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
         };
     }
 
@@ -173,8 +177,8 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     }
 
     private OwnerReviewRecord toOwnerRecord(ReviewEntity entity) {
-        var booking = entity.getBooking();
-        var court = booking.getVenueCourt();
+        BookingEntity booking = entity.getBooking();
+        VenueCourtEntity court = booking.getVenueCourt();
         return new OwnerReviewRecord(
                 toDomain(entity), entity.getVenue().getName(), court.getVenueCourtId(),
                 court.getName(), booking.getBookingCode(), booking.getPlayDate(),

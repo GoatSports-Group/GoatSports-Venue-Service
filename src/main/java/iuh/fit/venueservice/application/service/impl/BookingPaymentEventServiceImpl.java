@@ -14,12 +14,16 @@ import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
+import iuh.fit.venueservice.domain.entity.BookingCancellation;
+import iuh.fit.venueservice.domain.entity.Venue;
+import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
 
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -87,7 +91,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
 
     @Override
     public boolean remindOwnerOfManualRefund(UUID refundId, UUID reminderId, double amount) throws ServiceException {
-        var cancellation = bookingCancellationRepository.findByRefundIdForUpdate(refundId).orElse(null);
+        BookingCancellation cancellation = bookingCancellationRepository.findByRefundIdForUpdate(refundId).orElse(null);
         if (cancellation == null || cancellation.getStatus() != CancellationStatus.REFUND_MANUAL_REVIEW) return false;
         Booking booking = bookingRepository.findById(cancellation.getBookingId()).orElse(null);
         if (booking == null) return false;
@@ -236,13 +240,13 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     /** "lúc 19:00 ngày 11/10/2026" cho nội dung thông báo. */
     static String slotLabel(Booking booking) {
         return "lúc " + booking.getStartTime().toString().substring(0, 5) + " ngày "
-                + booking.getPlayDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                + booking.getPlayDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     private UUID venueOwnerId(Booking booking) throws ServiceException {
-        var court = venueCourtRepository.findById(booking.getVenueCourtId())
+        VenueCourt court = venueCourtRepository.findById(booking.getVenueCourtId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân của booking."));
-        var venue = venueRepository.findById(court.getVenueId())
+        Venue venue = venueRepository.findById(court.getVenueId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của booking."));
         return venue.getOwnerId();
     }

@@ -10,6 +10,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.time.LocalTime;
@@ -69,7 +70,7 @@ public interface JpaTimeSlotRepository extends JpaRepository<TimeSlotEntity, UUI
             order by slot.date asc, slot.startTime asc
             """)
     List<TimeSlotEntity> findByCourtsAndDateRangeForUpdate(
-            @Param("courtIds") java.util.Collection<UUID> courtIds,
+            @Param("courtIds") Collection<UUID> courtIds,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate
     );

@@ -3,7 +3,11 @@ package iuh.fit.venueservice.application.service.impl;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
+import iuh.fit.venueservice.application.port.PaymentRefundPort;
+import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
@@ -17,7 +21,9 @@ import iuh.fit.venueservice.domain.enums.BookingStatus;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
@@ -39,10 +45,10 @@ class BookingPaymentEventServiceImplTest {
     @Mock private VenueCourtRepository venueCourtRepository;
     @Mock private VenueRepository venueRepository;
     @Mock private TimeSlotLifecycleService timeSlotLifecycleService;
-    @Mock private iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository bookingCancellationRepository;
-    @Mock private iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
-    @Mock private iuh.fit.venueservice.application.port.PaymentRefundPort paymentRefundPort;
-    @Mock private iuh.fit.venueservice.application.port.BookingNotificationPort bookingNotificationPort;
+    @Mock private BookingCancellationRepository bookingCancellationRepository;
+    @Mock private MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
+    @Mock private PaymentRefundPort paymentRefundPort;
+    @Mock private BookingNotificationPort bookingNotificationPort;
 
     @Test
     void confirmsBookingAndIssuesSignedQrExactlyOnceForValidDeposit() throws Exception {
@@ -63,12 +69,12 @@ class BookingPaymentEventServiceImplTest {
                 LocalDate.of(2026, 9, 1), LocalTime.of(9, 0)
         ))).thenReturn("GSQR.v1.signed");
         when(bookingRepository.save(booking)).thenReturn(booking);
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
         );
-        var event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
+        PaymentSucceededCommand event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
 
         assertThat(service.applySucceededPayment(event)).isTrue();
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
@@ -77,15 +83,15 @@ class BookingPaymentEventServiceImplTest {
 
         assertThat(service.applySucceededPayment(event)).isFalse();
         verify(bookingRepository).save(booking);
-        verify(timeSlotLifecycleService, org.mockito.Mockito.times(2)).confirmBookingSlot(booking);
+        verify(timeSlotLifecycleService, Mockito.times(2)).confirmBookingSlot(booking);
         // Tiền cọc tính vào doanh thu chủ sân (gọi lặp ở sự kiện trùng là vô hại: payment-service bỏ qua).
-        verify(paymentRefundPort, org.mockito.Mockito.times(2)).assignPayee(paymentId, ownerId);
+        verify(paymentRefundPort, Mockito.times(2)).assignPayee(paymentId, ownerId);
         // Chủ sân nhận đúng một thông báo "đơn mới" (sự kiện trùng không báo lại).
-        verify(bookingNotificationPort, org.mockito.Mockito.times(1)).notifyOwner(
-                org.mockito.ArgumentMatchers.eq(ownerId), org.mockito.ArgumentMatchers.eq(bookingId),
-                org.mockito.ArgumentMatchers.eq("booking-confirmed-owner:" + bookingId),
-                org.mockito.ArgumentMatchers.eq("Đơn đặt sân mới"),
-                org.mockito.ArgumentMatchers.contains("lúc 08:00 ngày 01/09/2026 đã đóng cọc"));
+        verify(bookingNotificationPort, Mockito.times(1)).notifyOwner(
+                ArgumentMatchers.eq(ownerId), ArgumentMatchers.eq(bookingId),
+                ArgumentMatchers.eq("booking-confirmed-owner:" + bookingId),
+                ArgumentMatchers.eq("Đơn đặt sân mới"),
+                ArgumentMatchers.contains("lúc 08:00 ngày 01/09/2026 đã đóng cọc"));
     }
 
     @Test
@@ -94,7 +100,7 @@ class BookingPaymentEventServiceImplTest {
         UUID payerId = UUID.randomUUID();
         Booking booking = booking(bookingId, payerId);
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
@@ -130,7 +136,7 @@ class BookingPaymentEventServiceImplTest {
                 Venue.builder().venueId(venueId).ownerId(ownerId).build()
         ));
         when(bookingRepository.save(booking)).thenReturn(booking);
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
@@ -161,25 +167,25 @@ class BookingPaymentEventServiceImplTest {
                 VenueCourt.builder().venueCourtId(courtId).venueId(venueId).build()));
         when(venueRepository.findById(venueId)).thenReturn(Optional.of(
                 Venue.builder().venueId(venueId).ownerId(ownerId).build()));
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
         );
 
         assertThat(service.remindOwnerOfManualRefund(refundId, reminderId, 60_000)).isTrue();
-        verify(bookingNotificationPort).notifyOwner(org.mockito.ArgumentMatchers.eq(ownerId),
-                org.mockito.ArgumentMatchers.eq(bookingId),
-                org.mockito.ArgumentMatchers.eq("refund-reminder-owner:" + reminderId),
-                org.mockito.ArgumentMatchers.eq("Còn khoản hoàn tiền mặt chưa xác nhận"),
-                org.mockito.ArgumentMatchers.contains("GSCASH01 đã hủy, khách đang chờ hoàn 60.000 đ"));
+        verify(bookingNotificationPort).notifyOwner(ArgumentMatchers.eq(ownerId),
+                ArgumentMatchers.eq(bookingId),
+                ArgumentMatchers.eq("refund-reminder-owner:" + reminderId),
+                ArgumentMatchers.eq("Còn khoản hoàn tiền mặt chưa xác nhận"),
+                ArgumentMatchers.contains("GSCASH01 đã hủy, khách đang chờ hoàn 60.000 đ"));
 
         // Chủ sân xác nhận xong trước khi sự kiện tới: không nhắc nữa.
         cancellation.setStatus(CancellationStatus.REFUNDED);
         assertThat(service.remindOwnerOfManualRefund(refundId, UUID.randomUUID(), 60_000)).isFalse();
-        verify(bookingNotificationPort, org.mockito.Mockito.times(1)).notifyOwner(
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(bookingNotificationPort, Mockito.times(1)).notifyOwner(
+                ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
+                ArgumentMatchers.any(), ArgumentMatchers.any());
     }
 
     @Test
@@ -189,7 +195,7 @@ class BookingPaymentEventServiceImplTest {
         Booking booking = booking(bookingId, payerId);
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(booking)).thenReturn(booking);
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
@@ -213,7 +219,7 @@ class BookingPaymentEventServiceImplTest {
         Booking booking = booking(bookingId, payerId);
         booking.setStatus(BookingStatus.EXPIRED);
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
@@ -221,20 +227,20 @@ class BookingPaymentEventServiceImplTest {
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isTrue();
 
-        org.mockito.Mockito.verify(paymentRefundPort).createRefund(org.mockito.ArgumentMatchers.eq(paymentId),
-                org.mockito.ArgumentMatchers.eq(payerId), org.mockito.ArgumentMatchers.eq("unaccepted-payment:" + paymentId),
-                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(60_000.0),
-                org.mockito.ArgumentMatchers.eq(true));
+        verify(paymentRefundPort).createRefund(ArgumentMatchers.eq(paymentId),
+                ArgumentMatchers.eq(payerId), ArgumentMatchers.eq("unaccepted-payment:" + paymentId),
+                ArgumentMatchers.anyString(), ArgumentMatchers.eq(60_000.0),
+                ArgumentMatchers.eq(true));
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.EXPIRED);
         // Khoản hoàn được ghi lên booking để màn hình kết quả không báo "thành công", và người trả được báo riêng.
         assertThat(booking.getLateRefundPaymentId()).isEqualTo(paymentId);
         assertThat(booking.getLateRefundAmount()).isEqualTo(60_000.0);
         assertThat(booking.getLateRefundAt()).isNotNull();
         verify(bookingRepository).save(booking);
-        verify(bookingNotificationPort).notifyPayer(org.mockito.ArgumentMatchers.eq(payerId),
-                org.mockito.ArgumentMatchers.eq(bookingId), org.mockito.ArgumentMatchers.eq("late-payment-refund:" + paymentId),
-                org.mockito.ArgumentMatchers.eq("Hết giờ giữ sân — đang hoàn tiền"),
-                org.mockito.ArgumentMatchers.contains("60.000 đ"));
+        verify(bookingNotificationPort).notifyPayer(ArgumentMatchers.eq(payerId),
+                ArgumentMatchers.eq(bookingId), ArgumentMatchers.eq("late-payment-refund:" + paymentId),
+                ArgumentMatchers.eq("Hết giờ giữ sân — đang hoàn tiền"),
+                ArgumentMatchers.contains("60.000 đ"));
     }
 
     @Test
@@ -254,10 +260,10 @@ class BookingPaymentEventServiceImplTest {
         when(venueRepository.findById(venueId)).thenReturn(Optional.of(
                 Venue.builder().venueId(venueId).ownerId(UUID.randomUUID()).build()));
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
-        when(bookingQrPort.issue(org.mockito.ArgumentMatchers.eq(bookingId), org.mockito.ArgumentMatchers.any()))
+        when(bookingQrPort.issue(ArgumentMatchers.eq(bookingId), ArgumentMatchers.any()))
                 .thenReturn("GSQR.v1.signed");
         when(bookingRepository.save(booking)).thenReturn(booking);
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
@@ -269,15 +275,15 @@ class BookingPaymentEventServiceImplTest {
         assertThat(booking.getDepositPaymentId()).isEqualTo(paymentId);
         assertThat(booking.getLateRefundPaymentId()).isNull();
         verify(timeSlotLifecycleService).confirmBookingSlot(booking);
-        verify(paymentRefundPort, never()).createRefund(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any());
+        verify(paymentRefundPort, never()).createRefund(ArgumentMatchers.any(), ArgumentMatchers.any(),
+                ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
+                ArgumentMatchers.any());
         // Khong co thong bao "hoan tien muon" cho nguoi tra; chu san nhan thong bao don moi.
-        verify(bookingNotificationPort, never()).notifyPayer(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
-        verify(bookingNotificationPort).notifyOwner(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(bookingId),
-                org.mockito.ArgumentMatchers.eq("booking-confirmed-owner:" + bookingId), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any());
+        verify(bookingNotificationPort, never()).notifyPayer(ArgumentMatchers.any(), ArgumentMatchers.any(),
+                ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+        verify(bookingNotificationPort).notifyOwner(ArgumentMatchers.any(), ArgumentMatchers.eq(bookingId),
+                ArgumentMatchers.eq("booking-confirmed-owner:" + bookingId), ArgumentMatchers.any(),
+                ArgumentMatchers.any());
     }
 
     @Test
@@ -289,7 +295,7 @@ class BookingPaymentEventServiceImplTest {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setDepositPaymentId(paymentId);
         when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
-        var service = new BookingPaymentEventServiceImpl(
+        BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
                 bookingNotificationPort
@@ -297,7 +303,7 @@ class BookingPaymentEventServiceImplTest {
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isFalse();
 
-        org.mockito.Mockito.verifyNoInteractions(paymentRefundPort);
+        Mockito.verifyNoInteractions(paymentRefundPort);
     }
 
     private Booking booking(UUID bookingId, UUID payerId) {

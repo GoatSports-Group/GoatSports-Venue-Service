@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
@@ -405,7 +407,7 @@ public class DemoSimulationSeeder implements CommandLineRunner {
                 """);
     }
 
-    private static void bind(java.sql.PreparedStatement statement, Object[] row) throws java.sql.SQLException {
+    private static void bind(PreparedStatement statement, Object[] row) throws SQLException {
         for (int column = 0; column < row.length; column++) statement.setObject(column + 1, row[column]);
     }
 

@@ -51,7 +51,7 @@ class AdminStatsServiceImplTest {
 
     @Test
     void rejectsReversedOrOverlongRanges() {
-        var service = new AdminStatsServiceImpl(statsRepository);
+        AdminStatsServiceImpl service = new AdminStatsServiceImpl(statsRepository);
         assertThatThrownBy(() -> service.getBookingStats(LocalDate.of(2026, 9, 5), LocalDate.of(2026, 9, 1)))
                 .isInstanceOf(ServiceException.class);
         assertThatThrownBy(() -> service.getBookingStats(LocalDate.of(2025, 1, 1), LocalDate.of(2026, 9, 1)))

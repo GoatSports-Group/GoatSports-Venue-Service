@@ -5,6 +5,7 @@ import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.TimeSlot;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -39,13 +40,13 @@ class TimeSlotLifecycleServiceTest {
                 courtId, booking.getPlayDate(), booking.getStartTime(), booking.getEndTime()
         )).thenReturn(Optional.of(slot));
         when(repository.save(slot)).thenReturn(slot);
-        var lifecycle = new TimeSlotLifecycleService(repository, clock);
+        TimeSlotLifecycleService lifecycle = new TimeSlotLifecycleService(repository, clock);
 
         lifecycle.confirmBookingSlot(booking);
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.BOOKED);
 
         lifecycle.releaseBookingSlot(booking);
         assertThat(slot.getStatus()).isEqualTo(TimeSlotStatus.AVAILABLE);
-        verify(repository, org.mockito.Mockito.times(2)).save(slot);
+        verify(repository, Mockito.times(2)).save(slot);
     }
 }

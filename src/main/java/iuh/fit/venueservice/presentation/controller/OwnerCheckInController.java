@@ -3,6 +3,8 @@ package iuh.fit.venueservice.presentation.controller;
 import iuh.fit.venueservice.application.dto.request.venue.ConfirmOwnerCheckInCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateWalkInBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerCheckInLookupCommand;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingRecord;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingView;
 import iuh.fit.venueservice.application.dto.response.venue.OwnerCheckInView;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -13,6 +15,7 @@ import iuh.fit.venueservice.presentation.converter.OwnerBookingResponseMapper;
 import iuh.fit.venueservice.presentation.request.venue.ConfirmOwnerCheckInRequest;
 import iuh.fit.venueservice.presentation.request.venue.CreateWalkInBookingRequest;
 import iuh.fit.venueservice.presentation.request.venue.OwnerCheckInLookupRequest;
+import iuh.fit.venueservice.presentation.response.venue.OwnerBookingResponse;
 import iuh.fit.venueservice.presentation.response.venue.OwnerCheckInRecordResponse;
 import iuh.fit.venueservice.presentation.response.venue.OwnerCheckInResponse;
 import jakarta.validation.Valid;
@@ -50,7 +53,7 @@ public class OwnerCheckInController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) throws ServiceException {
-        var result = ownerCheckInService.history(new OwnerCheckInFilter(
+        PageResult<OwnerCheckInView> result = ownerCheckInService.history(new OwnerCheckInFilter(
                 currentUserId(), venueId, venueCourtId, date, page, size
         ));
         return ResponseEntity.ok(new BaseListResponse(
@@ -96,8 +99,8 @@ public class OwnerCheckInController {
     }
 
     private OwnerCheckInResponse toResponse(OwnerCheckInView view) {
-        var record = view.bookingRecord();
-        var booking = bookingMapper.toResponse(new OwnerBookingView(
+        OwnerBookingRecord record = view.bookingRecord();
+        OwnerBookingResponse booking = bookingMapper.toResponse(new OwnerBookingView(
                 record.booking(), record.venueId(), record.venueName(), record.courtName(),
                 null, view.payments(), List.of()
         ));

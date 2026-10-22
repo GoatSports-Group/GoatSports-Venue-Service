@@ -186,13 +186,13 @@ public class ApplicationServiceConfig {
     }
 
     @Bean
-    public iuh.fit.venueservice.application.service.impl.OwnerDemandHistoryServiceImpl ownerDemandHistoryService(
+    public OwnerDemandHistoryServiceImpl ownerDemandHistoryService(
             BookingRepository bookingRepository,
             VenueRepository venueRepository,
             VenueCourtRepository venueCourtRepository,
             Clock clock
     ) {
-        return new iuh.fit.venueservice.application.service.impl.OwnerDemandHistoryServiceImpl(
+        return new OwnerDemandHistoryServiceImpl(
                 bookingRepository, venueRepository, venueCourtRepository, clock);
     }
 
@@ -263,13 +263,13 @@ public class ApplicationServiceConfig {
     }
 
     @Bean
-    public iuh.fit.venueservice.application.service.impl.AccountDataServiceImpl accountDataService(
-            iuh.fit.venueservice.application.port.persistence.BookingRepository bookingRepository,
-            iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository cancellationRepository,
-            iuh.fit.venueservice.application.port.persistence.VenueRepository venueRepository,
-            iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository ownerApplicationRepository,
-            iuh.fit.venueservice.application.port.StoragePort storagePort) {
-        return new iuh.fit.venueservice.application.service.impl.AccountDataServiceImpl(
+    public AccountDataServiceImpl accountDataService(
+            BookingRepository bookingRepository,
+            BookingCancellationRepository cancellationRepository,
+            VenueRepository venueRepository,
+            OwnerApplicationRepository ownerApplicationRepository,
+            StoragePort storagePort) {
+        return new AccountDataServiceImpl(
                 bookingRepository, cancellationRepository, venueRepository, ownerApplicationRepository, storagePort);
     }
 }

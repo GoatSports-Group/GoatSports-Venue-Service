@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.enums.CancellationStatus;
+import iuh.fit.venueservice.infrastructure.persistence.entity.BookingCancellationEntity;
 import iuh.fit.venueservice.infrastructure.persistence.mapper.BookingCancellationEntityMapper;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingCancellationRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaBookingRepository;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,14 +28,14 @@ public class BookingCancellationRepositoryImpl implements BookingCancellationRep
 
     @Override
     public BookingCancellation save(BookingCancellation cancellation) {
-        var entity = cancellation.getCancellationId() == null
+        BookingCancellationEntity entity = cancellation.getCancellationId() == null
                 ? mapper.toEntity(cancellation)
                 : jpaRepository.findById(cancellation.getCancellationId()).map(existing -> {
                     mapper.updateEntity(cancellation, existing);
                     return existing;
                 }).orElseGet(() -> mapper.toEntity(cancellation));
         entity.setBooking(jpaBookingRepository.getReferenceById(cancellation.getBookingId()));
-        var saved = jpaRepository.save(entity);
+        BookingCancellationEntity saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }
 
@@ -79,7 +81,7 @@ public class BookingCancellationRepositoryImpl implements BookingCancellationRep
     }
 
     @Override
-    public boolean existsByRequesterAndStatusIn(UUID userId, java.util.Collection<CancellationStatus> statuses) {
+    public boolean existsByRequesterAndStatusIn(UUID userId, Collection<CancellationStatus> statuses) {
         return jpaRepository.existsByRequestedByUserIdAndStatusIn(userId, statuses);
     }
 }
