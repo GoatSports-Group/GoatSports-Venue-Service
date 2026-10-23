@@ -28,17 +28,17 @@ import java.util.Set;
 import java.util.StringJoiner;
 
 /**
- * Lấy sân thể thao có tên trong một khung bản đồ từ OpenStreetMap qua Overpass API. Máy chủ Overpass công khai hay quá
- * tải (502/504; lúc thử 23/10 phải tới lần gọi thứ 6 mới được), nên thử lần lượt từng máy chủ, mỗi máy 4 lần, nghỉ
- * giữa các lần. Chạy nền nên chờ lâu không sao. Dữ liệu © OpenStreetMap contributors
- * (ODbL): client phải ghi nguồn khi hiển thị.
+ * Lấy sân thể thao có tên trong một khung bản đồ nhỏ (một ô, xem {@code ExternalVenueServiceImpl}) từ OpenStreetMap qua
+ * Overpass API. Máy chủ Overpass công khai hay quá tải (502/504), nên thử lần lượt từng máy chủ, mỗi máy 3 lần, nghỉ
+ * giữa các lần. Truy vấn xin {@code timeout:60}: Overpass xếp hàng theo thời gian xin, xin ít thì dễ được nhận hơn.
+ * Dữ liệu © OpenStreetMap contributors (ODbL): client phải ghi nguồn khi hiển thị.
  */
 @Slf4j
 @Component
 public class OverpassExternalVenueAdapter implements ExternalVenueSourcePort {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(150);
-    private static final int ATTEMPTS_PER_SERVER = 4;
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(90);
+    private static final int ATTEMPTS_PER_SERVER = 3;
     private static final Duration RETRY_PAUSE = Duration.ofSeconds(10);
 
     private static final Map<String, SportType> SPORTS = Map.of(
@@ -95,7 +95,7 @@ public class OverpassExternalVenueAdapter implements ExternalVenueSourcePort {
     /** Sân, trung tâm thể thao có tên và môn; bỏ nơi ghi rõ không cho người ngoài vào (khu dân cư, chung cư). */
     static String query(GeoBounds b) {
         return """
-                [out:json][timeout:120];
+                [out:json][timeout:60];
                 nwr["leisure"~"^(pitch|sports_centre)$"]["sport"]["name"]["access"!~"^(private|no)$"](%s,%s,%s,%s);
                 out center tags;
                 """.formatted(b.south(), b.west(), b.north(), b.east());
