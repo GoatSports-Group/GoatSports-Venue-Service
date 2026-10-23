@@ -52,6 +52,9 @@ public interface ExternalVenueRepository {
      */
     Optional<UUID> claimWantersNotification(UUID venueId);
 
+    /** Có người chưa nhận được thông báo: bỏ dấu "đã báo" để lần cơ sở cập nhật kế tiếp thử lại. */
+    void releaseWantersNotification(UUID externalVenueId);
+
     /** Người chơi đã bấm "muốn đặt online" sân này. */
     List<UUID> findWanterIds(UUID externalVenueId);
 

@@ -49,11 +49,15 @@ public class ExternalVenueClaimServiceImpl implements ExternalVenueClaimService 
         UUID externalVenueId = externalVenueRepository.claimWantersNotification(venueId).orElse(null);
         if (externalVenueId == null) return;
         // ponytail: gửi lần lượt từng người (vài trăm lượt muốn đặt là cùng); hàng chục nghìn thì chuyển sang Kafka.
+        boolean allSent = true;
         for (UUID userId : externalVenueRepository.findWanterIds(externalVenueId)) {
-            notificationPort.notifyVenueJoined(userId, externalVenueId, venueId,
+            allSent &= notificationPort.notifyVenueJoined(userId, externalVenueId, venueId,
                     "Sân bạn muốn đặt đã nhận đặt online",
                     venueName + " đã mở đặt sân online trên GOAT Sports. Bấm để xem lịch trống và đặt sân.");
         }
+        // Gửi lỗi (vd notification-service từ chối) thì lần chủ sân lưu cơ sở kế tiếp thử lại; ai đã nhận rồi không bị
+        // nhận trùng vì event id cố định theo sân và người nhận.
+        if (!allSent) externalVenueRepository.releaseWantersNotification(externalVenueId);
     }
 
     @Override

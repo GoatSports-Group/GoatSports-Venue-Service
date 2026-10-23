@@ -168,6 +168,15 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
     }
 
     @Override
+    @Transactional
+    public void releaseWantersNotification(UUID externalVenueId) {
+        jpaRepository.findById(externalVenueId).ifPresent(entity -> {
+            entity.setWantersNotifiedAt(null);
+            jpaRepository.save(entity);
+        });
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<UUID> findWanterIds(UUID externalVenueId) {
         return wantRepository.findUserIdsByExternalVenueId(externalVenueId);

@@ -31,7 +31,7 @@ public class ExternalVenueNotificationAdapter implements ExternalVenueNotificati
     }
 
     @Override
-    public void notifyVenueJoined(UUID receiverId, UUID externalVenueId, UUID venueId, String title, String content) {
+    public boolean notifyVenueJoined(UUID receiverId, UUID externalVenueId, UUID venueId, String title, String content) {
         // Mỗi người chỉ được báo một lần cho mỗi sân, kể cả khi admin bấm duyệt lại.
         UUID eventId = UUID.nameUUIDFromBytes(("external-venue-joined:" + externalVenueId + ":" + receiverId)
                 .getBytes(StandardCharsets.UTF_8));
@@ -39,8 +39,10 @@ public class ExternalVenueNotificationAdapter implements ExternalVenueNotificati
             notificationClient.createNotification(new CreateNotificationRequest(
                     eventId, receiverId, title, content, "SYSTEM", "VENUE", "VENUE", venueId
             ));
+            return true;
         } catch (RuntimeException exception) {
             log.warn("Không báo được người chơi {} rằng sân {} đã tham gia", receiverId, venueId, exception);
+            return false;
         }
     }
 }

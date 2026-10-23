@@ -86,6 +86,18 @@ class ExternalVenueClaimServiceImplTest {
     }
 
     @Test
+    void aFailedNotificationIsRetriedOnTheNextVenueUpdate() {
+        UUID player = UUID.randomUUID();
+        when(externalVenueRepository.claimWantersNotification(venueId)).thenReturn(Optional.of(externalId));
+        when(externalVenueRepository.findWanterIds(externalId)).thenReturn(List.of(player));
+        when(notificationPort.notifyVenueJoined(any(), any(), any(), anyString(), anyString())).thenReturn(false);
+
+        service.notifyWantersWhenOpened(venueId, "Liber Pickleball");
+
+        verify(externalVenueRepository).releaseWantersNotification(externalId);
+    }
+
+    @Test
     void reviewWarnsWhenTheApplicationIsFarFromTheVenueAndCountsRivalClaims() {
         when(externalVenueRepository.findById(externalId)).thenReturn(Optional.of(external(null)));
         when(externalVenueRepository.countWants(externalId)).thenReturn(37L);
