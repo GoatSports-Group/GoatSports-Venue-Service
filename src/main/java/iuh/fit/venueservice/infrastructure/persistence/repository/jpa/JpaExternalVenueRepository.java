@@ -5,6 +5,7 @@ import iuh.fit.venueservice.infrastructure.persistence.entity.ExternalVenueEntit
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -38,4 +39,8 @@ public interface JpaExternalVenueRepository extends JpaRepository<ExternalVenueE
     List<ExternalVenueRegionSummary> summarizeByRegion();
 
     Page<ExternalVenueEntity> findByRegionOrderByName(String region, Pageable pageable);
+
+    @Modifying
+    @Query("delete from ExternalVenueEntity v where v.region = :region")
+    int deleteByRegion(@Param("region") String region);
 }

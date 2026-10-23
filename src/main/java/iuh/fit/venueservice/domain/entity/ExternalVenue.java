@@ -18,6 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ExternalVenue {
     public static final String SOURCE_OSM = "OSM";
+    public static final String SOURCE_PLAYER = "PLAYER";
+    public static final String REGION_PLAYER = "Người chơi gợi ý";
 
     private UUID externalVenueId;
     private String source;

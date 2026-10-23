@@ -4,6 +4,8 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.ExternalVenueRepository;
+import iuh.fit.venueservice.application.port.persistence.ExternalVenueSuggestionRepository;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.AccountDataService;
@@ -30,17 +32,23 @@ public class AccountDataServiceImpl implements AccountDataService {
     private final VenueRepository venueRepository;
     private final OwnerApplicationRepository ownerApplicationRepository;
     private final StoragePort storagePort;
+    private final ExternalVenueRepository externalVenueRepository;
+    private final ExternalVenueSuggestionRepository suggestionRepository;
 
     public AccountDataServiceImpl(BookingRepository bookingRepository,
                                   BookingCancellationRepository cancellationRepository,
                                   VenueRepository venueRepository,
                                   OwnerApplicationRepository ownerApplicationRepository,
-                                  StoragePort storagePort) {
+                                  StoragePort storagePort,
+                                  ExternalVenueRepository externalVenueRepository,
+                                  ExternalVenueSuggestionRepository suggestionRepository) {
         this.bookingRepository = bookingRepository;
         this.cancellationRepository = cancellationRepository;
         this.venueRepository = venueRepository;
         this.ownerApplicationRepository = ownerApplicationRepository;
         this.storagePort = storagePort;
+        this.externalVenueRepository = externalVenueRepository;
+        this.suggestionRepository = suggestionRepository;
     }
 
     @Override
@@ -59,6 +67,9 @@ public class AccountDataServiceImpl implements AccountDataService {
 
     @Override
     public void eraseUserData(UUID userId) {
+        // Lượt "muốn đặt online" và sân đã gợi ý gắn với userId: xóa hẳn. Sân gợi ý đã duyệt là sân ngoài riêng, giữ lại.
+        externalVenueRepository.removeWantsBy(userId);
+        suggestionRepository.deleteBySuggestedBy(userId);
         // Đơn đặt sân và đánh giá giữ lại: chỉ còn userId, tên hiển thị lấy từ auth-service là "Người dùng đã xóa".
         // Chạy trong transaction của consumer: storage lỗi thì ném ra, phần xóa dữ liệu rollback nên key giấy tờ vẫn còn,
         // Kafka thử lại (hết lượt vào DLT) thay vì để lại file CCCD mồ côi. Xóa lại file đã xóa vẫn thành công.

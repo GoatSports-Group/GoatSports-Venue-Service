@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20261023-create-external-venue-suggestions" author="claude">
+        <comment>Nguoi choi goi y san con thieu tren ban do; admin duyet thi thanh san ngoai nguon PLAYER</comment>
+        <createTable tableName="external_venue_suggestions">
+            <column name="suggestion_id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="suggested_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sport_types" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="latitude" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="longitude" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="VARCHAR(500)"/>
+            <column name="phone" type="VARCHAR(60)"/>
+            <column name="note" type="VARCHAR(500)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reject_reason" type="VARCHAR(500)"/>
+            <column name="external_venue_id" type="UUID"/>
+            <column name="reviewed_by" type="UUID"/>
+            <column name="reviewed_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="external_venue_suggestions" indexName="idx_external_venue_suggestions_status">
+            <column name="status"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20261023-create-external-venue-wants" author="claude">
+        <comment>Moi nguoi choi mot luot "muon dat san nay online" moi san</comment>
+        <createTable tableName="external_venue_wants">
+            <column name="external_venue_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_external_venue_wants_venue"
+                             referencedTableName="external_venues" referencedColumnNames="external_venue_id"
+                             deleteCascade="true"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="external_venue_wants" columnNames="external_venue_id, user_id"
+                       constraintName="pk_external_venue_wants"/>
+    </changeSet>
+
+    <changeSet id="20261023-create-external-venue-matches" author="claude">
+        <comment>Keo ghep tran da hoan tat o san ngoai (ai-service bao), khoa theo phien</comment>
+        <createTable tableName="external_venue_matches">
+            <column name="session_id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="external_venue_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_external_venue_matches_venue"
+                             referencedTableName="external_venues" referencedColumnNames="external_venue_id"
+                             deleteCascade="true"/>
+            </column>
+            <column name="played_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="external_venue_matches" indexName="idx_external_venue_matches_venue">
+            <column name="external_venue_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

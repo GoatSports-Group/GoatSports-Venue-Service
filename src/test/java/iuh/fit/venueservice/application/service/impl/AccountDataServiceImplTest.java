@@ -4,6 +4,8 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.StoragePort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.port.persistence.ExternalVenueRepository;
+import iuh.fit.venueservice.application.port.persistence.ExternalVenueSuggestionRepository;
 import iuh.fit.venueservice.application.port.persistence.OwnerApplicationRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
@@ -34,6 +36,8 @@ class AccountDataServiceImplTest {
     @Mock private VenueRepository venueRepository;
     @Mock private OwnerApplicationRepository ownerApplicationRepository;
     @Mock private StoragePort storagePort;
+    @Mock private ExternalVenueRepository externalVenueRepository;
+    @Mock private ExternalVenueSuggestionRepository suggestionRepository;
     @InjectMocks private AccountDataServiceImpl service;
 
     private final UUID userId = UUID.randomUUID();
@@ -71,6 +75,8 @@ class AccountDataServiceImplTest {
 
         verify(storagePort).delete("identities/a.jpg");
         verify(storagePort).delete("licenses/b.pdf");
+        verify(externalVenueRepository).removeWantsBy(userId);
+        verify(suggestionRepository).deleteBySuggestedBy(userId);
     }
 
     /** Ném ra để transaction rollback (key giấy tờ còn lại) và Kafka thử lại, không để file CCCD mồ côi. */

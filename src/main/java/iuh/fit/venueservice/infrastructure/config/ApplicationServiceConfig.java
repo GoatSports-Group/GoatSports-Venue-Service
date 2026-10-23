@@ -269,8 +269,10 @@ public class ApplicationServiceConfig {
             BookingCancellationRepository cancellationRepository,
             VenueRepository venueRepository,
             OwnerApplicationRepository ownerApplicationRepository,
-            StoragePort storagePort) {
-        return new AccountDataServiceImpl(
-                bookingRepository, cancellationRepository, venueRepository, ownerApplicationRepository, storagePort);
+            StoragePort storagePort,
+            ExternalVenueRepository externalVenueRepository,
+            ExternalVenueSuggestionRepository suggestionRepository) {
+        return new AccountDataServiceImpl(bookingRepository, cancellationRepository, venueRepository,
+                ownerApplicationRepository, storagePort, externalVenueRepository, suggestionRepository);
     }
 }

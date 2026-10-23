@@ -30,6 +30,12 @@ public interface ExternalVenueService {
 
     List<ExternalVenueRegionSummary> summarize();
 
+    /**
+     * Xóa khu vực: mọi sân của nó cùng lượt muốn đặt và kèo đã ghi ở đó; trả số sân đã xóa. Không xóa được khi
+     * đang có đợt nhập chính khu vực đó (đợt nhập sẽ thêm lại sân ngay).
+     */
+    int deleteRegion(String region) throws ServiceException;
+
     /** Sân đã nhập của một khu vực (admin xem lại kết quả nhập), mỗi trang tối đa 50. */
     PageResult<ExternalVenue> listByRegion(String region, int page, int size);
 }

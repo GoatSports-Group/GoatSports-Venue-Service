@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueDemand;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.application.port.persistence.ExternalVenueRepository;
 import iuh.fit.venueservice.domain.entity.ExternalVenue;
@@ -29,6 +30,38 @@ class ExternalVenueRepositoryTest {
                                        String region) {
         return ExternalVenue.builder().source(ExternalVenue.SOURCE_OSM).sourceId(sourceId).name(name)
                 .sportTypes(sports).latitude(lat).longitude(lng).region(region).importedAt(LocalDateTime.now()).build();
+    }
+
+    @Test
+    void wantsAndMatchesAreCountedOnceAndGoAwayWithTheirRegion() {
+        String tag = UUID.randomUUID().toString().substring(0, 8);
+        String region = "Xóa " + tag;
+        repository.upsertAll(List.of(venue("way/" + tag, "Sân " + tag, EnumSet.of(SportType.TENNIS), 22.0, 104.0, region)));
+        UUID venueId = repository.findByRegion(region, 0, 5).items().getFirst().getExternalVenueId();
+        UUID player = UUID.randomUUID();
+        UUID session = UUID.randomUUID();
+
+        repository.addWant(venueId, player);
+        repository.addWant(venueId, player);
+        repository.addWant(venueId, UUID.randomUUID());
+        repository.recordMatch(session, venueId);
+        repository.recordMatch(session, venueId);
+
+        assertThat(repository.countWants(venueId)).isEqualTo(2);
+        assertThat(repository.hasWant(venueId, player)).isTrue();
+        assertThat(repository.findDemand()).filteredOn(demand -> demand.venue().getExternalVenueId().equals(venueId))
+                .singleElement().satisfies(demand -> {
+                    assertThat(demand.wantCount()).isEqualTo(2);
+                    assertThat(demand.matchCount()).isEqualTo(1);
+                });
+
+        repository.removeWantsBy(player);
+        assertThat(repository.hasWant(venueId, player)).isFalse();
+
+        assertThat(repository.deleteByRegion(region)).isEqualTo(1);
+        assertThat(repository.findById(venueId)).isEmpty();
+        assertThat(repository.findDemand()).extracting(ExternalVenueDemand::venue)
+                .noneMatch(venue -> venue.getExternalVenueId().equals(venueId));
     }
 
     @Test

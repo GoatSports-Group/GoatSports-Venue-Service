@@ -136,6 +136,20 @@ public class ExternalVenueServiceImpl implements ExternalVenueService {
     }
 
     @Override
+    public int deleteRegion(String region) throws ServiceException {
+        if (region == null || region.isBlank()) {
+            throw new ServiceException("Tên khu vực không hợp lệ.");
+        }
+        ExternalVenueImportStatus current = lastImport.get();
+        if (importing.get() && current != null && current.region().equals(region)) {
+            throw new ServiceException("Khu vực này đang được nhập. Đợi nhập xong rồi hãy xóa.");
+        }
+        int deleted = externalVenueRepository.deleteByRegion(region);
+        log.info("Deleted region {} with {} external venues", region, deleted);
+        return deleted;
+    }
+
+    @Override
     public PageResult<ExternalVenue> listByRegion(String region, int page, int size) {
         return externalVenueRepository.findByRegion(region, Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE));
     }

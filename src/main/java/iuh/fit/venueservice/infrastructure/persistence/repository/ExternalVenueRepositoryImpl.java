@@ -1,29 +1,36 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueDemand;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.application.port.persistence.ExternalVenueRepository;
 import iuh.fit.venueservice.domain.entity.ExternalVenue;
 import iuh.fit.venueservice.domain.entity.GeoBounds;
 import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.infrastructure.persistence.entity.ExternalVenueEntity;
+import iuh.fit.venueservice.infrastructure.persistence.entity.ExternalVenueMatchEntity;
+import iuh.fit.venueservice.infrastructure.persistence.entity.ExternalVenueWantEntity;
+import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaExternalVenueMatchRepository;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaExternalVenueRepository;
+import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaExternalVenueWantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Repository
@@ -32,6 +39,8 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
     private static final int LOOKUP_BATCH = 500;
 
     private final JpaExternalVenueRepository jpaRepository;
+    private final JpaExternalVenueWantRepository wantRepository;
+    private final JpaExternalVenueMatchRepository matchRepository;
 
     @Override
     @Transactional
@@ -39,12 +48,14 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
         int saved = 0;
         for (int start = 0; start < venues.size(); start += LOOKUP_BATCH) {
             List<ExternalVenue> batch = venues.subList(start, Math.min(start + LOOKUP_BATCH, venues.size()));
-            Map<String, ExternalVenueEntity> existing = jpaRepository.findBySourceAndSourceIdIn(
-                            ExternalVenue.SOURCE_OSM, batch.stream().map(ExternalVenue::getSourceId).toList())
-                    .stream().collect(Collectors.toMap(ExternalVenueEntity::getSourceId, Function.identity()));
+            Map<String, ExternalVenueEntity> existing = new HashMap<>();
+            batch.stream().collect(Collectors.groupingBy(ExternalVenue::getSource)).forEach((source, sameSource) ->
+                    jpaRepository.findBySourceAndSourceIdIn(source, sameSource.stream().map(ExternalVenue::getSourceId).toList())
+                            .forEach(entity -> existing.put(source + "/" + entity.getSourceId(), entity)));
             List<ExternalVenueEntity> entities = new ArrayList<>(batch.size());
             for (ExternalVenue venue : batch) {
-                ExternalVenueEntity entity = existing.getOrDefault(venue.getSourceId(), new ExternalVenueEntity());
+                ExternalVenueEntity entity = existing.getOrDefault(venue.getSource() + "/" + venue.getSourceId(),
+                        new ExternalVenueEntity());
                 copy(venue, entity);
                 entities.add(entity);
             }
@@ -82,6 +93,82 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
         Page<ExternalVenueEntity> result = jpaRepository.findByRegionOrderByName(region, PageRequest.of(page, size));
         return new PageResult<>(result.getContent().stream().map(this::toDomain).toList(), result.getTotalElements(),
                 page, size, result.getTotalPages());
+    }
+
+    @Override
+    @Transactional
+    public ExternalVenue save(ExternalVenue venue) {
+        ExternalVenueEntity entity = venue.getExternalVenueId() == null ? new ExternalVenueEntity()
+                : jpaRepository.findById(venue.getExternalVenueId()).orElseGet(ExternalVenueEntity::new);
+        copy(venue, entity);
+        return toDomain(jpaRepository.save(entity));
+    }
+
+    @Override
+    @Transactional
+    public int deleteByRegion(String region) {
+        wantRepository.deleteByRegion(region);
+        matchRepository.deleteByRegion(region);
+        return jpaRepository.deleteByRegion(region);
+    }
+
+    @Override
+    @Transactional
+    public void addWant(UUID externalVenueId, UUID userId) {
+        ExternalVenueWantEntity.Key key = new ExternalVenueWantEntity.Key(externalVenueId, userId);
+        if (!wantRepository.existsById(key)) {
+            wantRepository.save(new ExternalVenueWantEntity(key, LocalDateTime.now()));
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removeWant(UUID externalVenueId, UUID userId) {
+        wantRepository.deleteById(new ExternalVenueWantEntity.Key(externalVenueId, userId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countWants(UUID externalVenueId) {
+        return wantRepository.countByIdExternalVenueId(externalVenueId);
+    }
+
+    @Override
+    @Transactional
+    public void removeWantsBy(UUID userId) {
+        wantRepository.deleteByUserId(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasWant(UUID externalVenueId, UUID userId) {
+        return wantRepository.existsById(new ExternalVenueWantEntity.Key(externalVenueId, userId));
+    }
+
+    @Override
+    @Transactional
+    public void recordMatch(UUID sessionId, UUID externalVenueId) {
+        if (!matchRepository.existsById(sessionId) && jpaRepository.existsById(externalVenueId)) {
+            matchRepository.save(new ExternalVenueMatchEntity(sessionId, externalVenueId, LocalDateTime.now()));
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ExternalVenueDemand> findDemand() {
+        Map<UUID, Long> wants = counts(wantRepository.countByVenue());
+        Map<UUID, Long> matches = counts(matchRepository.countByVenue());
+        Set<UUID> ids = new HashSet<>(wants.keySet());
+        ids.addAll(matches.keySet());
+        return jpaRepository.findAllById(ids).stream()
+                .map(entity -> new ExternalVenueDemand(toDomain(entity),
+                        wants.getOrDefault(entity.getExternalVenueId(), 0L),
+                        matches.getOrDefault(entity.getExternalVenueId(), 0L)))
+                .toList();
+    }
+
+    private static Map<UUID, Long> counts(List<Object[]> rows) {
+        return rows.stream().collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
     }
 
     private void copy(ExternalVenue venue, ExternalVenueEntity entity) {

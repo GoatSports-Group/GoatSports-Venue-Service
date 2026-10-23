@@ -26,4 +26,5 @@
     <include file="/db/changelog/schema/15-10-2026/add-activity-backfills.xml"/>
     <include file="/db/changelog/schema/20-10-2026/add-cancellation-workflow.xml"/>
     <include file="/db/changelog/schema/23-10-2026/add-external-venues.xml"/>
+    <include file="/db/changelog/schema/23-10-2026/add-external-venue-demand.xml"/>
 </databaseChangeLog>

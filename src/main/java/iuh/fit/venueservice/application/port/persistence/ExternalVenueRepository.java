@@ -1,6 +1,7 @@
 package iuh.fit.venueservice.application.port.persistence;
 
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueDemand;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.domain.entity.ExternalVenue;
 import iuh.fit.venueservice.domain.entity.GeoBounds;
@@ -23,4 +24,28 @@ public interface ExternalVenueRepository {
 
     /** Sân đã nhập của một khu vực, theo tên; {@code page} tính từ 0. */
     PageResult<ExternalVenue> findByRegion(String region, int page, int size);
+
+    /** Lưu một sân (sân người chơi gợi ý khi được duyệt); trả bản đã lưu kèm id. */
+    ExternalVenue save(ExternalVenue venue);
+
+    /** Xóa mọi sân của khu vực cùng lượt muốn đặt và kèo đã ghi ở đó; trả số sân đã xóa. */
+    int deleteByRegion(String region);
+
+    /** Ghi lượt "muốn đặt online"; người đã bấm rồi thì bỏ qua. */
+    void addWant(UUID externalVenueId, UUID userId);
+
+    void removeWant(UUID externalVenueId, UUID userId);
+
+    long countWants(UUID externalVenueId);
+
+    /** Xóa tài khoản: bỏ mọi lượt muốn đặt của người này. */
+    void removeWantsBy(UUID userId);
+
+    boolean hasWant(UUID externalVenueId, UUID userId);
+
+    /** Một kèo đã hoàn tất ở sân; cùng phiên báo lại không đếm trùng. */
+    void recordMatch(UUID sessionId, UUID externalVenueId);
+
+    /** Mọi sân có ít nhất một lượt muốn đặt hoặc một kèo, kèm hai con số đó (chưa sắp xếp). */
+    List<ExternalVenueDemand> findDemand();
 }

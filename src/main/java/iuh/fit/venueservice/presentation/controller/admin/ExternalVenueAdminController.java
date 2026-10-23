@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/external-venues")
@@ -61,6 +63,14 @@ public class ExternalVenueAdminController {
                 new BaseListResponse.Meta(result.page(), result.pageSize(), result.totalPages(), result.total()),
                 result.items().stream().map(ExternalVenueResponse::from).toList()
         ));
+    }
+
+    /** Xóa khu vực cùng mọi sân của nó (kể cả lượt muốn đặt online và kèo đã ghi ở các sân đó). */
+    @DeleteMapping
+    @PreAuthorize("hasAuthority('SUSPEND_VENUE')")
+    @AuditLog(action = "ADMIN_DELETE_EXTERNAL_VENUE_REGION", description = "Admin xóa khu vực sân ngoài #{#region}")
+    public ResponseEntity<Map<String, Integer>> deleteRegion(@RequestParam String region) throws ServiceException {
+        return ResponseEntity.ok(Map.of("deleted", externalVenueService.deleteRegion(region)));
     }
 
     @GetMapping("/import-status")
