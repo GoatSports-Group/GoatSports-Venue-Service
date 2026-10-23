@@ -34,4 +34,6 @@ public class ExternalVenue {
     private String openingHours;
     private String region;
     private LocalDateTime importedAt;
+    private int inviteCount;
+    private LocalDateTime lastInvitedAt;
 }

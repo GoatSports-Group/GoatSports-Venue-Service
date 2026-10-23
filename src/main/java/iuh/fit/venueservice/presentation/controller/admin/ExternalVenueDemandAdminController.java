@@ -9,6 +9,7 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.ExternalVenueDemandService;
 import iuh.fit.venueservice.application.util.BaseUtil;
+import iuh.fit.venueservice.domain.entity.ExternalVenue;
 import iuh.fit.venueservice.presentation.request.venue.RejectExternalVenueSuggestionRequest;
 import iuh.fit.venueservice.presentation.response.venue.ExternalVenueDemandResponse;
 import iuh.fit.venueservice.presentation.response.venue.ExternalVenueResponse;
@@ -72,6 +73,14 @@ public class ExternalVenueDemandAdminController {
     ) throws ServiceException {
         demandService.reject(suggestionId, currentUserId(), request.reason());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{externalVenueId}/invites")
+    @PreAuthorize("hasAuthority('SUSPEND_VENUE')")
+    @AuditLog(action = "ADMIN_INVITE_EXTERNAL_VENUE", description = "Admin mời sân ngoài tham gia #{#externalVenueId}")
+    public ResponseEntity<Map<String, Object>> recordInvite(@PathVariable UUID externalVenueId) throws ServiceException {
+        ExternalVenue venue = demandService.recordInvite(externalVenueId);
+        return ResponseEntity.ok(Map.of("inviteCount", venue.getInviteCount(), "lastInvitedAt", venue.getLastInvitedAt()));
     }
 
     @GetMapping("/potential")

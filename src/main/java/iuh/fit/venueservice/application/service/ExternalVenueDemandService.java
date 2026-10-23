@@ -37,6 +37,8 @@ public interface ExternalVenueDemandService {
     /** Sân có người muốn đặt hoặc đã có kèo: nhiều lượt muốn đặt trước, rồi nhiều kèo, rồi sân có số điện thoại. */
     PageResult<ExternalVenueDemand> potential(int page, int size);
 
+    ExternalVenue recordInvite(UUID externalVenueId) throws ServiceException;
+
     /** ai-service báo một kèo ghép trận đã hoàn tất ở sân ngoài; báo lại cùng phiên không đếm trùng. */
     void recordMatch(UUID sessionId, UUID externalVenueId);
 }

@@ -38,6 +38,10 @@ public interface ExternalVenueRepository {
 
     long countWants(UUID externalVenueId);
 
+    long countMatches(UUID externalVenueId);
+
+    Optional<ExternalVenue> recordInvite(UUID externalVenueId);
+
     /** Xóa tài khoản: bỏ mọi lượt muốn đặt của người này. */
     void removeWantsBy(UUID userId);
 

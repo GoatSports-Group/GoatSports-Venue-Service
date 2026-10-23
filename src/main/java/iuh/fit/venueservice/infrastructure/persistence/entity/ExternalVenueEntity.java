@@ -63,4 +63,11 @@ public class ExternalVenueEntity {
 
     @Column(name = "imported_at", nullable = false)
     private LocalDateTime importedAt;
+
+    @Builder.Default
+    @Column(name = "invite_count", nullable = false)
+    private int inviteCount = 0;
+
+    @Column(name = "last_invited_at")
+    private LocalDateTime lastInvitedAt;
 }

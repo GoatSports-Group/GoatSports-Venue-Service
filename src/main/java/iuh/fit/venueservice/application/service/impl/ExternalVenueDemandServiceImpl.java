@@ -168,6 +168,12 @@ public class ExternalVenueDemandServiceImpl implements ExternalVenueDemandServic
     }
 
     @Override
+    public ExternalVenue recordInvite(UUID externalVenueId) throws ServiceException {
+        return externalVenueRepository.recordInvite(externalVenueId)
+                .orElseThrow(() -> new ServiceException("Không tìm thấy sân."));
+    }
+
+    @Override
     public void recordMatch(UUID sessionId, UUID externalVenueId) {
         externalVenueRepository.recordMatch(sessionId, externalVenueId);
     }
@@ -207,7 +213,8 @@ public class ExternalVenueDemandServiceImpl implements ExternalVenueDemandServic
 
     private ExternalVenueDemandView view(UUID externalVenueId, UUID userId) {
         return new ExternalVenueDemandView(externalVenueRepository.countWants(externalVenueId),
-                userId != null && externalVenueRepository.hasWant(externalVenueId, userId));
+                userId != null && externalVenueRepository.hasWant(externalVenueId, userId),
+                externalVenueRepository.countMatches(externalVenueId));
     }
 
     private static String trimToNull(String value) {

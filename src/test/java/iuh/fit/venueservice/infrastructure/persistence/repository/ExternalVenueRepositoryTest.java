@@ -58,6 +58,20 @@ class ExternalVenueRepositoryTest {
         repository.removeWantsBy(player);
         assertThat(repository.hasWant(venueId, player)).isFalse();
 
+        assertThat(repository.countMatches(venueId)).isEqualTo(1);
+        repository.recordInvite(venueId);
+        assertThat(repository.recordInvite(venueId)).hasValueSatisfying(invited -> {
+            assertThat(invited.getInviteCount()).isEqualTo(2);
+            assertThat(invited.getLastInvitedAt()).isNotNull();
+        });
+        // Nhập lại OSM cập nhật thông tin sân nhưng giữ số lần admin đã mời.
+        repository.upsertAll(List.of(venue("way/" + tag, "Sân mới " + tag, EnumSet.of(SportType.TENNIS), 22.0, 104.0, region)));
+        assertThat(repository.findById(venueId)).hasValueSatisfying(venue -> {
+            assertThat(venue.getName()).isEqualTo("Sân mới " + tag);
+            assertThat(venue.getInviteCount()).isEqualTo(2);
+        });
+        assertThat(repository.recordInvite(UUID.randomUUID())).isEmpty();
+
         assertThat(repository.deleteByRegion(region)).isEqualTo(1);
         assertThat(repository.findById(venueId)).isEmpty();
         assertThat(repository.findDemand()).extracting(ExternalVenueDemand::venue)

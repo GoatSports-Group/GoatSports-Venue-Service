@@ -135,6 +135,22 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
 
     @Override
     @Transactional
+    public Optional<ExternalVenue> recordInvite(UUID externalVenueId) {
+        return jpaRepository.findById(externalVenueId).map(entity -> {
+            entity.setInviteCount(entity.getInviteCount() + 1);
+            entity.setLastInvitedAt(LocalDateTime.now());
+            return toDomain(jpaRepository.save(entity));
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countMatches(UUID externalVenueId) {
+        return matchRepository.countByExternalVenueId(externalVenueId);
+    }
+
+    @Override
+    @Transactional
     public void removeWantsBy(UUID userId) {
         wantRepository.deleteByUserId(userId);
     }
@@ -206,6 +222,8 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
                 .openingHours(entity.getOpeningHours())
                 .region(entity.getRegion())
                 .importedAt(entity.getImportedAt())
+                .inviteCount(entity.getInviteCount())
+                .lastInvitedAt(entity.getLastInvitedAt())
                 .build();
     }
 }

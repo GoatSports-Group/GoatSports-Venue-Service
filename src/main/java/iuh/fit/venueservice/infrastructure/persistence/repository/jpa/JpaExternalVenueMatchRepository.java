@@ -13,6 +13,8 @@ import java.util.UUID;
 @Repository
 public interface JpaExternalVenueMatchRepository extends JpaRepository<ExternalVenueMatchEntity, UUID> {
 
+    long countByExternalVenueId(UUID externalVenueId);
+
     /** [externalVenueId, số kèo] của mọi sân đã có kèo hoàn tất. */
     @Query("select m.externalVenueId, count(m) from ExternalVenueMatchEntity m group by m.externalVenueId")
     List<Object[]> countByVenue();
