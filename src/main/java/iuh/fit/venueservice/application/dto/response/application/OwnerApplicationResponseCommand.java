@@ -28,5 +28,6 @@ public record OwnerApplicationResponseCommand(
         LocalDateTime receivedAt,
         LocalDateTime viewedAt,
         Address address,
-        Set<OwnerApplicationDocument> documents
+        Set<OwnerApplicationDocument> documents,
+        UUID claimedExternalVenueId
 ) {}

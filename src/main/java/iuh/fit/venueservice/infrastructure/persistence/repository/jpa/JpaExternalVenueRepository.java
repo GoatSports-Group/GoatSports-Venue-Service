@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -22,6 +23,7 @@ public interface JpaExternalVenueRepository extends JpaRepository<ExternalVenueE
     @Query("""
             select v from ExternalVenueEntity v
             where v.latitude between :south and :north and v.longitude between :west and :east
+              and v.claimedVenueId is null
               and v.sportTypes like concat('%', :sport, '%')
               and lower(v.name) like concat('%', :keyword, '%')
             order by v.name
@@ -39,6 +41,8 @@ public interface JpaExternalVenueRepository extends JpaRepository<ExternalVenueE
     List<ExternalVenueRegionSummary> summarizeByRegion();
 
     Page<ExternalVenueEntity> findByRegionOrderByName(String region, Pageable pageable);
+
+    Optional<ExternalVenueEntity> findByClaimedVenueId(UUID claimedVenueId);
 
     @Modifying
     @Query("delete from ExternalVenueEntity v where v.region = :region")

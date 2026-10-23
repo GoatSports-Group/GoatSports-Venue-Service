@@ -144,6 +144,36 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
     }
 
     @Override
+    @Transactional
+    public boolean markClaimed(UUID externalVenueId, UUID venueId) {
+        ExternalVenueEntity entity = jpaRepository.findById(externalVenueId).orElse(null);
+        if (entity == null) return false;
+        if (entity.getClaimedVenueId() != null) return entity.getClaimedVenueId().equals(venueId);
+        entity.setClaimedVenueId(venueId);
+        entity.setClaimedAt(LocalDateTime.now());
+        jpaRepository.save(entity);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public Optional<UUID> claimWantersNotification(UUID venueId) {
+        return jpaRepository.findByClaimedVenueId(venueId)
+                .filter(entity -> entity.getWantersNotifiedAt() == null)
+                .map(entity -> {
+                    entity.setWantersNotifiedAt(LocalDateTime.now());
+                    jpaRepository.save(entity);
+                    return entity.getExternalVenueId();
+                });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> findWanterIds(UUID externalVenueId) {
+        return wantRepository.findUserIdsByExternalVenueId(externalVenueId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public long countMatches(UUID externalVenueId) {
         return matchRepository.countByExternalVenueId(externalVenueId);
@@ -177,6 +207,7 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
         Set<UUID> ids = new HashSet<>(wants.keySet());
         ids.addAll(matches.keySet());
         return jpaRepository.findAllById(ids).stream()
+                .filter(entity -> entity.getClaimedVenueId() == null)
                 .map(entity -> new ExternalVenueDemand(toDomain(entity),
                         wants.getOrDefault(entity.getExternalVenueId(), 0L),
                         matches.getOrDefault(entity.getExternalVenueId(), 0L)))
@@ -224,6 +255,8 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
                 .importedAt(entity.getImportedAt())
                 .inviteCount(entity.getInviteCount())
                 .lastInvitedAt(entity.getLastInvitedAt())
+                .claimedVenueId(entity.getClaimedVenueId())
+                .claimedAt(entity.getClaimedAt())
                 .build();
     }
 }

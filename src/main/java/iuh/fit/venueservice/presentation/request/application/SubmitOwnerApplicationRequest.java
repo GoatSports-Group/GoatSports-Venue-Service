@@ -42,6 +42,8 @@ public class SubmitOwnerApplicationRequest {
     private BusinessType businessType;
     @NotBlank
     private String taxCode;
+
+    private UUID claimedExternalVenueId;
     @NotBlank
     private String address;
     @NotBlank

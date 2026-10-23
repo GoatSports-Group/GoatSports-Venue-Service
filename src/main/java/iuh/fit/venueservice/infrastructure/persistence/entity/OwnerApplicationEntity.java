@@ -39,6 +39,7 @@ public class OwnerApplicationEntity extends BaseEntity {
     private LocalDateTime reviewedAt;
     private LocalDateTime receivedAt;
     private LocalDateTime viewedAt;
+    private UUID claimedExternalVenueId;
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
     @JoinColumn(name = "address_id", nullable = false, unique = true)

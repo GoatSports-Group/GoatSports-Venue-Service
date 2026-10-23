@@ -6,6 +6,7 @@ import iuh.fit.venueservice.application.dto.request.venue.UpdateVenueCommand;
 import iuh.fit.venueservice.application.dto.request.venue.UpdateCancellationPolicyCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.service.ExternalVenueClaimService;
 import iuh.fit.venueservice.application.service.VenueService;
 import iuh.fit.venueservice.application.service.impl.VenueServiceImpl;
 import iuh.fit.venueservice.domain.entity.Venue;
@@ -36,6 +37,7 @@ public class VenueDecorator implements VenueService {
     private final VenueServiceImpl venueServiceImpl;
     private final VenueSemanticIndexJob semanticIndex;
     private final NotificationClient notificationClient;
+    private final ExternalVenueClaimService claimService;
 
     @Override
     @Transactional(rollbackFor = ServiceException.class)
@@ -64,6 +66,9 @@ public class VenueDecorator implements VenueService {
     public Venue updateVenue(UpdateVenueCommand command) throws ServiceException {
         Venue venue = venueServiceImpl.updateVenue(command);
         reindexAfterCommit(venue);
+        if (Boolean.TRUE.equals(venue.getActive())) {
+            afterCommit(() -> claimService.notifyWantersWhenOpened(venue.getVenueId(), venue.getName()));
+        }
         return venue;
     }
 

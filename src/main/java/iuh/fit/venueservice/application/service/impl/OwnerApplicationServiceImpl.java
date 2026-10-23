@@ -89,6 +89,7 @@ public class OwnerApplicationServiceImpl implements OwnerApplicationService {
                 .receivedAt(LocalDateTime.now())
                 .address(address)
                 .documents(documents)
+                .claimedExternalVenueId(command.claimedExternalVenueId())
                 .build();
 
         return ownerApplicationRepository.create(ownerApplication);

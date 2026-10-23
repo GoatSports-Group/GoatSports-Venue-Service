@@ -72,6 +72,26 @@ class ExternalVenueRepositoryTest {
         });
         assertThat(repository.recordInvite(UUID.randomUUID())).isEmpty();
 
+        // Chủ sân nhận quản lý: sân biến khỏi bản đồ và sân tiềm năng, không gắn được cho cơ sở khác.
+        UUID partner = UUID.randomUUID();
+        GeoBounds around = new GeoBounds(21.99, 103.99, 22.01, 104.01);
+        assertThat(repository.findInBounds(around, null, null, 10)).extracting(ExternalVenue::getExternalVenueId)
+                .contains(venueId);
+        repository.addWant(venueId, player);
+        assertThat(repository.findWanterIds(venueId)).contains(player);
+        assertThat(repository.markClaimed(venueId, partner)).isTrue();
+        assertThat(repository.markClaimed(venueId, partner)).isTrue();
+        assertThat(repository.markClaimed(venueId, UUID.randomUUID())).isFalse();
+        assertThat(repository.findById(venueId)).hasValueSatisfying(venue ->
+                assertThat(venue.getClaimedVenueId()).isEqualTo(partner));
+        assertThat(repository.findInBounds(around, null, null, 10)).extracting(ExternalVenue::getExternalVenueId)
+                .doesNotContain(venueId);
+        assertThat(repository.findDemand()).extracting(ExternalVenueDemand::venue)
+                .noneMatch(venue -> venue.getExternalVenueId().equals(venueId));
+        assertThat(repository.claimWantersNotification(partner)).contains(venueId);
+        assertThat(repository.claimWantersNotification(partner)).isEmpty();
+        assertThat(repository.claimWantersNotification(UUID.randomUUID())).isEmpty();
+
         assertThat(repository.deleteByRegion(region)).isEqualTo(1);
         assertThat(repository.findById(venueId)).isEmpty();
         assertThat(repository.findDemand()).extracting(ExternalVenueDemand::venue)

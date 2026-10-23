@@ -123,6 +123,12 @@ public class OwnerApplicationRepositoryImpl implements OwnerApplicationRepositor
     }
 
     @Override
+    public long countOtherPendingClaims(UUID externalVenueId, UUID excludeApplicationId) {
+        return jpaRepository.countByClaimedExternalVenueIdAndStatusAndOwnerApplicationIdNot(
+                externalVenueId, OwnerApplicationStatus.PENDING, excludeApplicationId);
+    }
+
+    @Override
     public List<OwnerApplication> findWithTemporaryDocuments(int limit) {
         Pageable pageable = PageRequest.of(0, Math.max(1, limit), Sort.by(Sort.Direction.ASC, "createdAt"));
         List<UUID> applicationIds = jpaRepository.findIdsWithDocumentFileUrlPrefix("temp/", pageable);

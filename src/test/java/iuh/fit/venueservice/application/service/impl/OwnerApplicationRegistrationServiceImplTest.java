@@ -160,7 +160,8 @@ class OwnerApplicationRegistrationServiceImplTest {
                         document(userId, OwnerApplicationDocumentSlot.IDENTITY_BACK, "identities/back.jpg"),
                         document(userId, OwnerApplicationDocumentSlot.BUSINESS_LICENSE, "licenses/license.jpg"),
                         document(userId, OwnerApplicationDocumentSlot.VENUE_PHOTO, "venues/venue.jpg")
-                )
+                ),
+                null
         );
     }
 

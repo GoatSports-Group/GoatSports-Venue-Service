@@ -36,4 +36,6 @@ public class ExternalVenue {
     private LocalDateTime importedAt;
     private int inviteCount;
     private LocalDateTime lastInvitedAt;
+    private UUID claimedVenueId;
+    private LocalDateTime claimedAt;
 }

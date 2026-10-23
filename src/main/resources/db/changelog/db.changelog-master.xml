@@ -28,4 +28,5 @@
     <include file="/db/changelog/schema/23-10-2026/add-external-venues.xml"/>
     <include file="/db/changelog/schema/23-10-2026/add-external-venue-demand.xml"/>
     <include file="/db/changelog/schema/23-10-2026/add-external-venue-invites.xml"/>
+    <include file="/db/changelog/schema/24-10-2026/add-external-venue-claims.xml"/>
 </databaseChangeLog>

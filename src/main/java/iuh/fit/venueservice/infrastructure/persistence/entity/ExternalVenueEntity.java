@@ -70,4 +70,13 @@ public class ExternalVenueEntity {
 
     @Column(name = "last_invited_at")
     private LocalDateTime lastInvitedAt;
+
+    @Column(name = "claimed_venue_id")
+    private UUID claimedVenueId;
+
+    @Column(name = "claimed_at")
+    private LocalDateTime claimedAt;
+
+    @Column(name = "wanters_notified_at")
+    private LocalDateTime wantersNotifiedAt;
 }

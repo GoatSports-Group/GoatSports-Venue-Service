@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20261024-add-external-venue-claims" author="claude">
+        <comment>Chu san nhan quan ly san ngoai he thong: ho so ghi san duoc nhan, duyet xong san ngoai tro sang co so moi; bao nguoi muon dat mot lan khi co so mo lan dau</comment>
+        <addColumn tableName="external_venues">
+            <column name="claimed_venue_id" type="UUID"/>
+            <column name="claimed_at" type="TIMESTAMP"/>
+            <column name="wanters_notified_at" type="TIMESTAMP"/>
+        </addColumn>
+        <addColumn tableName="owner_applications">
+            <column name="claimed_external_venue_id" type="UUID"/>
+        </addColumn>
+        <createIndex tableName="owner_applications" indexName="idx_owner_applications_claimed_external_venue">
+            <column name="claimed_external_venue_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

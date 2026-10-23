@@ -32,6 +32,7 @@ public class OwnerApplicationResponse {
 
     private AddressResponse address;
     private Set<DocumentResponse> documents;
+    private UUID claimedExternalVenueId;
 
     @Getter
     @Setter

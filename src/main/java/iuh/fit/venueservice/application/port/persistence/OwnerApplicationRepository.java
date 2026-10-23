@@ -23,6 +23,9 @@ public interface OwnerApplicationRepository {
 
     boolean existsByUserIdAndStatusIn(UUID userId, List<OwnerApplicationStatus> statuses);
 
+    /** Hồ sơ khác (không tính {@code excludeApplicationId}) đang chờ duyệt cũng nhận sân ngoài này. */
+    long countOtherPendingClaims(UUID externalVenueId, UUID excludeApplicationId);
+
     List<OwnerApplication> findWithTemporaryDocuments(int limit);
 
     PageResult<OwnerApplication> findAll(PageFilter filter);

@@ -36,4 +36,5 @@ public class OwnerApplication extends BaseEntity {
     private LocalDateTime viewedAt;
     private Address address;
     private Set<OwnerApplicationDocument> documents;
+    private UUID claimedExternalVenueId;
 }

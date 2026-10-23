@@ -7,11 +7,13 @@ import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.mapper.OwnerApplicationMapper;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
+import iuh.fit.venueservice.application.service.ExternalVenueClaimService;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.util.BaseUtil;
 import iuh.fit.venueservice.presentation.converter.OwnerApplicationConverter;
 import iuh.fit.venueservice.presentation.request.application.RejectOwnerApplicationRequest;
 import iuh.fit.venueservice.presentation.response.application.OwnerApplicationResponse;
+import iuh.fit.venueservice.presentation.response.venue.ExternalVenueClaimReviewResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +34,7 @@ public class OwnerApplicationAdminController {
     private final OwnerApplicationMapper ownerApplicationMapper;
     private final OwnerApplicationConverter ownerApplicationConverter;
     private final CurrentUserProvider currentUserProvider;
+    private final ExternalVenueClaimService claimService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('GET_OWNER_APPLICATIONS')")
@@ -67,6 +70,16 @@ public class OwnerApplicationAdminController {
                 ownerApplicationService.getOwnerApplicationDetail(id)
         );
         return ResponseEntity.status(HttpStatus.OK).body(ownerApplicationConverter.toResponse(result));
+    }
+
+    @GetMapping("/{id}/external-venue-claim")
+    @PreAuthorize("hasAuthority('GET_OWNER_APPLICATION')")
+    public ResponseEntity<ExternalVenueClaimReviewResponse> getExternalVenueClaim(@PathVariable String id)
+            throws ServiceException {
+        return claimService.review(ownerApplicationService.getOwnerApplicationDetail(id))
+                .map(ExternalVenueClaimReviewResponse::from)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PutMapping("/{id}/viewed")

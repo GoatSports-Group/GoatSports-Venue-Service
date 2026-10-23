@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.port.OwnerApplicationNotificationPort;
 import iuh.fit.venueservice.application.port.OwnerApplicationBackgroundPort;
 import iuh.fit.venueservice.infrastructure.external.client.NotificationClient;
 import iuh.fit.venueservice.infrastructure.scheduling.VenueSemanticIndexJob;
+import iuh.fit.venueservice.application.service.ExternalVenueClaimService;
 import iuh.fit.venueservice.application.service.OwnerApplicationService;
 import iuh.fit.venueservice.application.service.OwnerCheckInService;
 import iuh.fit.venueservice.application.service.VenueCourtService;
@@ -26,6 +27,7 @@ class DecoratorBeanSelectionTest {
     void serviceInterfacesResolveToTransactionalDecorators() {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
             context.registerBean(OwnerApplicationServiceImpl.class, () -> mock(OwnerApplicationServiceImpl.class));
+            context.registerBean(ExternalVenueClaimService.class, () -> mock(ExternalVenueClaimService.class));
             context.registerBean(
                     OwnerApplicationNotificationPort.class,
                     () -> mock(OwnerApplicationNotificationPort.class)

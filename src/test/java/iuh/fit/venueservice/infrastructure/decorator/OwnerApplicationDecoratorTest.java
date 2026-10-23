@@ -3,6 +3,7 @@ package iuh.fit.venueservice.infrastructure.decorator;
 import iuh.fit.venueservice.application.dto.request.application.SubmitOwnerApplicationCommand;
 import iuh.fit.venueservice.application.port.OwnerApplicationBackgroundPort;
 import iuh.fit.venueservice.application.port.OwnerApplicationNotificationPort;
+import iuh.fit.venueservice.application.service.ExternalVenueClaimService;
 import iuh.fit.venueservice.application.service.impl.OwnerApplicationServiceImpl;
 import iuh.fit.venueservice.domain.entity.OwnerApplication;
 import org.junit.jupiter.api.AfterEach;
@@ -17,6 +18,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -30,6 +32,8 @@ class OwnerApplicationDecoratorTest {
     private OwnerApplicationNotificationPort notificationPort;
     @Mock
     private OwnerApplicationBackgroundPort backgroundPort;
+    @Mock
+    private ExternalVenueClaimService claimService;
     @InjectMocks
     private OwnerApplicationDecorator decorator;
 
@@ -78,6 +82,27 @@ class OwnerApplicationDecoratorTest {
                 synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK)
         );
         verify(notificationPort, never()).notifyProgressChanged(application);
+    }
+
+    @Test
+    void approvingAClaimLinksTheVenueInTheTransactionWithoutTellingWantersYet() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        UUID reviewerId = UUID.randomUUID();
+        OwnerApplication application = OwnerApplication.builder()
+                .ownerApplicationId(applicationId)
+                .userId(UUID.randomUUID())
+                .claimedExternalVenueId(UUID.randomUUID())
+                .build();
+        when(ownerApplicationServiceImpl.approveOwnerApplication(applicationId, reviewerId)).thenReturn(application);
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        TransactionSynchronizationManager.initSynchronization();
+
+        decorator.approveOwnerApplication(applicationId, reviewerId);
+
+        verify(claimService).linkClaim(application);
+        // Cơ sở mới còn đóng (trang sân 404): người muốn đặt được báo khi chủ sân mở cơ sở, không phải lúc duyệt.
+        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        verify(claimService, never()).notifyWantersWhenOpened(any(), any());
     }
 
     @Test

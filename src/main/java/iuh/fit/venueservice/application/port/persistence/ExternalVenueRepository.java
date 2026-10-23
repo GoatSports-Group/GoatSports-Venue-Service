@@ -15,7 +15,7 @@ public interface ExternalVenueRepository {
     /** Thêm mới hoặc cập nhật theo (source, sourceId); giữ nguyên id của sân đã có. Trả số bản ghi đã lưu. */
     int upsertAll(List<ExternalVenue> venues);
 
-    /** {@code sportType}, {@code keyword} có thể null; tối đa {@code limit} sân, theo tên. */
+    /** Bỏ sân đã có chủ nhận quản lý. {@code sportType}, {@code keyword} có thể null; tối đa {@code limit} sân, theo tên. */
     List<ExternalVenue> findInBounds(GeoBounds bounds, SportType sportType, String keyword, int limit);
 
     Optional<ExternalVenue> findById(UUID externalVenueId);
@@ -39,6 +39,21 @@ public interface ExternalVenueRepository {
     long countWants(UUID externalVenueId);
 
     long countMatches(UUID externalVenueId);
+
+    /**
+     * Gắn sân ngoài với cơ sở đối tác vừa được duyệt. true khi đã gắn (hoặc vốn gắn với chính cơ sở này, duyệt lại),
+     * false khi sân không còn hoặc đã thuộc cơ sở khác.
+     */
+    boolean markClaimed(UUID externalVenueId, UUID venueId);
+
+    /**
+     * Cơ sở đối tác vừa mở đặt online: nếu nó thay cho một sân ngoài mà chưa báo người muốn đặt, đánh dấu đã báo và trả
+     * id sân ngoài đó (chỉ trả một lần); ngược lại trống.
+     */
+    Optional<UUID> claimWantersNotification(UUID venueId);
+
+    /** Người chơi đã bấm "muốn đặt online" sân này. */
+    List<UUID> findWanterIds(UUID externalVenueId);
 
     Optional<ExternalVenue> recordInvite(UUID externalVenueId);
 

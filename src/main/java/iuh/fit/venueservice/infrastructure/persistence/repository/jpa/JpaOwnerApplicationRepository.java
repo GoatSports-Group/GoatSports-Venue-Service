@@ -25,6 +25,10 @@ public interface JpaOwnerApplicationRepository extends JpaRepository<OwnerApplic
 
     boolean existsByUserIdAndStatusIn(UUID userId, List<OwnerApplicationStatus> statuses);
 
+    long countByClaimedExternalVenueIdAndStatusAndOwnerApplicationIdNot(UUID claimedExternalVenueId,
+                                                                         OwnerApplicationStatus status,
+                                                                         UUID ownerApplicationId);
+
     @EntityGraph(attributePaths = { "address", "ownerApplicationDocuments", "venue" })
     @Query("select application from OwnerApplicationEntity application where application.ownerApplicationId = :id")
     Optional<OwnerApplicationEntity> findDetailedById(@Param("id") UUID id);

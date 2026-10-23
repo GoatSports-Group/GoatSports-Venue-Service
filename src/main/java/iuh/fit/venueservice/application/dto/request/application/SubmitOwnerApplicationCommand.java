@@ -27,7 +27,8 @@ public record SubmitOwnerApplicationCommand(
         String city,
         Double latitude,
         Double longitude,
-        List<OwnerApplicationUploadedDocumentCommand> documents
+        List<OwnerApplicationUploadedDocumentCommand> documents,
+        UUID claimedExternalVenueId
 ) {
     private static final Set<OwnerApplicationDocumentSlot> REQUIRED_SLOTS = Set.of(
             OwnerApplicationDocumentSlot.IDENTITY_FRONT,
@@ -85,7 +86,7 @@ public record SubmitOwnerApplicationCommand(
                 ownerApplicationRequestId, userId, identityVerificationId,
                 verifiedFullName, phone, email, verifiedIdentityNumber,
                 businessName, businessType, taxCode, address, province, district, ward, city,
-                latitude, longitude, documents
+                latitude, longitude, documents, claimedExternalVenueId
         );
     }
 

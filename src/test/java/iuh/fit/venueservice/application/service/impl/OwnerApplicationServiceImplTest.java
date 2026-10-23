@@ -127,7 +127,8 @@ class OwnerApplicationServiceImplTest {
                         uploadedDocument(userId, OwnerApplicationDocumentSlot.IDENTITY_BACK, "identities/back.jpg"),
                         uploadedDocument(userId, OwnerApplicationDocumentSlot.BUSINESS_LICENSE, "licenses/license.jpg"),
                         uploadedDocument(userId, OwnerApplicationDocumentSlot.VENUE_PHOTO, "venues/venue.jpg")
-                )
+                ),
+                null
         );
         when(ownerApplicationRepository.create(any(OwnerApplication.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));

@@ -16,6 +16,9 @@ public interface JpaExternalVenueWantRepository
 
     long countByIdExternalVenueId(UUID externalVenueId);
 
+    @Query("select w.id.userId from ExternalVenueWantEntity w where w.id.externalVenueId = :externalVenueId")
+    List<UUID> findUserIdsByExternalVenueId(@Param("externalVenueId") UUID externalVenueId);
+
     @Modifying
     @Query("delete from ExternalVenueWantEntity w where w.id.userId = :userId")
     int deleteByUserId(@Param("userId") UUID userId);

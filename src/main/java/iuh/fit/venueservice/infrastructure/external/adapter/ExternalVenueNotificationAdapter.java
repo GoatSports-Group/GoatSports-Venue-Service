@@ -29,4 +29,18 @@ public class ExternalVenueNotificationAdapter implements ExternalVenueNotificati
             log.warn("Không gửi được thông báo duyệt gợi ý sân {}", suggestionId, exception);
         }
     }
+
+    @Override
+    public void notifyVenueJoined(UUID receiverId, UUID externalVenueId, UUID venueId, String title, String content) {
+        // Mỗi người chỉ được báo một lần cho mỗi sân, kể cả khi admin bấm duyệt lại.
+        UUID eventId = UUID.nameUUIDFromBytes(("external-venue-joined:" + externalVenueId + ":" + receiverId)
+                .getBytes(StandardCharsets.UTF_8));
+        try {
+            notificationClient.createNotification(new CreateNotificationRequest(
+                    eventId, receiverId, title, content, "SYSTEM", "VENUE", "VENUE", venueId
+            ));
+        } catch (RuntimeException exception) {
+            log.warn("Không báo được người chơi {} rằng sân {} đã tham gia", receiverId, venueId, exception);
+        }
+    }
 }

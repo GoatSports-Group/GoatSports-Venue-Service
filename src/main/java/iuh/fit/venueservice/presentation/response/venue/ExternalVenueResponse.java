@@ -17,7 +17,8 @@ public record ExternalVenueResponse(
         String phone,
         String website,
         String openingHours,
-        String source
+        String source,
+        UUID claimedVenueId
 ) {
     public static ExternalVenueResponse from(ExternalVenue venue) {
         return new ExternalVenueResponse(
@@ -30,7 +31,8 @@ public record ExternalVenueResponse(
                 venue.getPhone(),
                 venue.getWebsite(),
                 venue.getOpeningHours(),
-                venue.getSource()
+                venue.getSource(),
+                venue.getClaimedVenueId()
         );
     }
 }

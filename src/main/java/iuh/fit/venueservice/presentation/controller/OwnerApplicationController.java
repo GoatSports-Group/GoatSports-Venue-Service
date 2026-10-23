@@ -186,7 +186,8 @@ public class OwnerApplicationController {
                                 document.getSlot(),
                                 document.getObjectKey()
                         ))
-                        .toList()
+                        .toList(),
+                request.getClaimedExternalVenueId()
         ));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ownerApplicationConverter.toResponse(
