@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalComma
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.BookingTicketMailPort;
 import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
@@ -12,6 +13,7 @@ import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
+import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.Venue;
@@ -49,6 +51,7 @@ class BookingPaymentEventServiceImplTest {
     @Mock private MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
     @Mock private PaymentRefundPort paymentRefundPort;
     @Mock private BookingNotificationPort bookingNotificationPort;
+    @Mock private BookingTicketMailPort bookingTicketMailPort;
 
     @Test
     void confirmsBookingAndIssuesSignedQrExactlyOnceForValidDeposit() throws Exception {
@@ -72,7 +75,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
         PaymentSucceededCommand event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
 
@@ -92,6 +95,19 @@ class BookingPaymentEventServiceImplTest {
                 ArgumentMatchers.eq("booking-confirmed-owner:" + bookingId),
                 ArgumentMatchers.eq("Đơn đặt sân mới"),
                 ArgumentMatchers.contains("lúc 08:00 ngày 01/09/2026 đã đóng cọc"));
+        // Người chơi nhận đúng một email vé, mang đúng token QR vừa cấp.
+        verify(bookingTicketMailPort, Mockito.times(1)).sendTicket(ArgumentMatchers.eq(payerId),
+                ArgumentMatchers.argThat(ticket -> ticket.bookingId().equals(bookingId)
+                        && "GSQR.v1.signed".equals(ticket.qrCode())));
+    }
+
+    @Test
+    void addressLineSkipsBlankParts() {
+        assertThat(BookingPaymentEventServiceImpl.addressLine(Address.builder()
+                .address("12 Nguyễn Văn Bảo").ward(" ").district("Gò Vấp").city("TP.HCM").build()))
+                .isEqualTo("12 Nguyễn Văn Bảo, Gò Vấp, TP.HCM");
+        assertThat(BookingPaymentEventServiceImpl.addressLine(Address.builder().build())).isNull();
+        assertThat(BookingPaymentEventServiceImpl.addressLine(null)).isNull();
     }
 
     @Test
@@ -103,7 +119,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
 
         assertThatThrownBy(() -> service.applySucceededPayment(event(
@@ -139,7 +155,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
 
         assertThat(service.applySucceededPayment(event(
@@ -170,7 +186,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
 
         assertThat(service.remindOwnerOfManualRefund(refundId, reminderId, 60_000)).isTrue();
@@ -198,7 +214,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
 
         assertThat(service.applyTerminalPayment(new PaymentTerminalCommand(
@@ -222,7 +238,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isTrue();
@@ -266,7 +282,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isTrue();
@@ -298,7 +314,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isFalse();

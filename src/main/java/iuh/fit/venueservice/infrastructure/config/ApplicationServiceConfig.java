@@ -253,12 +253,13 @@ public class ApplicationServiceConfig {
             BookingCancellationRepository bookingCancellationRepository,
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
             PaymentRefundPort paymentRefundPort,
-            BookingNotificationPort bookingNotificationPort
+            BookingNotificationPort bookingNotificationPort,
+            BookingTicketMailPort bookingTicketMailPort
     ) {
         return new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort
+                bookingNotificationPort, bookingTicketMailPort
         );
     }
 

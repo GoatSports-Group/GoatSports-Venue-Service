@@ -5,6 +5,7 @@ import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalComma
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.BookingQrPort;
+import iuh.fit.venueservice.application.port.BookingTicketMailPort;
 import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentRefundPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
@@ -13,6 +14,7 @@ import iuh.fit.venueservice.application.port.persistence.VenueCourtRepository;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
 import iuh.fit.venueservice.application.service.BookingPaymentEventService;
 import iuh.fit.venueservice.application.service.TimeSlotLifecycleService;
+import iuh.fit.venueservice.domain.entity.Address;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.entity.BookingCancellation;
 import iuh.fit.venueservice.domain.entity.Venue;
@@ -26,6 +28,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class BookingPaymentEventServiceImpl implements BookingPaymentEventService {
     private static final Locale VI = Locale.forLanguageTag("vi-VN");
@@ -40,6 +44,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
     private final PaymentRefundPort paymentRefundPort;
     private final BookingNotificationPort bookingNotificationPort;
+    private final BookingTicketMailPort bookingTicketMailPort;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
@@ -50,7 +55,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             BookingCancellationRepository bookingCancellationRepository,
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
             PaymentRefundPort paymentRefundPort,
-            BookingNotificationPort bookingNotificationPort
+            BookingNotificationPort bookingNotificationPort,
+            BookingTicketMailPort bookingTicketMailPort
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
@@ -61,6 +67,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
         this.paymentRefundPort = paymentRefundPort;
         this.bookingNotificationPort = bookingNotificationPort;
+        this.bookingTicketMailPort = bookingTicketMailPort;
     }
 
     @Override
@@ -133,7 +140,9 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                         "là khoản trùng: lượt đặt đã được đóng cọc bằng giao dịch khác, sân của bạn vẫn giữ nguyên.");
             }
             // Gọi trước khi commit: lỗi thì cả sự kiện được Kafka xử lý lại; gọi lặp thì payment-service bỏ qua.
-            UUID ownerId = venueOwnerId(booking);
+            VenueCourt court = courtOf(booking);
+            Venue venue = venueOf(court);
+            UUID ownerId = venue.getOwnerId();
             paymentRefundPort.assignPayee(command.paymentId(), ownerId);
             boolean changed = !command.paymentId().equals(booking.getDepositPaymentId());
             booking.setDepositPaymentId(command.paymentId());
@@ -163,6 +172,11 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 bookingNotificationPort.notifyOwner(ownerId, booking.getBookingId(),
                         "booking-confirmed-owner:" + booking.getBookingId(), "Đơn đặt sân mới",
                         "Lượt " + booking.getBookingCode() + " " + slotLabel(booking) + " đã đóng cọc.");
+                bookingTicketMailPort.sendTicket(booking.getPlayerId(), new BookingTicketMailPort.BookingTicket(
+                        booking.getBookingId(), booking.getBookingCode(), venue.getName(), court.getName(),
+                        addressLine(venue.getAddress()), booking.getPlayDate(), booking.getStartTime(),
+                        booking.getEndTime(), booking.getDepositAmount(), booking.getRemainingAmount(),
+                        booking.getQrCode()));
             }
             return changed;
         }
@@ -243,12 +257,27 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 + booking.getPlayDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
+    /** "12 Nguyễn Văn Bảo, Phường 4, Gò Vấp, TP.HCM", bỏ phần trống. */
+    static String addressLine(Address address) {
+        if (address == null) return null;
+        String line = Stream.of(address.getAddress(), address.getWard(), address.getDistrict(), address.getCity())
+                .filter(part -> part != null && !part.isBlank())
+                .collect(Collectors.joining(", "));
+        return line.isEmpty() ? null : line;
+    }
+
     private UUID venueOwnerId(Booking booking) throws ServiceException {
-        VenueCourt court = venueCourtRepository.findById(booking.getVenueCourtId())
+        return venueOf(courtOf(booking)).getOwnerId();
+    }
+
+    private VenueCourt courtOf(Booking booking) throws ServiceException {
+        return venueCourtRepository.findById(booking.getVenueCourtId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy sân của booking."));
-        Venue venue = venueRepository.findById(court.getVenueId())
+    }
+
+    private Venue venueOf(VenueCourt court) throws ServiceException {
+        return venueRepository.findById(court.getVenueId())
                 .orElseThrow(() -> new ServiceException("Không tìm thấy cơ sở của booking."));
-        return venue.getOwnerId();
     }
 
     private void ensureAmountMatches(Double actual, Double expected) throws ServiceException {
