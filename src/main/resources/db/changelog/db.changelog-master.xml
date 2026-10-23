@@ -25,4 +25,5 @@
     <include file="/db/changelog/schema/14-10-2026/add-review-ai-verdict.xml"/>
     <include file="/db/changelog/schema/15-10-2026/add-activity-backfills.xml"/>
     <include file="/db/changelog/schema/20-10-2026/add-cancellation-workflow.xml"/>
+    <include file="/db/changelog/schema/23-10-2026/add-external-venues.xml"/>
 </databaseChangeLog>

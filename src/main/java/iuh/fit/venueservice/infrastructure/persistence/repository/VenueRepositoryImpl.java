@@ -4,6 +4,8 @@ import iuh.fit.venueservice.application.dto.request.venue.AdminVenueFilter;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.port.persistence.VenueRepository;
+import iuh.fit.venueservice.domain.entity.GeoBounds;
+import iuh.fit.venueservice.domain.entity.GeoPoint;
 import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
@@ -67,6 +69,11 @@ public class VenueRepositoryImpl implements VenueRepository {
     @Override
     public List<UUID> findOwnerIds() {
         return jpaRepository.findDistinctOwnerIds();
+    }
+
+    @Override
+    public List<GeoPoint> findActiveLocationsIn(GeoBounds bounds) {
+        return jpaRepository.findActiveLocationsIn(bounds.south(), bounds.west(), bounds.north(), bounds.east());
     }
 
     @Override

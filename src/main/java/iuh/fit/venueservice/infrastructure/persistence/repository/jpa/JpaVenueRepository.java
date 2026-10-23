@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository.jpa;
 
+import iuh.fit.venueservice.domain.entity.GeoPoint;
 import iuh.fit.venueservice.infrastructure.persistence.entity.VenueEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -33,4 +35,13 @@ public interface JpaVenueRepository extends JpaRepository<VenueEntity, UUID>, Jp
     List<UUID> findDistinctOwnerIds();
 
     boolean existsByOwnerId(UUID ownerId);
+
+    @Query("""
+            select new iuh.fit.venueservice.domain.entity.GeoPoint(a.latitude, a.longitude)
+            from VenueEntity v join v.address a
+            where v.active = true and v.suspendedAt is null
+              and a.latitude between :south and :north and a.longitude between :west and :east
+            """)
+    List<GeoPoint> findActiveLocationsIn(@Param("south") double south, @Param("west") double west,
+                                         @Param("north") double north, @Param("east") double east);
 }

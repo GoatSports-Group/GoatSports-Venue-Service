@@ -3,6 +3,8 @@ package iuh.fit.venueservice.application.port.persistence;
 import iuh.fit.venueservice.application.dto.request.venue.AdminVenueFilter;
 import iuh.fit.venueservice.application.dto.request.venue.SearchVenueCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
+import iuh.fit.venueservice.domain.entity.GeoBounds;
+import iuh.fit.venueservice.domain.entity.GeoPoint;
 import iuh.fit.venueservice.domain.entity.Venue;
 
 import java.util.List;
@@ -24,4 +26,7 @@ public interface VenueRepository {
     PageResult<Venue> findAll(AdminVenueFilter filter);
 
     boolean existsByOwnerId(UUID ownerId);
+
+    /** Tọa độ các cơ sở đang nhận đặt trong khung bản đồ: sân ngoài trùng chỗ thì ẩn đi. */
+    List<GeoPoint> findActiveLocationsIn(GeoBounds bounds);
 }

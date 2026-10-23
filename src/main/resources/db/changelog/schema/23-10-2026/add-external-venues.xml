@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet id="20261023-create-external-venues" author="claude">
+        <comment>San ngoai thuc te nhap tu OpenStreetMap: tim, chi duong, ru nhau choi; khong dat online</comment>
+        <createTable tableName="external_venues">
+            <column name="external_venue_id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="source" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_id" type="VARCHAR(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sport_types" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="latitude" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="longitude" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="VARCHAR(500)"/>
+            <column name="phone" type="VARCHAR(60)"/>
+            <column name="website" type="VARCHAR(500)"/>
+            <column name="opening_hours" type="VARCHAR(200)"/>
+            <column name="region" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="imported_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="external_venues" columnNames="source, source_id"
+                             constraintName="uk_external_venues_source"/>
+        <createIndex tableName="external_venues" indexName="idx_external_venues_location">
+            <column name="latitude"/>
+            <column name="longitude"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
