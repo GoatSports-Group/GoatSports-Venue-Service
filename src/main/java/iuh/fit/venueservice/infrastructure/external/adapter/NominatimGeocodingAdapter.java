@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import iuh.fit.venueservice.application.dto.response.address.GeocodingResultCommand;
 import iuh.fit.venueservice.application.port.GeocodingPort;
+import iuh.fit.venueservice.domain.entity.GeoBounds;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -169,9 +170,22 @@ public class NominatimGeocodingAdapter implements GeocodingPort {
                     result.address() == null ? null : result.address().road(),
                     address.split(",", 2)[0]
             );
-            return Optional.of(new GeocodingResultCommand(latitude, longitude, title, address));
+            return Optional.of(new GeocodingResultCommand(latitude, longitude, title, address, bounds(result)));
         } catch (NumberFormatException exception) {
             return Optional.empty();
+        }
+    }
+
+    /** Nominatim trả {@code boundingbox} theo thứ tự nam, bắc, tây, đông (chuỗi). */
+    private static GeoBounds bounds(NominatimResult result) {
+        List<String> box = result.boundingbox();
+        if (box == null || box.size() != 4) return null;
+        try {
+            GeoBounds bounds = new GeoBounds(Double.parseDouble(box.get(0)), Double.parseDouble(box.get(2)),
+                    Double.parseDouble(box.get(1)), Double.parseDouble(box.get(3)));
+            return bounds.isValid() ? bounds : null;
+        } catch (NumberFormatException exception) {
+            return null;
         }
     }
 
@@ -250,7 +264,8 @@ public class NominatimGeocodingAdapter implements GeocodingPort {
             String lon,
             String name,
             @JsonProperty("display_name") String displayName,
-            NominatimAddress address
+            NominatimAddress address,
+            List<String> boundingbox
     ) {
         String latitude() {
             return lat;
