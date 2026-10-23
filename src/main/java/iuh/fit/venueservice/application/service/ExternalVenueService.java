@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service;
 
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueImportStatus;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -28,4 +29,7 @@ public interface ExternalVenueService {
     ExternalVenue get(UUID externalVenueId) throws ServiceException;
 
     List<ExternalVenueRegionSummary> summarize();
+
+    /** Sân đã nhập của một khu vực (admin xem lại kết quả nhập), mỗi trang tối đa 50. */
+    PageResult<ExternalVenue> listByRegion(String region, int page, int size);
 }

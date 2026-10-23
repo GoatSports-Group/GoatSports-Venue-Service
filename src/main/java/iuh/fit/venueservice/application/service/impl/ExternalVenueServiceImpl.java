@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueImportStatus;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -38,6 +39,7 @@ public class ExternalVenueServiceImpl implements ExternalVenueService {
     /** Thu nhỏ bản đồ tới cả nước thì không đổ hàng nghìn ghim: đòi phóng to hơn. */
     private static final double MAX_SEARCH_SPAN_DEGREES = 3.0;
     private static final int MAX_RESULTS = 200;
+    private static final int MAX_PAGE_SIZE = 50;
     /** Sân ngoài cách một cơ sở đối tác dưới khoảng này coi là cùng một nơi: chỉ hiện cơ sở đặt online được. */
     private static final double PARTNER_OVERLAP_METERS = 150;
 
@@ -131,6 +133,11 @@ public class ExternalVenueServiceImpl implements ExternalVenueService {
     @Override
     public List<ExternalVenueRegionSummary> summarize() {
         return externalVenueRepository.summarizeByRegion();
+    }
+
+    @Override
+    public PageResult<ExternalVenue> listByRegion(String region, int page, int size) {
+        return externalVenueRepository.findByRegion(region, Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE));
     }
 
     private static void requireBounds(GeoBounds bounds, double maxSpan, String tooWideMessage) throws ServiceException {

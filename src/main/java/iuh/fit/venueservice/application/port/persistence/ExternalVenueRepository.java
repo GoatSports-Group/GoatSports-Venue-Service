@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.port.persistence;
 
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.domain.entity.ExternalVenue;
 import iuh.fit.venueservice.domain.entity.GeoBounds;
@@ -19,4 +20,7 @@ public interface ExternalVenueRepository {
     Optional<ExternalVenue> findById(UUID externalVenueId);
 
     List<ExternalVenueRegionSummary> summarizeByRegion();
+
+    /** Sân đã nhập của một khu vực, theo tên; {@code page} tính từ 0. */
+    PageResult<ExternalVenue> findByRegion(String region, int page, int size);
 }

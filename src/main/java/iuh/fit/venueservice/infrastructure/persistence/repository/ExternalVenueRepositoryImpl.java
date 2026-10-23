@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.application.port.persistence.ExternalVenueRepository;
 import iuh.fit.venueservice.domain.entity.ExternalVenue;
@@ -8,6 +9,7 @@ import iuh.fit.venueservice.domain.enums.SportType;
 import iuh.fit.venueservice.infrastructure.persistence.entity.ExternalVenueEntity;
 import iuh.fit.venueservice.infrastructure.persistence.repository.jpa.JpaExternalVenueRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,6 +74,14 @@ public class ExternalVenueRepositoryImpl implements ExternalVenueRepository {
     @Transactional(readOnly = true)
     public List<ExternalVenueRegionSummary> summarizeByRegion() {
         return jpaRepository.summarizeByRegion();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<ExternalVenue> findByRegion(String region, int page, int size) {
+        Page<ExternalVenueEntity> result = jpaRepository.findByRegionOrderByName(region, PageRequest.of(page, size));
+        return new PageResult<>(result.getContent().stream().map(this::toDomain).toList(), result.getTotalElements(),
+                page, size, result.getTotalPages());
     }
 
     private void copy(ExternalVenue venue, ExternalVenueEntity entity) {

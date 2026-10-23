@@ -1,12 +1,16 @@
 package iuh.fit.venueservice.presentation.controller.admin;
 
 import iuh.fit.shared.annotation.AuditLog;
+import iuh.fit.venueservice.application.dto.response.base.BaseListResponse;
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueImportStatus;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.service.ExternalVenueService;
+import iuh.fit.venueservice.domain.entity.ExternalVenue;
 import iuh.fit.venueservice.domain.entity.GeoBounds;
 import iuh.fit.venueservice.presentation.request.venue.ImportExternalVenuesRequest;
+import iuh.fit.venueservice.presentation.response.venue.ExternalVenueResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -41,6 +46,21 @@ public class ExternalVenueAdminController {
     @PreAuthorize("hasAuthority('SUSPEND_VENUE')")
     public ResponseEntity<List<ExternalVenueRegionSummary>> summary() {
         return ResponseEntity.ok(externalVenueService.summarize());
+    }
+
+    /** Sân đã nhập của một khu vực, theo tên, để admin xem lại kết quả nhập. */
+    @GetMapping
+    @PreAuthorize("hasAuthority('SUSPEND_VENUE')")
+    public ResponseEntity<BaseListResponse> listByRegion(
+            @RequestParam String region,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        PageResult<ExternalVenue> result = externalVenueService.listByRegion(region, page, size);
+        return ResponseEntity.ok(new BaseListResponse(
+                new BaseListResponse.Meta(result.page(), result.pageSize(), result.totalPages(), result.total()),
+                result.items().stream().map(ExternalVenueResponse::from).toList()
+        ));
     }
 
     @GetMapping("/import-status")

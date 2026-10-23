@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.infrastructure.persistence.repository;
 
+import iuh.fit.venueservice.application.dto.response.base.PageResult;
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.application.port.persistence.ExternalVenueRepository;
 import iuh.fit.venueservice.domain.entity.ExternalVenue;
@@ -57,5 +58,9 @@ class ExternalVenueRepositoryTest {
                 .extracting(ExternalVenue::getName).containsExactly("Cầu Lông Mới " + tag);
         assertThat(repository.summarizeByRegion()).filteredOn(s -> s.region().equals(region))
                 .singleElement().extracting(ExternalVenueRegionSummary::venueCount).isEqualTo(3L);
+        PageResult<ExternalVenue> secondPage = repository.findByRegion(region, 1, 2);
+        assertThat(secondPage.total()).isEqualTo(3);
+        assertThat(secondPage.totalPages()).isEqualTo(2);
+        assertThat(secondPage.items()).extracting(ExternalVenue::getName).containsExactly("Xa Lắm " + tag);
     }
 }

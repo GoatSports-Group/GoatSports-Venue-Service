@@ -2,6 +2,7 @@ package iuh.fit.venueservice.infrastructure.persistence.repository.jpa;
 
 import iuh.fit.venueservice.application.dto.response.venue.ExternalVenueRegionSummary;
 import iuh.fit.venueservice.infrastructure.persistence.entity.ExternalVenueEntity;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -35,4 +36,6 @@ public interface JpaExternalVenueRepository extends JpaRepository<ExternalVenueE
             from ExternalVenueEntity v group by v.region order by v.region
             """)
     List<ExternalVenueRegionSummary> summarizeByRegion();
+
+    Page<ExternalVenueEntity> findByRegionOrderByName(String region, Pageable pageable);
 }
