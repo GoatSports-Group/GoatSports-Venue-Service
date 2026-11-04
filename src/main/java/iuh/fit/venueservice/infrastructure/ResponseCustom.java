@@ -27,7 +27,7 @@ public class ResponseCustom implements ResponseBodyAdvice<Object> {
     public Object beforeBodyWrite(@Nullable Object body, MethodParameter returnType,
             MediaType selectedContentType, Class selectedConverterType,
             ServerHttpRequest request, ServerHttpResponse response) {
-        if (body instanceof ServerSentEvent<?> || body instanceof Flux) {
+        if (body instanceof ServerSentEvent<?> || body instanceof Flux || body instanceof byte[]) {
             return body;
         }
 
