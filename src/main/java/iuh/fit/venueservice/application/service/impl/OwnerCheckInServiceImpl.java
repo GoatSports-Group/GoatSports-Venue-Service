@@ -121,10 +121,17 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         BigDecimal remaining = money(booking.getRemainingAmount());
         BigDecimal collectedAtCheckIn = BigDecimal.ZERO;
         if (remaining.signum() > 0 && remainingPayment == null) {
+            if (command.paymentMode() == PaymentCollectionMode.NONE) {
+                throw new ServiceException("Khách cần thanh toán khoản còn lại trước khi nhận sân.");
+            }
             if (command.paymentMode() == PaymentCollectionMode.ONLINE) {
                 throw new ServiceException("Khoản tiền còn lại chưa được dịch vụ thanh toán xác nhận thành công.");
             }
             if (command.paymentMode() == PaymentCollectionMode.CASH) {
+                if (hasPendingRemainingCheckout(payments)) {
+                    throw new ServiceException("Đơn đang có giao dịch payOS chờ xác nhận. Hãy hủy giao dịch đó "
+                            + "trước khi thu tiền mặt để tránh thu hai lần.");
+                }
                 UUID payerId = booking.getPlayerId() == null ? command.ownerId() : booking.getPlayerId();
                 remainingPayment = paymentCollectionPort.collectBookingRemaining(
                         booking.getBookingId(), payerId, command.ownerId(), booking.getRemainingAmount()
@@ -339,6 +346,12 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 .filter(payment -> payment.amount() != null && expectedAmount != null
                         && Math.abs(payment.amount() - expectedAmount) < 0.01)
                 .findFirst().orElse(null);
+    }
+
+    private boolean hasPendingRemainingCheckout(List<PaymentSnapshot> payments) {
+        return payments.stream()
+                .filter(payment -> "BOOKING_REMAINING".equals(payment.purpose()))
+                .anyMatch(payment -> "CREATED".equals(payment.status()) || "PENDING".equals(payment.status()));
     }
 
     private OwnerCheckInView view(

@@ -185,7 +185,7 @@ class OwnerCheckInServiceImplTest {
     }
 
     @Test
-    void allowsUnpaidWalkInToCheckInAndDefersPayment() throws Exception {
+    void refusesCheckInWithoutCollectingRemainingAmount() {
         Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(8, 0), LocalTime.of(9, 0));
         booking.setSource(BookingSource.WALK_IN);
         booking.setPlayerId(null);
@@ -194,18 +194,52 @@ class OwnerCheckInServiceImplTest {
         when(checkInRecordRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
         when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of());
 
+        assertThatThrownBy(() -> service.confirm(new ConfirmOwnerCheckInCommand(
+                ownerId, bookingId, CheckInMethod.MANUAL, PaymentCollectionMode.NONE, null, null
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("thanh toán khoản còn lại");
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        verify(checkInRecordRepository, never()).save(any());
+        verify(paymentCollectionPort, never()).collectBookingRemaining(any(), any(), any(), any());
+    }
+
+    @Test
+    void refusesCashWhilePayosRemainingCheckoutIsPending() {
+        Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(8, 0), LocalTime.of(9, 0));
+        PaymentSnapshot pending = new PaymentSnapshot(
+                UUID.randomUUID(), bookingId, "BOOKING_REMAINING", 140_000.0, "VND", "PENDING",
+                null, null, LocalDateTime.of(2026, 8, 30, 8, 20)
+        );
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
+                .thenReturn(Optional.of(record(booking)));
+        when(checkInRecordRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(deposit(), pending));
+
+        assertThatThrownBy(() -> service.confirm(new ConfirmOwnerCheckInCommand(
+                ownerId, bookingId, CheckInMethod.BOOKING_CODE, PaymentCollectionMode.CASH, null, "GS123456"
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("payOS chờ xác nhận");
+        verify(paymentCollectionPort, never()).collectBookingRemaining(any(), any(), any(), any());
+        verify(checkInRecordRepository, never()).save(any());
+    }
+
+    @Test
+    void checksInOnlineWhenPayosAlreadyConfirmedRemainingAmount() throws Exception {
+        Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(8, 0), LocalTime.of(9, 0));
+        PaymentSnapshot remaining = remaining();
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
+                .thenReturn(Optional.of(record(booking)));
+        when(checkInRecordRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(paymentQueryPort.findByBookingIds(Set.of(bookingId))).thenReturn(List.of(deposit(), remaining));
         when(checkInRecordRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(bookingRepository.save(booking)).thenReturn(booking);
 
         OwnerCheckInView result = service.confirm(new ConfirmOwnerCheckInCommand(
-                ownerId, bookingId, CheckInMethod.MANUAL, PaymentCollectionMode.NONE, null, null
+                ownerId, bookingId, CheckInMethod.BOOKING_CODE, PaymentCollectionMode.ONLINE, null, "GS123456"
         ));
 
         assertThat(result.bookingRecord().booking().getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
-        assertThat(result.outstandingAmount()).isEqualByComparingTo("140000.00");
-        assertThat(result.checkInRecord().getRemainingAmountCollected()).isZero();
+        assertThat(result.outstandingAmount()).isZero();
+        assertThat(result.checkInRecord().getPaymentId()).isEqualTo(remaining.paymentId());
         verify(paymentCollectionPort, never()).collectBookingRemaining(any(), any(), any(), any());
-        verify(timeSlotLifecycleService).confirmBookingSlot(booking);
     }
 
     @Test
