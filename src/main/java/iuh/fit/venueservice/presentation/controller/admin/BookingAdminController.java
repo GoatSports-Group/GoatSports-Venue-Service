@@ -46,7 +46,7 @@ public class BookingAdminController {
                 new AdminBookingFilter(ownerId, venueId, venueCourtId, status, query, fromDate, toDate, page, size));
         BaseListResponse.Meta meta = new BaseListResponse.Meta(
                 result.page(), result.pageSize(), result.totalPages(), result.total());
-        return ResponseEntity.ok(new BaseListResponse(meta, result.items().stream().map(responseMapper::toResponse).toList()));
+        return ResponseEntity.ok(new BaseListResponse(meta, responseMapper.toResponses(result.items())));
     }
 
     @GetMapping("/{bookingId}")

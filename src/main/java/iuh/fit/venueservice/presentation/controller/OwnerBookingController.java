@@ -67,7 +67,7 @@ public class OwnerBookingController {
                 result.page(), result.pageSize(), result.totalPages(), result.total()
         );
         return ResponseEntity.ok(new BaseListResponse(
-                meta, result.items().stream().map(responseMapper::toResponse).toList()
+                meta, responseMapper.toResponses(result.items())
         ));
     }
 

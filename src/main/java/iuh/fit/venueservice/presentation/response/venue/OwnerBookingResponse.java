@@ -30,6 +30,8 @@ public record OwnerBookingResponse(
         String qrCode,
         String walkInCustomerName,
         String walkInCustomerPhone,
+        String customerName,
+        String customerPhone,
         UUID matchmakingSessionId,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

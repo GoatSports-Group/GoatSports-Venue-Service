@@ -11,6 +11,7 @@ import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.security.CurrentUserProvider;
 import iuh.fit.venueservice.application.service.OwnerCheckInService;
 import iuh.fit.venueservice.application.util.BaseUtil;
+import iuh.fit.venueservice.application.port.PlayerContactPort.PlayerContact;
 import iuh.fit.venueservice.presentation.converter.OwnerBookingResponseMapper;
 import iuh.fit.venueservice.presentation.request.venue.ConfirmOwnerCheckInRequest;
 import iuh.fit.venueservice.presentation.request.venue.CreateWalkInBookingRequest;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.time.LocalDate;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerCheckInFilter;
@@ -60,7 +62,7 @@ public class OwnerCheckInController {
                 new BaseListResponse.Meta(
                         result.page(), result.pageSize(), result.totalPages(), result.total()
                 ),
-                result.items().stream().map(this::toResponse).toList()
+                toResponses(result.items())
         ));
     }
 
@@ -98,12 +100,25 @@ public class OwnerCheckInController {
         ));
     }
 
+    private List<OwnerCheckInResponse> toResponses(List<OwnerCheckInView> views) {
+        Map<UUID, PlayerContact> contacts = bookingMapper.contacts(views.stream().map(this::bookingView).toList());
+        return views.stream().map(view -> toResponse(view, contacts)).toList();
+    }
+
     private OwnerCheckInResponse toResponse(OwnerCheckInView view) {
+        return toResponse(view, bookingMapper.contacts(List.of(bookingView(view))));
+    }
+
+    private OwnerBookingView bookingView(OwnerCheckInView view) {
         OwnerBookingRecord record = view.bookingRecord();
-        OwnerBookingResponse booking = bookingMapper.toResponse(new OwnerBookingView(
+        return new OwnerBookingView(
                 record.booking(), record.venueId(), record.venueName(), record.courtName(),
                 null, view.payments(), List.of()
-        ));
+        );
+    }
+
+    private OwnerCheckInResponse toResponse(OwnerCheckInView view, Map<UUID, PlayerContact> contacts) {
+        OwnerBookingResponse booking = bookingMapper.toResponse(bookingView(view), contacts);
         OwnerCheckInRecordResponse checkIn = view.checkInRecord() == null ? null
                 : OwnerCheckInRecordResponse.builder()
                 .checkInId(view.checkInRecord().getCheckInId())

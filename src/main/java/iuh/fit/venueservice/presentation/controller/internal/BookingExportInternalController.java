@@ -36,6 +36,6 @@ public class BookingExportInternalController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
     ) throws ServiceException {
         AdminBookingFilter filter = new AdminBookingFilter(null, venueId, venueCourtId, status, query, fromDate, toDate, 0, 1);
-        return adminBookingService.exportBookings(filter, MAX_EXPORT_ROWS).stream().map(responseMapper::toResponse).toList();
+        return responseMapper.toResponses(adminBookingService.exportBookings(filter, MAX_EXPORT_ROWS));
     }
 }
