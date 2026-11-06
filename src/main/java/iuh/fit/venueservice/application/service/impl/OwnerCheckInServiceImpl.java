@@ -12,10 +12,14 @@ import iuh.fit.venueservice.application.dto.response.venue.OwnerCheckInView;
 import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.LifecycleMessage;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.StartBookingLifecycle;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
 import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
+import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.CheckInRecordRepository;
 import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
@@ -31,6 +35,7 @@ import iuh.fit.venueservice.domain.entity.Venue;
 import iuh.fit.venueservice.domain.entity.VenueCourt;
 import iuh.fit.venueservice.domain.enums.BookingSource;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
+import iuh.fit.venueservice.domain.enums.CancellationStatus;
 import iuh.fit.venueservice.domain.enums.CheckInMethod;
 import iuh.fit.venueservice.domain.enums.TimeSlotStatus;
 
@@ -65,6 +70,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
     private final Duration onlineEarlyCheckInWindow;
     private final MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort;
     private final CourtHoldRepository courtHoldRepository;
+    private final BookingCancellationRepository bookingCancellationRepository;
+    private final BookingLifecyclePort bookingLifecyclePort;
 
     public OwnerCheckInServiceImpl(
             BookingRepository bookingRepository,
@@ -79,7 +86,9 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
             Clock clock,
             Duration onlineEarlyCheckInWindow,
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
-            CourtHoldRepository courtHoldRepository
+            CourtHoldRepository courtHoldRepository,
+            BookingCancellationRepository bookingCancellationRepository,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         this.bookingRepository = bookingRepository;
         this.checkInRecordRepository = checkInRecordRepository;
@@ -94,6 +103,8 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         this.onlineEarlyCheckInWindow = onlineEarlyCheckInWindow;
         this.matchmakingLifecycleSyncPort = matchmakingLifecycleSyncPort;
         this.courtHoldRepository = courtHoldRepository;
+        this.bookingCancellationRepository = bookingCancellationRepository;
+        this.bookingLifecyclePort = bookingLifecyclePort;
     }
 
     @Override
@@ -161,6 +172,11 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         matchmakingLifecycleSyncPort.syncBookingLifecycle(
                 saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name()
         );
+        // Process đi qua "đã thu phần còn lại" rồi "đã nhận sân"; khoản đã báo lúc payOS thành công thì trùng id, bị bỏ qua.
+        bookingLifecyclePort.publish(saved.getBookingId(), LifecycleMessage.REMAINING_PAID, "remaining-paid:"
+                + (remainingPayment == null ? saved.getBookingId() : remainingPayment.paymentId()));
+        bookingLifecyclePort.publish(saved.getBookingId(), LifecycleMessage.CHECKED_IN,
+                "checked-in:" + saved.getBookingId());
         return view(new OwnerBookingRecord(
                 saved, record.venueId(), record.venueName(), record.courtName()
         ), payments, checkIn);
@@ -209,6 +225,7 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
                 .walkInCustomerPhone(command.normalizedPhone())
                 .build());
         saved.setQrCode(bookingQrPort.issue(saved.getBookingId(), end));
+        saved.setLifecycleInstanceKey(bookingLifecyclePort.start(StartBookingLifecycle.of(saved)));
         saved = bookingRepository.save(saved);
         slot.setStatus(TimeSlotStatus.BOOKED);
         timeSlotRepository.save(slot);
@@ -272,6 +289,11 @@ public class OwnerCheckInServiceImpl implements OwnerCheckInService {
         if (booking.getStatus() != BookingStatus.CONFIRMED
                 && booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
             return "Chỉ đơn còn hiệu lực mới được nhận sân.";
+        }
+        // Nhận sân lúc yêu cầu hủy còn chờ duyệt thì khách có thể vừa vào sân vừa được hoàn cọc.
+        if (bookingCancellationRepository.findByBookingId(booking.getBookingId())
+                .filter(cancellation -> cancellation.getStatus() == CancellationStatus.PENDING).isPresent()) {
+            return "Đơn đang có yêu cầu hủy chờ chủ sân duyệt. Duyệt hoặc từ chối yêu cầu trước khi nhận sân.";
         }
         LocalDateTime now = LocalDateTime.now(clock);
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT

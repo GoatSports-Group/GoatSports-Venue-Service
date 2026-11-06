@@ -13,6 +13,8 @@ import iuh.fit.venueservice.application.dto.response.venue.OwnerBookingPaymentRe
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.PaymentQueryPort;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.LifecycleMessage;
 import iuh.fit.venueservice.application.port.PaymentCollectionPort;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
 import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
@@ -47,6 +49,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     private final TimeSlotLifecycleService timeSlotLifecycleService;
     private final Clock clock;
     private final Duration paymentCheckoutDuration;
+    private final BookingLifecyclePort bookingLifecyclePort;
 
     public OwnerBookingServiceImpl(
             BookingRepository bookingRepository,
@@ -57,7 +60,8 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
             PaymentCollectionPort paymentCollectionPort,
             TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
-            Duration paymentCheckoutDuration
+            Duration paymentCheckoutDuration,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingCancellationRepository = bookingCancellationRepository;
@@ -68,6 +72,7 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
         this.timeSlotLifecycleService = timeSlotLifecycleService;
         this.clock = clock;
         this.paymentCheckoutDuration = paymentCheckoutDuration;
+        this.bookingLifecyclePort = bookingLifecyclePort;
     }
 
     @Override
@@ -199,6 +204,10 @@ public class OwnerBookingServiceImpl implements OwnerBookingService {
     }
 
     private void applySuccessfulRemainingPayment(Booking booking, UUID paymentId) throws ServiceException {
+        if (!paymentId.equals(booking.getRemainingPaymentId())) {
+            bookingLifecyclePort.publish(booking.getBookingId(), LifecycleMessage.REMAINING_PAID,
+                    "remaining-paid:" + paymentId);
+        }
         booking.setRemainingPaymentId(paymentId);
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
             booking.setStatus(BookingStatus.CONFIRMED);

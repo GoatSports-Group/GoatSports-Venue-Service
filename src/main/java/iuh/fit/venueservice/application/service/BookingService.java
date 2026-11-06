@@ -29,8 +29,5 @@ public interface BookingService {
             UUID playerId, String status, int page, int size
     ) throws ServiceException;
 
-
-
-
     String generateBookingCode();
 }

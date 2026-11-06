@@ -3,6 +3,8 @@ package iuh.fit.venueservice.application.service.impl;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.LifecycleMessage;
 import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.BookingTicketMailPort;
@@ -45,6 +47,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
     private final PaymentRefundPort paymentRefundPort;
     private final BookingNotificationPort bookingNotificationPort;
     private final BookingTicketMailPort bookingTicketMailPort;
+    private final BookingLifecyclePort bookingLifecyclePort;
 
     public BookingPaymentEventServiceImpl(
             BookingRepository bookingRepository,
@@ -56,7 +59,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
             PaymentRefundPort paymentRefundPort,
             BookingNotificationPort bookingNotificationPort,
-            BookingTicketMailPort bookingTicketMailPort
+            BookingTicketMailPort bookingTicketMailPort,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingQrPort = bookingQrPort;
@@ -68,6 +72,7 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
         this.paymentRefundPort = paymentRefundPort;
         this.bookingNotificationPort = bookingNotificationPort;
         this.bookingTicketMailPort = bookingTicketMailPort;
+        this.bookingLifecyclePort = bookingLifecyclePort;
     }
 
     @Override
@@ -93,6 +98,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                 saved.getMatchmakingSessionId(), saved.getBookingId(), saved.getStatus().name(),
                 paymentCancelled ? "PAYMENT_CANCELLED" : "PAYMENT_EXPIRED"
         );
+        bookingLifecyclePort.publish(saved.getBookingId(), LifecycleMessage.PAYMENT_CLOSED,
+                "payment-closed:" + saved.getBookingId());
         return true;
     }
 
@@ -177,6 +184,8 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
                         addressLine(venue.getAddress()), booking.getPlayDate(), booking.getStartTime(),
                         booking.getEndTime(), booking.getDepositAmount(), booking.getRemainingAmount(),
                         booking.getQrCode()));
+                bookingLifecyclePort.publish(booking.getBookingId(), LifecycleMessage.DEPOSIT_PAID,
+                        "deposit-paid:" + command.paymentId());
             }
             return changed;
         }
@@ -197,6 +206,10 @@ public class BookingPaymentEventServiceImpl implements BookingPaymentEventServic
             }
             paymentRefundPort.assignPayee(command.paymentId(), venueOwnerId(booking));
             boolean changed = !command.paymentId().equals(booking.getRemainingPaymentId());
+            if (changed) {
+                bookingLifecyclePort.publish(booking.getBookingId(), LifecycleMessage.REMAINING_PAID,
+                        "remaining-paid:" + command.paymentId());
+            }
             booking.setRemainingPaymentId(command.paymentId());
             if (booking.getSource() == BookingSource.WALK_IN
                     && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {

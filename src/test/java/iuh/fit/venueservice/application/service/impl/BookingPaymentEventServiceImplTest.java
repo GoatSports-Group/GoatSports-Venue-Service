@@ -1,5 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.LifecycleMessage;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentSucceededCommand;
 import iuh.fit.venueservice.application.dto.request.payment.PaymentTerminalCommand;
 import iuh.fit.venueservice.application.exception.ServiceException;
@@ -34,6 +36,7 @@ import java.time.LocalTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
@@ -42,6 +45,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class BookingPaymentEventServiceImplTest {
+    private final BookingLifecyclePort bookingLifecyclePort = mock(BookingLifecyclePort.class);
     @Mock private BookingRepository bookingRepository;
     @Mock private BookingQrPort bookingQrPort;
     @Mock private VenueCourtRepository venueCourtRepository;
@@ -75,7 +79,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
         PaymentSucceededCommand event = event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0);
 
@@ -99,6 +103,9 @@ class BookingPaymentEventServiceImplTest {
         verify(bookingTicketMailPort, Mockito.times(1)).sendTicket(ArgumentMatchers.eq(payerId),
                 ArgumentMatchers.argThat(ticket -> ticket.bookingId().equals(bookingId)
                         && "GSQR.v1.signed".equals(ticket.qrCode())));
+        // Process vòng đời đi tiếp đúng một lần.
+        verify(bookingLifecyclePort, Mockito.times(1))
+                .publish(bookingId, LifecycleMessage.DEPOSIT_PAID, "deposit-paid:" + paymentId);
     }
 
     @Test
@@ -119,7 +126,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
 
         assertThatThrownBy(() -> service.applySucceededPayment(event(
@@ -155,7 +162,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
 
         assertThat(service.applySucceededPayment(event(
@@ -186,7 +193,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
 
         assertThat(service.remindOwnerOfManualRefund(refundId, reminderId, 60_000)).isTrue();
@@ -214,7 +221,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
 
         assertThat(service.applyTerminalPayment(new PaymentTerminalCommand(
@@ -225,6 +232,7 @@ class BookingPaymentEventServiceImplTest {
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.EXPIRED);
         verify(timeSlotLifecycleService).releaseBookingSlot(booking);
         verify(bookingRepository).save(booking);
+        verify(bookingLifecyclePort).publish(bookingId, LifecycleMessage.PAYMENT_CLOSED, "payment-closed:" + bookingId);
     }
 
     @Test
@@ -238,7 +246,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isTrue();
@@ -282,7 +290,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isTrue();
@@ -314,7 +322,7 @@ class BookingPaymentEventServiceImplTest {
         BookingPaymentEventServiceImpl service = new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
 
         assertThat(service.applySucceededPayment(event(paymentId, payerId, bookingId, "BOOKING_DEPOSIT", 60_000.0))).isFalse();

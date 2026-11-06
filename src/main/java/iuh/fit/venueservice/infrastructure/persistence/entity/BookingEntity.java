@@ -81,6 +81,9 @@ public class BookingEntity extends BaseEntity {
     @Column(name = "late_refund_at")
     private LocalDateTime lateRefundAt;
 
+    @Column(name = "lifecycle_instance_key")
+    private Long lifecycleInstanceKey;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "venue_court_id", nullable = false)
     private VenueCourtEntity venueCourt;

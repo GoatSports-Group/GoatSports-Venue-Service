@@ -117,11 +117,13 @@ public class ApplicationServiceConfig {
             BookingQrPort bookingQrPort,
             Clock clock,
             @Value("${booking.payment-hold-duration}") Duration paymentHoldDuration,
-            CourtHoldRepository courtHoldRepository
+            CourtHoldRepository courtHoldRepository,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository, bookingQrPort, clock, paymentHoldDuration, courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, paymentHoldDuration, courtHoldRepository,
+                bookingLifecyclePort
         );
     }
 
@@ -137,12 +139,28 @@ public class ApplicationServiceConfig {
             BookingNotificationPort bookingNotificationPort,
             CancellationWorkflowPort cancellationWorkflowPort,
             Clock clock,
-            @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow
+            @Value("${booking.cancellation-auto-approval-window}") Duration cancellationAutoApprovalWindow,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         return new BookingCancellationServiceImpl(
                 bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, paymentRefundPort, matchmakingLifecycleSyncPort, bookingNotificationPort,
-                cancellationWorkflowPort, clock, cancellationAutoApprovalWindow
+                cancellationWorkflowPort, clock, cancellationAutoApprovalWindow, bookingLifecyclePort
+        );
+    }
+
+    @Bean
+    public BookingLifecycleServiceImpl bookingLifecycleService(
+            BookingRepository bookingRepository,
+            PaymentQueryPort paymentQueryPort,
+            TimeSlotLifecycleService timeSlotLifecycleService,
+            BookingNotificationPort bookingNotificationPort,
+            BookingLifecyclePort bookingLifecyclePort,
+            Clock clock
+    ) {
+        return new BookingLifecycleServiceImpl(
+                bookingRepository, paymentQueryPort, timeSlotLifecycleService, bookingNotificationPort,
+                bookingLifecyclePort, clock
         );
     }
 
@@ -177,11 +195,12 @@ public class ApplicationServiceConfig {
             PaymentCollectionPort paymentCollectionPort,
             TimeSlotLifecycleService timeSlotLifecycleService,
             Clock clock,
-            @Value("${booking.payment-checkout-duration:PT15M}") Duration paymentCheckoutDuration
+            @Value("${booking.payment-checkout-duration:PT15M}") Duration paymentCheckoutDuration,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         return new OwnerBookingServiceImpl(
                 bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository, paymentQueryPort,
-                paymentCollectionPort, timeSlotLifecycleService, clock, paymentCheckoutDuration
+                paymentCollectionPort, timeSlotLifecycleService, clock, paymentCheckoutDuration, bookingLifecyclePort
         );
     }
 
@@ -233,13 +252,16 @@ public class ApplicationServiceConfig {
             Clock clock,
             @Value("${booking.online-check-in-early-window}") Duration onlineEarlyCheckInWindow,
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
-            CourtHoldRepository courtHoldRepository
+            CourtHoldRepository courtHoldRepository,
+            BookingCancellationRepository bookingCancellationRepository,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         return new OwnerCheckInServiceImpl(
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
-                onlineEarlyCheckInWindow, matchmakingLifecycleSyncPort, courtHoldRepository
+                onlineEarlyCheckInWindow, matchmakingLifecycleSyncPort, courtHoldRepository,
+                bookingCancellationRepository, bookingLifecyclePort
         );
     }
 
@@ -254,12 +276,13 @@ public class ApplicationServiceConfig {
             MatchmakingLifecycleSyncPort matchmakingLifecycleSyncPort,
             PaymentRefundPort paymentRefundPort,
             BookingNotificationPort bookingNotificationPort,
-            BookingTicketMailPort bookingTicketMailPort
+            BookingTicketMailPort bookingTicketMailPort,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         return new BookingPaymentEventServiceImpl(
                 bookingRepository, bookingQrPort, venueCourtRepository, venueRepository,
                 timeSlotLifecycleService, bookingCancellationRepository, matchmakingLifecycleSyncPort, paymentRefundPort,
-                bookingNotificationPort, bookingTicketMailPort
+                bookingNotificationPort, bookingTicketMailPort, bookingLifecyclePort
         );
     }
 

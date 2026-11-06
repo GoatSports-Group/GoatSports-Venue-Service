@@ -45,6 +45,9 @@ public interface BookingRepository {
     /** Luot "Da xac nhan" da qua gio ket thuc (chua ai quet QR): ung vien danh dau Khong den nhan san. */
     List<Booking> findNoShowCandidatesForUpdate(LocalDateTime cutoff, int limit);
 
+    /** Đơn ở các trạng thái {@code statuses}, chưa tới giờ kết thúc mà chưa có process vòng đời; sớm nhất trước. */
+    List<Booking> findWithoutLifecycle(Collection<BookingStatus> statuses, LocalDateTime now, int limit);
+
     /** Luot con hieu luc (cho thanh toan / da xac nhan / da nhan san) chua toi gio ket thuc, som nhat truoc. */
     PageResult<Booking> findPlayerUpcomingPage(UUID playerId, LocalDateTime now, int page, int size);
 

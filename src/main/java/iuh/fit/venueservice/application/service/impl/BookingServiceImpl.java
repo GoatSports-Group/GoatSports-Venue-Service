@@ -7,6 +7,8 @@ import iuh.fit.venueservice.application.dto.response.venue.PlayerReviewView;
 import iuh.fit.venueservice.application.dto.response.venue.TimeSlotResponseCommand;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.StartBookingLifecycle;
 import iuh.fit.venueservice.application.port.BookingQrPort;
 import iuh.fit.venueservice.application.port.persistence.CourtHoldRepository;
 import iuh.fit.venueservice.domain.entity.CourtHold;
@@ -52,6 +54,7 @@ public class BookingServiceImpl implements BookingService {
     private final Clock clock;
     private final Duration paymentHoldDuration;
     private final CourtHoldRepository courtHoldRepository;
+    private final BookingLifecyclePort bookingLifecyclePort;
 
     public BookingServiceImpl(
             BookingRepository bookingRepository,
@@ -63,7 +66,8 @@ public class BookingServiceImpl implements BookingService {
             BookingQrPort bookingQrPort,
             Clock clock,
             Duration paymentHoldDuration,
-            CourtHoldRepository courtHoldRepository
+            CourtHoldRepository courtHoldRepository,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
@@ -75,6 +79,7 @@ public class BookingServiceImpl implements BookingService {
         this.clock = clock;
         this.paymentHoldDuration = paymentHoldDuration;
         this.courtHoldRepository = courtHoldRepository;
+        this.bookingLifecyclePort = bookingLifecyclePort;
     }
 
     @Override
@@ -174,9 +179,11 @@ public class BookingServiceImpl implements BookingService {
             saved.setQrCode(bookingQrPort.issue(
                     saved.getBookingId(), LocalDateTime.of(saved.getPlayDate(), saved.getEndTime())
             ));
-            return bookingRepository.save(saved);
         }
-        return saved;
+        // Mở process "Vòng đời đặt sân". Gọi workflow-service lỗi (tắt, mất Camunda, quá timeout) thì đơn vẫn tạo,
+        // lifecycle_instance_key để trống và BookingLifecycleAdoptionJob sẽ mở process sau.
+        saved.setLifecycleInstanceKey(bookingLifecyclePort.start(StartBookingLifecycle.of(saved)));
+        return bookingRepository.save(saved);
     }
 
     @Override

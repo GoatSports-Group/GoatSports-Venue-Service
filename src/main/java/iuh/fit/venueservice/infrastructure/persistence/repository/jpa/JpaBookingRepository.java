@@ -102,6 +102,20 @@ public interface JpaBookingRepository extends JpaRepository<BookingEntity, UUID>
             Pageable pageable
     );
 
+    @Query("""
+            select booking from BookingEntity booking
+            where booking.lifecycleInstanceKey is null
+              and booking.status in :statuses
+              and (booking.playDate > :today or (booking.playDate = :today and booking.endTime > :nowTime))
+            order by booking.playDate, booking.startTime, booking.bookingId
+            """)
+    List<BookingEntity> findWithoutLifecycle(
+            @Param("statuses") Collection<BookingStatus> statuses,
+            @Param("today") LocalDate today,
+            @Param("nowTime") LocalTime nowTime,
+            Pageable pageable
+    );
+
     @Query(value = """
             select booking from BookingEntity booking
             where booking.playerId = :playerId

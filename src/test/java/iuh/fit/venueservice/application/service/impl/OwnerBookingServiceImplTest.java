@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingFilter;
 import iuh.fit.venueservice.application.dto.request.venue.CreateOwnerBookingPaymentCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerBookingPaymentMethod;
@@ -38,6 +39,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +49,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OwnerBookingServiceImplTest {
+    private final BookingLifecyclePort bookingLifecyclePort = mock(BookingLifecyclePort.class);
     @Mock private BookingRepository bookingRepository;
     @Mock private BookingCancellationRepository bookingCancellationRepository;
     @Mock private VenueCourtRepository venueCourtRepository;
@@ -66,7 +69,7 @@ class OwnerBookingServiceImplTest {
         service = new OwnerBookingServiceImpl(
                 bookingRepository, bookingCancellationRepository, venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, timeSlotLifecycleService, Clock.systemDefaultZone(),
-                Duration.ofMinutes(15)
+                Duration.ofMinutes(15), bookingLifecyclePort
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();

@@ -1,5 +1,7 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.LifecycleMessage;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.WorkflowCancellationStateCommand;
 import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
@@ -44,6 +46,8 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,6 +66,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class BookingCancellationServiceImplTest {
+    private final BookingLifecyclePort bookingLifecyclePort = mock(BookingLifecyclePort.class);
     private static final Instant NOW = Instant.parse("2026-09-02T01:00:00Z"); // 08:00 giờ Việt Nam
     @Mock BookingRepository bookingRepository;
     @Mock BookingCancellationRepository cancellationRepository;
@@ -90,7 +95,7 @@ class BookingCancellationServiceImplTest {
         Clock clock = Clock.fixed(NOW, ZoneId.of("Asia/Ho_Chi_Minh"));
         service = new BookingCancellationServiceImpl(bookingRepository, cancellationRepository, venueCourtRepository,
                 venueRepository, new TimeSlotLifecycleService(timeSlotRepository, clock), paymentRefundPort,
-                matchmakingLifecycleSyncPort, bookingNotificationPort, workflow, clock, Duration.ofHours(1));
+                matchmakingLifecycleSyncPort, bookingNotificationPort, workflow, clock, Duration.ofHours(1), bookingLifecyclePort);
         booking = Booking.builder()
                 .bookingId(bookingId).playerId(playerId).venueCourtId(courtId).bookingCode("GS-001")
                 .playDate(playDate).startTime(LocalTime.of(18, 0)).endTime(LocalTime.of(19, 0))
@@ -215,6 +220,9 @@ class BookingCancellationServiceImplTest {
         assertThat(cancellation.getStatus()).isEqualTo(CancellationStatus.REFUNDED);
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
         verify(matchmakingLifecycleSyncPort).syncBookingLifecycle(any(), eq(bookingId), eq("REFUNDED"), eq("REFUNDED"));
+        // Flow đặt sân dừng đúng một lần, ngay khi yêu cầu được chấp thuận.
+        verify(bookingLifecyclePort, times(1))
+                .publish(bookingId, LifecycleMessage.CANCELLED, "cancelled:" + cancellationId);
     }
 
     @Test

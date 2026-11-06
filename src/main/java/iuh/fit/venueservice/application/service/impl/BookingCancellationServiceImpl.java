@@ -6,6 +6,8 @@ import iuh.fit.venueservice.application.dto.response.venue.RefundSnapshot;
 import iuh.fit.venueservice.application.exception.OwnershipException;
 import iuh.fit.venueservice.application.exception.ResourceNotFoundException;
 import iuh.fit.venueservice.application.exception.ServiceException;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.LifecycleMessage;
 import iuh.fit.venueservice.application.port.BookingNotificationPort;
 import iuh.fit.venueservice.application.port.CancellationWorkflowPort;
 import iuh.fit.venueservice.application.port.MatchmakingLifecycleSyncPort;
@@ -67,6 +69,7 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
     private final CancellationWorkflowPort cancellationWorkflow;
     private final Clock clock;
     private final Duration autoApprovalWindow;
+    private final BookingLifecyclePort bookingLifecyclePort;
 
     public BookingCancellationServiceImpl(
             BookingRepository bookingRepository,
@@ -79,7 +82,8 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
             BookingNotificationPort bookingNotificationPort,
             CancellationWorkflowPort cancellationWorkflow,
             Clock clock,
-            Duration autoApprovalWindow
+            Duration autoApprovalWindow,
+            BookingLifecyclePort bookingLifecyclePort
     ) {
         this.bookingRepository = bookingRepository;
         this.cancellationRepository = cancellationRepository;
@@ -92,6 +96,7 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
         this.cancellationWorkflow = cancellationWorkflow;
         this.clock = clock;
         this.autoApprovalWindow = autoApprovalWindow;
+        this.bookingLifecyclePort = bookingLifecyclePort;
     }
 
     /**
@@ -260,6 +265,9 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
             // nhầm khung giờ người khác vừa đặt.
             if (previous == CancellationStatus.PENDING && booking.getStatus() != BookingStatus.REFUND_PENDING) {
                 timeSlotLifecycleService.releaseBookingSlot(booking);
+                // Đơn rời trạng thái còn hiệu lực: process "Vòng đời đặt sân" dừng, không nhả slot lần nữa.
+                bookingLifecyclePort.publish(booking.getBookingId(), LifecycleMessage.CANCELLED,
+                        "cancelled:" + cancellation.getCancellationId());
             }
             booking.setStatus(target);
             Booking saved = bookingRepository.save(booking);

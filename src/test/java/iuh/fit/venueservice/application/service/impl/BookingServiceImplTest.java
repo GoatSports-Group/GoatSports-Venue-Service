@@ -1,5 +1,6 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
 import iuh.fit.venueservice.application.dto.request.venue.CreateBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CancelBookingCommand;
 import iuh.fit.venueservice.application.dto.response.base.PageResult;
@@ -50,6 +51,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,6 +62,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceImplTest {
+    private final BookingLifecyclePort bookingLifecyclePort = mock(BookingLifecyclePort.class);
     @Mock BookingRepository bookingRepository;
     @Mock TimeSlotRepository timeSlotRepository;
     @Mock BookingCancellationRepository bookingCancellationRepository;
@@ -100,9 +104,11 @@ class BookingServiceImplTest {
             if (booking.getBookingId() == null) booking.setBookingId(bookingId);
             return booking;
         });
+        when(bookingLifecyclePort.start(any())).thenReturn(42L);
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository,
+                bookingLifecyclePort
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -110,6 +116,10 @@ class BookingServiceImplTest {
                 BookingSource.DIRECT, null, null, null
         ));
 
+        // Process "Vòng đời đặt sân" mở ngay khi tạo đơn, bắt đầu ở bước chờ cọc với hạn giữ chỗ của đơn.
+        assertThat(result.getLifecycleInstanceKey()).isEqualTo(42L);
+        verify(bookingLifecyclePort).start(argThat(command -> "PENDING_PAYMENT".equals(command.status())
+                && "2026-09-01T08:15+07:00".equals(command.holdExpiresAt())));
         assertThat(result.getStatus()).isEqualTo(BookingStatus.PENDING_PAYMENT);
         assertThat(result.getDepositPaymentId()).isNull();
         assertThat(result.getRemainingPaymentId()).isNull();
@@ -152,7 +162,8 @@ class BookingServiceImplTest {
 
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository,
+                bookingLifecyclePort
         );
 
         Booking result = service.createBooking(new CreateBookingCommand(
@@ -191,7 +202,8 @@ class BookingServiceImplTest {
                 .thenReturn(Optional.of(heldSlot));
         BookingServiceImpl service = new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository,
+                bookingLifecyclePort
         );
 
         assertThatThrownBy(() -> service.createBooking(new CreateBookingCommand(
@@ -220,7 +232,8 @@ class BookingServiceImplTest {
         Clock clock = Clock.fixed(instant, ZoneId.of("Asia/Ho_Chi_Minh"));
         return new BookingServiceImpl(
                 bookingRepository, timeSlotRepository, bookingCancellationRepository, reviewRepository,
-                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository
+                venueCourtRepository, venueRepository, bookingQrPort, clock, Duration.ofMinutes(15), courtHoldRepository,
+                bookingLifecyclePort
         );
     }
 

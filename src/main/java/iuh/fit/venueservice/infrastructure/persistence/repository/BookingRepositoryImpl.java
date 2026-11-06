@@ -139,6 +139,16 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Booking> findWithoutLifecycle(Collection<BookingStatus> statuses, LocalDateTime now, int limit) {
+        return jpaRepository.findWithoutLifecycle(
+                        statuses, now.toLocalDate(), now.toLocalTime(), PageRequest.of(0, limit)
+                ).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public List<Booking> findNoShowCandidatesForUpdate(LocalDateTime cutoff, int limit) {
         return jpaRepository.findCompletionCandidatesForUpdate(

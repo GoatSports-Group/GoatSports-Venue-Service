@@ -1,12 +1,11 @@
 package iuh.fit.venueservice.infrastructure.scheduling;
 
-import iuh.fit.venueservice.application.dto.response.venue.PaymentSnapshot;
-import iuh.fit.venueservice.application.port.PaymentQueryPort;
+import iuh.fit.venueservice.application.exception.ServiceException;
 import iuh.fit.venueservice.application.port.persistence.BookingRepository;
+import iuh.fit.venueservice.application.service.BookingLifecycleService;
 import iuh.fit.venueservice.domain.entity.Booking;
 import iuh.fit.venueservice.domain.enums.BookingStatus;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,19 +13,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
-import static iuh.fit.venueservice.application.service.BookingPaymentStatusPolicy.isFullyPaid;
-
+/**
+ * Dự phòng cho timer "Hết giờ chơi" của process "Vòng đời đặt sân": chỉ xử lý đơn đã quá mốc giờ thêm
+ * {@code booking.lifecycle-fallback-grace} (process chậm, chưa có process, workflow-service tắt). Ghi qua cùng
+ * {@link BookingLifecycleService} với process nên không ghi hai lần.
+ */
 @Component
 @RequiredArgsConstructor
-@Slf4j
 @ConditionalOnProperty(
         name = "booking.auto-completion-enabled",
         havingValue = "true",
@@ -34,38 +30,21 @@ import static iuh.fit.venueservice.application.service.BookingPaymentStatusPolic
 )
 public class BookingAutoCompletionJob {
     private final BookingRepository bookingRepository;
-    private final PaymentQueryPort paymentQueryPort;
+    private final BookingLifecycleService bookingLifecycleService;
     private final Clock clock;
 
     @Value("${booking.auto-completion-batch-size:100}")
     private int batchSize = 100;
 
+    @Value("${booking.lifecycle-fallback-grace:PT5M}")
+    private Duration fallbackGrace = Duration.ofMinutes(5);
+
     @Scheduled(fixedDelayString = "${booking.auto-completion-scan-ms:60000}")
-    @Transactional
-    public void completeEligibleBookings() {
-        LocalDateTime now = LocalDateTime.now(clock);
-        List<Booking> candidates = bookingRepository.findCompletionCandidatesForUpdate(now, batchSize);
-        if (candidates.isEmpty()) return;
-
-        Set<UUID> bookingIds = candidates.stream()
-                .map(booking -> booking.getBookingId())
-                .collect(Collectors.toSet());
-        Map<UUID, List<PaymentSnapshot>> paymentsByBooking = paymentQueryPort.findByBookingIds(bookingIds).stream()
-                .collect(Collectors.groupingBy(PaymentSnapshot::referenceId));
-
-        int completed = 0;
-        for (Booking booking : candidates) {
-            if (booking.getStatus() != BookingStatus.CHECKED_IN
-                    || !isFullyPaid(booking, paymentsByBooking.getOrDefault(
-                            booking.getBookingId(), Collections.emptyList()))) {
-                continue;
-            }
-            booking.setStatus(BookingStatus.COMPLETED);
-            bookingRepository.save(booking);
-            completed++;
-        }
-        if (completed > 0) {
-            log.info("Automatically completed {} eligible bookings", completed);
+    @Transactional(rollbackFor = ServiceException.class)
+    public void completeEligibleBookings() throws ServiceException {
+        LocalDateTime cutoff = LocalDateTime.now(clock).minus(fallbackGrace);
+        for (Booking booking : bookingRepository.findCompletionCandidatesForUpdate(cutoff, batchSize)) {
+            bookingLifecycleService.applyTimedState(booking.getBookingId(), BookingStatus.COMPLETED);
         }
     }
 }

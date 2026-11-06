@@ -1,5 +1,11 @@
 package iuh.fit.venueservice.application.service.impl;
 
+import org.mockito.InOrder;
+import iuh.fit.venueservice.domain.enums.CancellationStatus;
+import iuh.fit.venueservice.domain.entity.BookingCancellation;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort.LifecycleMessage;
+import iuh.fit.venueservice.application.port.persistence.BookingCancellationRepository;
+import iuh.fit.venueservice.application.port.BookingLifecyclePort;
 import iuh.fit.venueservice.application.dto.request.venue.ConfirmOwnerCheckInCommand;
 import iuh.fit.venueservice.application.dto.request.venue.CreateWalkInBookingCommand;
 import iuh.fit.venueservice.application.dto.request.venue.OwnerCheckInLookupCommand;
@@ -53,6 +59,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,6 +70,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OwnerCheckInServiceImplTest {
+    private final BookingLifecyclePort bookingLifecyclePort = mock(BookingLifecyclePort.class);
+    private final BookingCancellationRepository bookingCancellationRepository = mock(BookingCancellationRepository.class);
     @Mock private BookingRepository bookingRepository;
     @Mock private CheckInRecordRepository checkInRecordRepository;
     @Mock private TimeSlotRepository timeSlotRepository;
@@ -91,7 +101,8 @@ class OwnerCheckInServiceImplTest {
                 bookingRepository, checkInRecordRepository, timeSlotRepository,
                 venueCourtRepository, venueRepository, paymentQueryPort,
                 paymentCollectionPort, bookingQrPort, timeSlotLifecycleService, clock,
-                Duration.ofMinutes(30), matchmakingLifecycleSyncPort, courtHoldRepository
+                Duration.ofMinutes(30), matchmakingLifecycleSyncPort, courtHoldRepository,
+                bookingCancellationRepository, bookingLifecyclePort
         );
         ownerId = UUID.randomUUID();
         venueId = UUID.randomUUID();
@@ -282,6 +293,26 @@ class OwnerCheckInServiceImplTest {
         assertThat(result.checkInRecord().getPaymentId()).isEqualTo(remaining.paymentId());
         assertThat(result.checkInRecord().getRemainingAmountCollected()).isEqualByComparingTo("140000.00");
         verify(bookingRepository).findOwnedBookingByIdForUpdate(bookingId, ownerId);
+        // Process vòng đời: đã thu phần còn lại rồi mới đã nhận sân.
+        InOrder lifecycle = inOrder(bookingLifecyclePort);
+        lifecycle.verify(bookingLifecyclePort).publish(bookingId, LifecycleMessage.REMAINING_PAID,
+                "remaining-paid:" + remaining.paymentId());
+        lifecycle.verify(bookingLifecyclePort).publish(bookingId, LifecycleMessage.CHECKED_IN, "checked-in:" + bookingId);
+    }
+
+    @Test
+    void refusesCheckInWhileACancellationRequestAwaitsTheOwner() {
+        Booking booking = booking(BookingStatus.CONFIRMED, LocalTime.of(8, 0), LocalTime.of(9, 0));
+        when(bookingRepository.findOwnedBookingByIdForUpdate(bookingId, ownerId))
+                .thenReturn(Optional.of(record(booking)));
+        when(bookingCancellationRepository.findByBookingId(bookingId)).thenReturn(Optional.of(
+                BookingCancellation.builder().bookingId(bookingId).status(CancellationStatus.PENDING).build()));
+
+        assertThatThrownBy(() -> service.confirm(new ConfirmOwnerCheckInCommand(
+                ownerId, bookingId, CheckInMethod.BOOKING_CODE, PaymentCollectionMode.CASH, null, "GS123456"
+        ))).isInstanceOf(ServiceException.class).hasMessageContaining("yêu cầu hủy chờ chủ sân duyệt");
+        verify(paymentCollectionPort, never()).collectBookingRemaining(any(), any(), any(), any());
+        verify(checkInRecordRepository, never()).save(any());
     }
 
     @Test
